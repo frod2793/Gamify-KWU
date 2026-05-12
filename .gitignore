@@ -104,3 +104,28 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# AI Agents & Automation tools
+.agents/
+
+# Unity IDE Config files
+.vscode/
+
+# Windows-specific files (useful for developers on Windows)
+.vs/
+
+# Logs
+Logs/
+*.log
+
+# User-specific files
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.csproj.user
+*.unityproj.user
+
+# Crash reports
+sysinfo.txt
