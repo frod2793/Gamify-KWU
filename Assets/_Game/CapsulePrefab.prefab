@@ -9,11 +9,11 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 724722973991509388}
-  - component: {fileID: 2780230887522897833}
   - component: {fileID: 8319211249114684690}
   - component: {fileID: 6780518100590613348}
   - component: {fileID: 5567473716563821379}
   - component: {fileID: 602774872487031344}
+  - component: {fileID: 7833534880115860931}
   m_Layer: 6
   m_Name: CapsulePrefab
   m_TagString: Untagged
@@ -41,19 +41,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -35.5959}
   m_SizeDelta: {x: 330.93, y: 94.5}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &2780230887522897833
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2454654020541007502}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c4d6b98bfe785cf479a7dd5bf74e4195, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GamifyKWU.CraneGame.View.CapsuleView
-  m_answerText: {fileID: 6580140227319812647}
 --- !u!222 &8319211249114684690
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -165,6 +152,18 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
+--- !u!114 &7833534880115860931
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2454654020541007502}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8f1e44fbab824d0997b34bc419019a2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameArifiction.ClawMachine.ClawMachineDollView
 --- !u!1 &5180739490907764861
 GameObject:
   m_ObjectHideFlags: 0
