@@ -13,6 +13,7 @@ namespace GameArifiction.ClawMachine
         Grabbing,       // 집기(벌리고 닫기)
         Ascending,      // 상승 중
         Returning,      // 원래 위치로 복귀 중
-        Result          // 결과 확인
+        Result,         // 결과 확인
+        ReTakeRequest   // [신규]: 시간초과 시 재수강 요청 및 팝업 대기 상태
     }
 }

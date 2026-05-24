@@ -60,8 +60,9 @@ namespace GameArifiction.ClawMachine
         private float m_moveSpeed = 3.0f;
         
         private Vector3 m_initialPosition;
-        private SpriteRenderer m_wireRenderer;
+        private LineRenderer m_wireLineRenderer;
         private System.Threading.CancellationTokenSource m_animCts;
+        private bool m_isInAnimSequence; // 하강~상승 애니메이션 시퀀스 진행 중 플래그 (레이스 컨디션 방지)
 
         // [수식 필드]: 절차적 물리 연산용
         private float m_currentRopeLength;
@@ -131,7 +132,7 @@ namespace GameArifiction.ClawMachine
 
             if (m_clawBody != null)
             {
-                m_clawBody.Initialize(m_viewModel);
+                m_clawBody.Initialize(m_viewModel, m_clawRoot);
             }
         }
 
@@ -149,12 +150,27 @@ namespace GameArifiction.ClawMachine
 
         private void InitializeWire()
         {
-            GameObject wireObj = new GameObject("Wire_Renderer", typeof(SpriteRenderer));
+            GameObject wireObj = new GameObject("Wire_Renderer", typeof(LineRenderer));
             wireObj.transform.SetParent(m_clawRoot, false);
-            m_wireRenderer = wireObj.GetComponent<SpriteRenderer>();
+            m_wireLineRenderer = wireObj.GetComponent<LineRenderer>();
             
-            // [참고]: 인쇄용 흰색 스프라이트를 할당해야 함 (여기선 기본 Color 설정)
-            m_wireRenderer.color = m_wireColor;
+            if (m_wireLineRenderer != null)
+            {
+                Shader defaultShader = Shader.Find("Sprites/Default");
+                if (defaultShader != null)
+                {
+                    m_wireLineRenderer.material = new Material(defaultShader);
+                }
+                
+                m_wireLineRenderer.startColor = m_wireColor;
+                m_wireLineRenderer.endColor = m_wireColor;
+                m_wireLineRenderer.startWidth = 0.04f;
+                m_wireLineRenderer.endWidth = 0.04f;
+                m_wireLineRenderer.positionCount = 2;
+                m_wireLineRenderer.sortingLayerName = "Default";
+                m_wireLineRenderer.sortingOrder = 5;
+            }
+            
             wireObj.transform.localPosition = Vector3.zero;
         }
         #endregion
@@ -209,7 +225,7 @@ namespace GameArifiction.ClawMachine
                 Vector3 targetPosition = m_clawRoot.position + offset;
                 Quaternion targetRotation = m_clawRoot.rotation * rotation;
 
-                m_clawBody.UpdatePhysicsTarget(targetPosition, targetRotation);
+                m_clawBody.UpdatePhysicsTarget(targetPosition, targetRotation, m_currentRopeLength);
             }
         }
 
@@ -222,19 +238,14 @@ namespace GameArifiction.ClawMachine
         /// </summary>
         private void RenderClawAndWire()
         {
-            if (m_clawBody == null || m_clawRoot == null || m_wireRenderer == null)
+            if (m_clawBody == null || m_clawRoot == null || m_wireLineRenderer == null)
             {
                 return;
             }
 
-            // 1. 집게 헤드 위치 계산
-            Quaternion rotation = Quaternion.Euler(0, 0, m_currentAngle);
-            
-            // 2. 와이어 렌더링 (Scale을 이용한 두께 및 길이 조절)
-            float wireThickness = 0.05f; 
-            m_wireRenderer.transform.localScale = new Vector3(wireThickness, m_currentRopeLength, 1f);
-            m_wireRenderer.transform.localRotation = rotation;
-            m_wireRenderer.transform.localPosition = rotation * Vector3.down * (m_currentRopeLength * 0.5f);
+            // 카트 루트와 실제 집게 바디의 월드 좌표를 이어 밧줄 렌더링
+            m_wireLineRenderer.SetPosition(0, m_clawRoot.position);
+            m_wireLineRenderer.SetPosition(1, m_clawBody.transform.position);
         }
         #endregion
 
@@ -263,25 +274,46 @@ namespace GameArifiction.ClawMachine
 
         private void HandleStateChanged(ClawStateType newState)
         {
-            CancelAnimations();
-            m_animCts = new System.Threading.CancellationTokenSource();
-            System.Threading.CancellationToken token = m_animCts.Token;
+            // [핵심 보호]: 하강/그랩/상승 등 애니메이션 시퀀스가 진행 중일 때,
+            // Idle/Moving 전환에 의한 불필요한 토큰 취소를 방지합니다.
+            // 단, 새로운 애니메이션 시퀀스 상태로 진입할 때는 반드시 이전 시퀀스를 정리합니다.
+            bool isAnimationState = (newState == ClawStateType.Descending ||
+                                     newState == ClawStateType.Grabbing ||
+                                     newState == ClawStateType.Ascending ||
+                                     newState == ClawStateType.Returning);
+
+            if (isAnimationState)
+            {
+                // 새 애니메이션 시퀀스 시작 → 이전 시퀀스 정리 후 새 토큰 발급
+                CancelAnimations();
+                m_animCts = new System.Threading.CancellationTokenSource();
+            }
+            else if (!m_isInAnimSequence)
+            {
+                // 애니메이션 시퀀스가 진행 중이 아닐 때만 잔존 토큰 정리 (레이스 컨디션 차단)
+                CancelAnimations();
+            }
 
             switch (newState)
             {
                 case ClawStateType.Descending:
-                    PlayDescendAnimation(token).Forget();
+                    m_isInAnimSequence = true;
+                    PlayDescendAnimation(m_animCts.Token).Forget();
                     break;
                 case ClawStateType.Grabbing:
-                    PlayGrabAnimation(token).Forget();
+                    PlayGrabAnimation(m_animCts.Token).Forget();
                     break;
                 case ClawStateType.Ascending:
-                    PlayAscendAnimation(token).Forget();
+                    PlayAscendAnimation(m_animCts.Token).Forget();
                     break;
                 case ClawStateType.Returning:
-                    PlayReturnAnimation(token).Forget();
+                    PlayReturnAnimation(m_animCts.Token).Forget();
+                    break;
+                case ClawStateType.Idle:
+                    m_isInAnimSequence = false;
                     break;
                 case ClawStateType.Result:
+                    m_isInAnimSequence = false;
                     CheckResult();
                     break;
             }
@@ -299,7 +331,12 @@ namespace GameArifiction.ClawMachine
         #region 절차적 애니메이션 시퀀스
         private async UniTaskVoid PlayDescendAnimation(System.Threading.CancellationToken token)
         {
-            if (m_clawBody != null) m_clawBody.OpenClaws();
+            if (m_clawBody != null)
+            {
+                m_clawBody.ResetClawCollidersForNextPlay();
+                m_clawBody.SetPhysicsToDynamic(); // 하강 시작 즉시 Dynamic으로 전환하여 밀침 충격 근절!
+                m_clawBody.OpenClaws();
+            }
 
             float elapsed = 0f;
             float startLen = m_currentRopeLength;
@@ -332,7 +369,15 @@ namespace GameArifiction.ClawMachine
         private async UniTaskVoid PlayAscendAnimation(System.Threading.CancellationToken token)
         {
             float elapsed = 0f;
+            
+            // 얹혀진 상태에 따른 실제 카트-집게간의 거리를 측정하여 줄의 감김 시작점으로 설정 (텔레포트/튕김 방지)
             float startLen = m_currentRopeLength;
+            if (m_clawRoot != null && m_clawBody != null)
+            {
+                float actualDistance = Vector3.Distance(m_clawRoot.position, m_clawBody.transform.position);
+                startLen = Mathf.Clamp(actualDistance, m_minRopeDistance, m_maxRopeDistance);
+            }
+            m_currentRopeLength = startLen;
 
             while (elapsed < m_ascendDuration)
             {
@@ -342,7 +387,16 @@ namespace GameArifiction.ClawMachine
             }
             m_currentRopeLength = m_minRopeDistance;
 
-            if (m_viewModel != null) m_viewModel.NotifyAscendCompleted();
+            // [상승 완료 시점]: 상승이 완전히 끝나 밀착한 시점에 비로소 Kinematic으로 강체 원복 (실패 시의 Dynamic 유지 보증)
+            if (m_clawBody != null)
+            {
+                m_clawBody.ResetPhysicsToKinematic();
+            }
+
+            if (m_viewModel != null)
+            {
+                m_viewModel.NotifyAscendCompleted();
+            }
         }
 
         private async UniTaskVoid PlayReturnAnimation(System.Threading.CancellationToken token)

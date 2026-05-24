@@ -18,6 +18,10 @@ namespace GameArifiction.ClawMachine
         private readonly ClawMachineModel m_model;
         private ClawStateType m_currentState;
         private CancellationTokenSource m_timerCts;
+
+        // [신규]: 퀴즈 정답 추적 및 캡슐 퀴즈 데이터 매핑 딕셔너리
+        private readonly System.Collections.Generic.Dictionary<string, bool> m_dollAnswers = new System.Collections.Generic.Dictionary<string, bool>();
+        private GamifyKWU.CraneGame.Data.QuizData m_currentQuiz;
         #endregion
 
         #region 이벤트 핸들러 (Event Handlers)
@@ -29,12 +33,33 @@ namespace GameArifiction.ClawMachine
         public event Action<bool> OnMoveRequested; // true: Right, false: Left
         public event Action OnStopRequested;
         public event Action OnDropRequested; // 도중 강제 놓기 이벤트
+
+        // [신규]: 재수강 시스템 관련 이벤트 정의
+        public event Action OnReTakeRequested;
+        public event Action OnRemoveDisagreeDollRequested;
+
+        // [신규]: 퀴즈 성공 및 실패 브로드캐스트 이벤트
+        public event Action OnQuizSuccess;
+        public event Action OnQuizFailed;
         #endregion
 
         #region 속성 (Properties)
         public ClawStateType CurrentState => m_currentState;
         public bool IsHoldingDoll { get; private set; }
         public bool IsClawClosed { get; private set; }
+        public GamifyKWU.CraneGame.Data.QuizData CurrentQuiz => m_currentQuiz;
+
+        public int ReTakeCount
+        {
+            get
+            {
+                if (m_model != null)
+                {
+                    return m_model.ReTakeCount;
+                }
+                return 0;
+            }
+        }
         #endregion
 
         #region 초기화 (Initialization)
@@ -46,6 +71,69 @@ namespace GameArifiction.ClawMachine
         #endregion
 
         #region 공개 메서드 (Public Methods)
+        /// <summary>
+        /// [기능]: 출제된 퀴즈의 정보를 세팅합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void SetQuiz(GamifyKWU.CraneGame.Data.QuizData quiz)
+        {
+            m_currentQuiz = quiz;
+        }
+
+        /// <summary>
+        /// [기능]: 등록되어 있던 캡슐들의 정답 매핑 딕셔너리를 초기화합니다. (새 게임 시작 시 호출)
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void ClearDollAnswers()
+        {
+            m_dollAnswers.Clear();
+        }
+
+        /// <summary>
+        /// [기능]: 캡슐의 고유 ID와 정답 여부를 등록합니다. (캡슐 스폰 시 Initializer에서 호출)
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void RegisterDollAnswer(string dollId, bool isCorrect)
+        {
+            if (!m_dollAnswers.ContainsKey(dollId))
+            {
+                m_dollAnswers.Add(dollId, isCorrect);
+                Debug.Log($"[ClawGameViewModel] 캡슐 퀴즈 정답지 등록 완료: DollId={dollId}, IsCorrect={isCorrect}");
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 플레이어가 인형을 퇴출구에 빠뜨렸을 때 호출되어 정답 여부를 체킹하는 핵심 비즈니스 메서드
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void func_SubmitAnswer(string dollId)
+        {
+            if (m_dollAnswers.TryGetValue(dollId, out bool isCorrect))
+            {
+                if (isCorrect)
+                {
+                    Debug.Log($"[ClawGameViewModel] 정답 골인 감지! 축하합니다. 정답입니다. (DollId: {dollId})");
+                    OnQuizSuccess?.Invoke();
+                    
+                    // 게임 클리어 상태(Result)로 전이
+                    ChangeState(ClawStateType.Result);
+                }
+                else
+                {
+                    Debug.Log($"[ClawGameViewModel] 오답 골인 감지! 오답입니다. (DollId: {dollId})");
+                    OnQuizFailed?.Invoke();
+                    
+                    // 횟수가 남아있더라도 퀴즈를 틀리면 즉각 재수강 팝업 대기 상태로 전이합니다.
+                    ChangeState(ClawStateType.ReTakeRequest);
+                    OnReTakeRequested?.Invoke();
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[ClawGameViewModel] 등록되지 않은 캡슐 ID 정답 체킹 시도 감지: {dollId}");
+            }
+        }
+
         public void StartMoveLeft()
         {
             if (m_currentState != ClawStateType.Idle && m_currentState != ClawStateType.MovingRight) return;
@@ -69,22 +157,27 @@ namespace GameArifiction.ClawMachine
             }
         }
 
+        /// <summary>
+        /// [기능]: 캐치 시도 하강 명령 개시 (시간 제한이 도는 동안 무제한 시도 가능하도록 하강 제한 차단 해제)
+        /// [작성자]: 윤승종
+        /// </summary>
         public void DescendClaw()
         {
-            // [수정]: 이동 중 하강 시 맵 이탈 방지를 위해 오직 Idle(정지) 상태에서만 하강 허용
-            if (m_currentState != ClawStateType.Idle)
+            // [수정]: 이동 중에도 하강 가능하도록 가드 조건 완화 (View에서 StopMove 선행 호출 보장)
+            if (m_currentState != ClawStateType.Idle &&
+                m_currentState != ClawStateType.MovingLeft &&
+                m_currentState != ClawStateType.MovingRight)
             {
                 return;
             }
             
-            // 횟수 차감
-            if (m_model.RemainingPlayCount <= 0)
+            // [하강 제한 전면 해제]: RemainingPlayCount가 0 이하가 되더라도 120초 제한 시간 내라면 계속 하강을 허용합니다.
+            // 플레이 횟수는 0까지만 깎이며 마이너스로 깨져 내려가지 않게 마진 방어합니다.
+            if (m_model.RemainingPlayCount > 0)
             {
-                return;
+                m_model.RemainingPlayCount--;
+                OnPlayCountChanged?.Invoke(m_model.RemainingPlayCount);
             }
-            
-            m_model.RemainingPlayCount--;
-            OnPlayCountChanged?.Invoke(m_model.RemainingPlayCount);
 
             ChangeState(ClawStateType.Descending);
         }
@@ -179,6 +272,44 @@ public void NotifyAscendCompleted()
             ChangeState(ClawStateType.Idle);
         }
 
+        /// <summary>
+        /// [기능]: 플레이어가 재수강 요청을 수락했을 때의 비즈니스 로직 처리
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void AcceptReTake()
+        {
+            if (m_model != null)
+            {
+                m_model.ReTakeCount++;
+                // [버그 수정]: 재수강 성공 시 플레이어에게 다시 5회의 도전 기회를 원복 충전하여 하강 불가 현상을 종결합니다.
+                m_model.RemainingPlayCount = 5;
+                
+                Debug.Log($"[ClawGameViewModel] 플레이어가 재수강을 수락했습니다. 재수강 횟수: {m_model.ReTakeCount}회, 잔여 기회 복원: {m_model.RemainingPlayCount}회, 다음 플레이 제한시간: {m_model.GetTimeLimitForCurrentPlay()}초");
+                
+                // UI 횟수 동기화 브로드캐스트 트리거
+                OnPlayCountChanged?.Invoke(m_model.RemainingPlayCount);
+            }
+
+            // 뷰단에 '동의 안 함' 방해 캡슐 1개 파괴 제거 이벤트 전송
+            if (OnRemoveDisagreeDollRequested != null)
+            {
+                OnRemoveDisagreeDollRequested.Invoke();
+            }
+
+            // 플레이 가능 상태(Idle)로 복구 및 새로운 삭감 타이머 시작
+            ChangeState(ClawStateType.Idle);
+        }
+
+        /// <summary>
+        /// [기능]: 플레이어가 재수강 요청을 거부(비동의)했을 때 게임 종료 처리
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void RejectReTake()
+        {
+            Debug.Log("[ClawGameViewModel] 플레이어가 재수강을 거부했습니다. 최종 결과 화면으로 전이합니다.");
+            ChangeState(ClawStateType.Result);
+        }
+
         public void Dispose()
         {
             StopTimer();
@@ -230,7 +361,7 @@ public void NotifyAscendCompleted()
             StopTimer();
             if (m_model != null)
             {
-                m_model.RemainingTime = m_model.TimeLimitPerPlay;
+                m_model.RemainingTime = m_model.GetTimeLimitForCurrentPlay();
             }
             m_timerCts = new CancellationTokenSource();
             StartTimerAsync(m_timerCts.Token).Forget();
@@ -238,10 +369,17 @@ public void NotifyAscendCompleted()
 
         private async UniTaskVoid StartTimerAsync(CancellationToken token)
         {
-            float limit = m_model != null ? m_model.TimeLimitPerPlay : 30f;
+            float limit = 120f;
+            if (m_model != null)
+            {
+                limit = m_model.GetTimeLimitForCurrentPlay();
+            }
             float elapsed = 0f;
 
-            OnTimeChanged?.Invoke(limit);
+            if (OnTimeChanged != null)
+            {
+                OnTimeChanged.Invoke(limit);
+            }
 
             while (elapsed < limit)
             {
@@ -253,13 +391,21 @@ public void NotifyAscendCompleted()
                 {
                     m_model.RemainingTime = timeLeft;
                 }
-                OnTimeChanged?.Invoke(timeLeft);
+                
+                if (OnTimeChanged != null)
+                {
+                    OnTimeChanged.Invoke(timeLeft);
+                }
             }
 
-            // 시간 초과 시 자동 하강
+            // 시간 초과 시 자동 하강 대신 재수강 창 대기 상태로 전이
             if (IsPlayableState(m_currentState))
             {
-                DescendClaw();
+                ChangeState(ClawStateType.ReTakeRequest);
+                if (OnReTakeRequested != null)
+                {
+                    OnReTakeRequested.Invoke();
+                }
             }
         }
         #endregion
