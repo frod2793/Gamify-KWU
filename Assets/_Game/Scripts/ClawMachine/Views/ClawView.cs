@@ -1,39 +1,38 @@
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace GameArifiction.ClawMachine
 {
     /// <summary>
-    /// [기능]: 물리 엔진을 배제하고 수식 기반 절차적 애니메이션으로 집게의 이동과 흔들림을 제어
+    /// [기능]: UI Canvas를 벗어나 2D World Space 상에서 집게의 이동과 흔들림을 제어
     /// [작성자]: 윤승종
     /// [수정 날짜]: 2026-05-24
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 모든 Physics2D 컴포넌트(Rigidbody, Joint)를 제거하고 수학적 진자 운동 시스템 도입
+    /// [수정 내용]: RectTransform 의존성을 제거하고 Transform 및 SpriteRenderer 기반으로 전환
     /// </summary>
     public class ClawView : MonoBehaviour
     {
-        #region UI 참조 (Inspector)
+        #region 참조 (Inspector)
         [SerializeField]
-        [Tooltip("좌우로 주행하는 천장 카트의 RectTransform 객체입니다.")]
-        private RectTransform m_clawRoot;
+        [Tooltip("좌우로 주행하는 천장 카트의 Transform 객체입니다.")]
+        private Transform m_clawRoot;
 
         [SerializeField]
         [Tooltip("절차적 제어를 받는 실제 집게 헤드 View 객체입니다.")]
         private ClawBodyView m_clawBody;
 
         [SerializeField]
-        [Tooltip("UI 와이어의 시각적 색상입니다.")]
+        [Tooltip("와이어의 시각적 색상입니다.")]
         private Color m_wireColor = Color.white;
 
         [SerializeField]
         [Tooltip("상승 완료 후 밀착 상태의 최소 줄 길이입니다.")]
-        private float m_minRopeDistance = 50f;
+        private float m_minRopeDistance = 0.5f;
 
         [SerializeField]
         [Tooltip("집게 하강 시 와이어 줄이 늘어날 최대 길이입니다.")]
-        private float m_maxRopeDistance = 500f;
+        private float m_maxRopeDistance = 5.0f;
 
         [SerializeField]
         [Tooltip("집게가 바닥/인형에 안착한 후, 실제로 오므리기까지 대기하는 시간(초)입니다.")]
@@ -48,16 +47,20 @@ namespace GameArifiction.ClawMachine
         [SerializeField] [Tooltip("중력 복원력 (0으로 돌아오려는 힘)")] private float m_swingGravity = 9.8f;
         [SerializeField] [Tooltip("흔들림 감쇄 저항")] private float m_swingDamping = 0.98f;
         [SerializeField] [Tooltip("최대 흔들림 각도")] private float m_maxSwingAngle = 45f;
+
+        [Header("주행 한계 설정 (Cart Boundaries)")]
+        [SerializeField] [Tooltip("카트가 좌측으로 갈 수 있는 최소 로컬 X 좌표입니다.")] private float m_minCartX = -4.0f;
+        [SerializeField] [Tooltip("카트가 우측으로 갈 수 있는 최대 로컬 X 좌표입니다.")] private float m_maxCartX = 4.0f;
         #endregion
 
         #region 내부 필드 (Private Fields)
         private ClawGameViewModel m_viewModel;
         private bool m_isMoving;
         private float m_moveDirection; // -1: Left, 1: Right, 0: Idle
-        private float m_moveSpeed = 300f;
+        private float m_moveSpeed = 3.0f;
         
-        private Vector2 m_initialPosition;
-        private RectTransform m_uiWireRect;
+        private Vector3 m_initialPosition;
+        private SpriteRenderer m_wireRenderer;
         private System.Threading.CancellationTokenSource m_animCts;
 
         // [수식 필드]: 절차적 물리 연산용
@@ -82,8 +85,8 @@ namespace GameArifiction.ClawMachine
         {
             if (m_clawRoot != null)
             {
-                m_initialPosition = m_clawRoot.anchoredPosition;
-                m_prevCartX = m_clawRoot.anchoredPosition.x;
+                m_initialPosition = m_clawRoot.localPosition;
+                m_prevCartX = m_clawRoot.position.x;
             }
 
             // 초기 줄 길이 및 각도 설정
@@ -96,14 +99,19 @@ namespace GameArifiction.ClawMachine
                 m_clawBody.SetClawsOpenImmediately();
             }
 
-            // UI 와이어 객체 동적 생성
-            InitializeUIWire();
+            // 와이어 객체 동적 생성 (SpriteRenderer 기반)
+            InitializeWire();
         }
 
         private void Update()
         {
             UpdateCartMovement();
             UpdatePendulumPhysics();
+        }
+
+        private void FixedUpdate()
+        {
+            UpdatePhysicsPosition();
         }
 
         private void LateUpdate()
@@ -139,19 +147,15 @@ namespace GameArifiction.ClawMachine
             CancelAnimations();
         }
 
-        private void InitializeUIWire()
+        private void InitializeWire()
         {
-            GameObject wireObj = new GameObject("UI_Wire", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            GameObject wireObj = new GameObject("Wire_Renderer", typeof(SpriteRenderer));
             wireObj.transform.SetParent(m_clawRoot, false);
-            m_uiWireRect = wireObj.GetComponent<RectTransform>();
-            m_uiWireRect.pivot = new Vector2(0.5f, 1f); 
-            m_uiWireRect.anchorMin = new Vector2(0.5f, 0.5f);
-            m_uiWireRect.anchorMax = new Vector2(0.5f, 0.5f);
-            m_uiWireRect.localPosition = Vector3.zero;
+            m_wireRenderer = wireObj.GetComponent<SpriteRenderer>();
             
-            UnityEngine.UI.Image wireImg = wireObj.GetComponent<UnityEngine.UI.Image>();
-            wireImg.color = m_wireColor;
-            wireImg.raycastTarget = false;
+            // [참고]: 인쇄용 흰색 스프라이트를 할당해야 함 (여기선 기본 Color 설정)
+            m_wireRenderer.color = m_wireColor;
+            wireObj.transform.localPosition = Vector3.zero;
         }
         #endregion
 
@@ -160,9 +164,10 @@ namespace GameArifiction.ClawMachine
         {
             if (m_isMoving && m_clawRoot != null)
             {
-                Vector2 pos = m_clawRoot.anchoredPosition;
+                Vector3 pos = m_clawRoot.localPosition;
                 pos.x += m_moveDirection * m_moveSpeed * Time.deltaTime;
-                m_clawRoot.anchoredPosition = pos;
+                pos.x = Mathf.Clamp(pos.x, m_minCartX, m_maxCartX);
+                m_clawRoot.localPosition = pos;
             }
         }
 
@@ -170,49 +175,66 @@ namespace GameArifiction.ClawMachine
         {
             if (m_clawRoot == null) return;
 
-            // 1. 카트의 가속도 계산 (프레임 간 좌표 차이)
-            float currentCartX = m_clawRoot.anchoredPosition.x;
+            // 1. 카트의 가속도 계산 (프레임 간 월드 좌표 차이)
+            float currentCartX = m_clawRoot.position.x;
             float cartDeltaX = (currentCartX - m_prevCartX) / Time.deltaTime;
             
-            // 가속도 변화량에 따른 관성 부여 (카트가 움직일 때 반대 방향으로 힘을 받음)
-            // 실제 물리와 유사하게 현재 속도 자체가 아닌 가속도/속도 변화에 반응하도록 설계
-            float inertiaForce = -cartDeltaX * m_swingSensitivity * 0.01f;
+            // 가속도 변화량에 따른 관성 부여
+            float inertiaForce = -cartDeltaX * m_swingSensitivity;
 
-            // 2. 진자 운동 수식 (삼각함수 미분 근사)
-            // 중력 복원력: -sin(각도) * gravity
+            // 2. 진자 운동 수식
             float gravityForce = -Mathf.Sin(m_currentAngle * Mathf.Deg2Rad) * m_swingGravity;
             
-            // 각속도 갱신
             m_angularVelocity += (inertiaForce + gravityForce) * Time.deltaTime * 10f;
-            m_angularVelocity *= m_swingDamping; // 공기 저항 감쇄
+            m_angularVelocity *= m_swingDamping;
 
-            // 각도 갱신
             m_currentAngle += m_angularVelocity * Time.deltaTime * 50f;
-            
-            // 최대 각도 제한
             m_currentAngle = Mathf.Clamp(m_currentAngle, -m_maxSwingAngle, m_maxSwingAngle);
 
             m_prevCartX = currentCartX;
         }
 
+        /// <summary>
+        /// [기능]: 물리 프레임마다 현재 줄 길이와 진자 각도에 따른 집게 헤드의 물리 목표 위치와 회전을 주입합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-05-24
+        /// </summary>
+        private void UpdatePhysicsPosition()
+        {
+            if (m_clawBody != null && m_clawRoot != null)
+            {
+                Quaternion rotation = Quaternion.Euler(0, 0, m_currentAngle);
+                Vector3 offset = rotation * Vector3.down * m_currentRopeLength;
+                
+                Vector3 targetPosition = m_clawRoot.position + offset;
+                Quaternion targetRotation = m_clawRoot.rotation * rotation;
+
+                m_clawBody.UpdatePhysicsTarget(targetPosition, targetRotation);
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 줄 스프라이트와 집게의 시각적 형태를 와이어 길이와 회전에 맞추어 렌더링합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-05-24
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 물리 타겟 갱신(UpdatePhysicsTarget) 로직을 FixedUpdate로 이관하고 시각적 연출만 담당
+        /// </summary>
         private void RenderClawAndWire()
         {
-            if (m_clawBody == null || m_clawRoot == null || m_uiWireRect == null) return;
+            if (m_clawBody == null || m_clawRoot == null || m_wireRenderer == null)
+            {
+                return;
+            }
 
-            // 1. 집게 헤드 위치 계산 (진자 각도와 줄 길이를 이용한 원호 이동)
-            // 하향 벡터를 현재 각도만큼 회전
+            // 1. 집게 헤드 위치 계산
             Quaternion rotation = Quaternion.Euler(0, 0, m_currentAngle);
-            Vector3 offset = rotation * Vector3.down * m_currentRopeLength;
             
-            // World Space 기준으로 변환 (Canvas 스케일 고려)
-            m_clawBody.transform.position = m_clawRoot.position + (offset * m_clawRoot.lossyScale.y);
-            
-            // 2. 집게 헤드 회전 (줄의 각도와 일치시킴)
-            m_clawBody.transform.rotation = m_clawRoot.rotation * rotation;
-
-            // 3. UI 와이어 렌더링
-            m_uiWireRect.sizeDelta = new Vector2(6f, m_currentRopeLength);
-            m_uiWireRect.localRotation = rotation;
+            // 2. 와이어 렌더링 (Scale을 이용한 두께 및 길이 조절)
+            float wireThickness = 0.05f; 
+            m_wireRenderer.transform.localScale = new Vector3(wireThickness, m_currentRopeLength, 1f);
+            m_wireRenderer.transform.localRotation = rotation;
+            m_wireRenderer.transform.localPosition = rotation * Vector3.down * (m_currentRopeLength * 0.5f);
         }
         #endregion
 
@@ -290,7 +312,6 @@ namespace GameArifiction.ClawMachine
             }
             m_currentRopeLength = m_maxRopeDistance;
 
-            // 안착 대기 (절차적 방식이므로 속도 체크 대신 짧은 시간 대기)
             await UniTask.Delay(System.TimeSpan.FromSeconds(m_grabDelay), cancellationToken: token);
 
             if (m_viewModel != null) m_viewModel.NotifyDescendCompleted();
@@ -328,8 +349,7 @@ namespace GameArifiction.ClawMachine
         {
             if (m_clawRoot == null) return;
 
-            // [수정]: DOAnchoredMoveX -> DOAnchorPosX (DOTween RectTransform 전용 메서드)
-            await m_clawRoot.DOAnchorPosX(m_initialPosition.x, 1.5f)
+            await m_clawRoot.DOLocalMoveX(m_initialPosition.x, 1.5f)
                 .SetEase(Ease.OutQuad)
                 .ToUniTask(cancellationToken: token);
             
