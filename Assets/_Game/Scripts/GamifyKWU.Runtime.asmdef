@@ -1,0 +1,22 @@
+{
+    "name": "GamifyKWU.Runtime",
+    "rootNamespace": "",
+    "references": [
+        "UniTask",
+        "Unity.TextMeshPro",
+        "Unity.InputSystem",
+        "SPUM.Runtime",
+        "VirtualJoystick.Runtime",
+        "DOTween.Modules",
+        "UniTask.DOTween"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

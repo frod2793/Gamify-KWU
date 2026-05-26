@@ -16,9 +16,14 @@ namespace GameArifiction.ClawMachine
         private TextMeshProUGUI m_questionText;
 
         [SerializeField]
+        [Tooltip("남은 제한 시간을 표시할 TextMeshProUGUI 컴포넌트입니다.")]
+        private TextMeshProUGUI m_timeText;
+
+        [SerializeField]
         [Tooltip("정답/오답 시 텍스트 연출이 일어날 텍스트 컨테이너 RectTransform입니다.")]
         private RectTransform m_textContainer;
         #endregion
+
 
         #region 내부 필드 (Private Fields)
         private ClawGameViewModel m_viewModel;
@@ -45,6 +50,7 @@ namespace GameArifiction.ClawMachine
                 m_viewModel.OnQuizSuccess -= HandleQuizSuccess;
                 m_viewModel.OnQuizFailed -= HandleQuizFailed;
                 m_viewModel.OnStateChanged -= HandleStateChanged;
+                m_viewModel.OnTimeChanged -= UpdateTimeUI;
             }
 
             if (m_textContainer != null)
@@ -67,15 +73,31 @@ namespace GameArifiction.ClawMachine
             m_viewModel.OnQuizSuccess += HandleQuizSuccess;
             m_viewModel.OnQuizFailed += HandleQuizFailed;
             m_viewModel.OnStateChanged += HandleStateChanged;
+            m_viewModel.OnTimeChanged += UpdateTimeUI;
 
-            // 초기 문제 세팅
+            // 초기 문제 및 제한 시간 타이머 UI 동기화 갱신
             UpdateQuizUI();
+            UpdateTimeUI(m_viewModel.TimeLeft);
         }
         #endregion
 
+
         #region 내부 메서드 (Private Methods)
         /// <summary>
+        /// [기능]: 뷰모델로부터 실시간 남은 제한시간을 전달받아 UI에 출력합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void UpdateTimeUI(float timeLeft)
+        {
+            if (m_timeText != null)
+            {
+                m_timeText.text = $"남은 시간: {Mathf.CeilToInt(timeLeft)}초";
+            }
+        }
+
+        /// <summary>
         /// [기능]: 뷰모델에 등록된 현재 퀴즈 질문을 텍스트 컴포넌트에 출력하고 시각 요소를 리셋합니다.
+
         /// [작성자]: 윤승종
         /// </summary>
         private void UpdateQuizUI()
@@ -100,10 +122,11 @@ namespace GameArifiction.ClawMachine
 
         private void HandleStateChanged(ClawStateType state)
         {
-            // 재수강 등으로 게임이 리셋되어 Idle 상태로 복귀했을 때 퀴즈 UI를 다시 안전하게 업데이트해줍니다.
+            // 재수강 등으로 게임이 리셋되어 Idle 상태로 복귀했을 때 퀴즈 UI 및 타이머를 다시 안전하게 업데이트해줍니다.
             if (state == ClawStateType.Idle)
             {
                 UpdateQuizUI();
+                UpdateTimeUI(m_viewModel.TimeLeft);
             }
         }
 

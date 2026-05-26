@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using GamifyKWU.CraneGame.Data;
 
 namespace GameArifiction.ClawMachine
 {
@@ -12,7 +14,7 @@ namespace GameArifiction.ClawMachine
     /// [마지막 수정 작성자]: 윤승종
     /// [수정 내용]: 집게가 오므려져 있는 상태(IsClawClosed) 관리 추가 및 스페이스바 입력 조건 고도화
     /// </summary>
-    public class ClawGameViewModel : IDisposable
+    public class ClawGameViewModel : IQuizGameViewModel, IDisposable
     {
         #region 내부 필드 (Private Fields)
         private readonly ClawMachineModel m_model;
@@ -20,8 +22,9 @@ namespace GameArifiction.ClawMachine
         private CancellationTokenSource m_timerCts;
 
         // [신규]: 퀴즈 정답 추적 및 캡슐 퀴즈 데이터 매핑 딕셔너리
-        private readonly System.Collections.Generic.Dictionary<string, bool> m_dollAnswers = new System.Collections.Generic.Dictionary<string, bool>();
-        private GamifyKWU.CraneGame.Data.QuizData m_currentQuiz;
+        private readonly Dictionary<string, bool> m_dollAnswers = new Dictionary<string, bool>();
+        private QuizData m_currentQuiz;
+
         #endregion
 
         #region 이벤트 핸들러 (Event Handlers)
@@ -47,7 +50,8 @@ namespace GameArifiction.ClawMachine
         public ClawStateType CurrentState => m_currentState;
         public bool IsHoldingDoll { get; private set; }
         public bool IsClawClosed { get; private set; }
-        public GamifyKWU.CraneGame.Data.QuizData CurrentQuiz => m_currentQuiz;
+        public QuizData CurrentQuiz => m_currentQuiz;
+
 
         public int ReTakeCount
         {
@@ -60,13 +64,35 @@ namespace GameArifiction.ClawMachine
                 return 0;
             }
         }
+
+        public float TimeLeft
+        {
+            get
+            {
+                if (m_model != null)
+                {
+                    return m_model.RemainingTime;
+                }
+                return 120f;
+            }
+        }
         #endregion
 
         #region 초기화 (Initialization)
         public ClawGameViewModel(ClawMachineModel model)
         {
             m_model = model;
-            ChangeState(ClawStateType.Idle);
+            m_currentState = ClawStateType.Idle;
+        }
+
+        /// <summary>
+        /// [기능]: 인형뽑기 게임을 공식적으로 개시하고 실시간 잔여 제한시간 타이머 카운트다운을 시동합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void StartGame()
+        {
+            ResetAndStartTimer();
+            Debug.Log("[ClawGameViewModel] 인형뽑기 게임 공식 시작 -> 실시간 타이머 작동 개시.");
         }
         #endregion
 
@@ -75,7 +101,8 @@ namespace GameArifiction.ClawMachine
         /// [기능]: 출제된 퀴즈의 정보를 세팅합니다.
         /// [작성자]: 윤승종
         /// </summary>
-        public void SetQuiz(GamifyKWU.CraneGame.Data.QuizData quiz)
+        public void SetQuiz(QuizData quiz)
+
         {
             m_currentQuiz = quiz;
         }
@@ -123,9 +150,10 @@ namespace GameArifiction.ClawMachine
                     Debug.Log($"[ClawGameViewModel] 오답 골인 감지! 오답입니다. (DollId: {dollId})");
                     OnQuizFailed?.Invoke();
                     
-                    // 횟수가 남아있더라도 퀴즈를 틀리면 즉각 재수강 팝업 대기 상태로 전이합니다.
+                    // [버그 수정]: 오답 시 OnReTakeRequested 중복 발사 제거.
+                    // OnReTakeRequested는 시간 초과 전용 이벤트이며, 오답 실패는 OnQuizFailed 이벤트로 분리 처리합니다.
+                    // ClawGameResultPopupView는 OnQuizFailed 구독으로 실패 팝업을 표시합니다.
                     ChangeState(ClawStateType.ReTakeRequest);
-                    OnReTakeRequested?.Invoke();
                 }
             }
             else
@@ -296,8 +324,12 @@ public void NotifyAscendCompleted()
                 OnRemoveDisagreeDollRequested.Invoke();
             }
 
-            // 플레이 가능 상태(Idle)로 복구 및 새로운 삭감 타이머 시작
-            ChangeState(ClawStateType.Idle);
+            // [수정]: 재수강 시에는 패널티가 적용된 새 제한시간으로 타이머를 완전히 리셋해야 하므로,
+            // 상태를 직접 Idle로 변경한 뒤 ResetAndStartTimer를 명시적으로 호출합니다.
+            // ChangeState를 통하면 ResumeTimer(기존 남은 시간 기반)가 호출되어 의도와 다르게 동작합니다.
+            m_currentState = ClawStateType.Idle;
+            OnStateChanged?.Invoke(m_currentState);
+            ResetAndStartTimer();
         }
 
         /// <summary>
@@ -319,31 +351,36 @@ public void NotifyAscendCompleted()
         #region 내부 메서드 (Private Methods)
         private void ChangeState(ClawStateType newState)
         {
-            if (m_currentState == newState) return;
+            if (m_currentState == newState)
+            {
+                return;
+            }
             
             ClawStateType prevState = m_currentState;
             m_currentState = newState;
             
-            bool wasPlayable = IsPlayableState(prevState);
-            bool isPlayable = IsPlayableState(newState);
+            bool wasTimerActive = IsTimerActiveState(prevState);
+            bool isTimerActive = IsTimerActiveState(newState);
 
-            if (!wasPlayable && isPlayable)
+            if (!wasTimerActive && isTimerActive)
             {
-                ResetAndStartTimer();
+                // [버그 수정]: 비활성→활성 전이 시 타이머를 리셋하지 않고, 기존 남은 시간(m_model.RemainingTime)을 기준으로 재개(Resume)합니다.
+                ResumeTimer();
             }
-            else if (wasPlayable && !isPlayable)
+            else if (wasTimerActive && !isTimerActive)
             {
+                // 활성→비활성 전이 시 타이머를 일시정지(Pause)합니다. 남은 시간은 m_model.RemainingTime에 보존됩니다.
                 StopTimer();
             }
 
             OnStateChanged?.Invoke(m_currentState);
         }
 
-        private bool IsPlayableState(ClawStateType state)
+        private bool IsTimerActiveState(ClawStateType state)
         {
-            return state == ClawStateType.Idle || 
-                   state == ClawStateType.MovingLeft || 
-                   state == ClawStateType.MovingRight;
+            // 타이머는 성공 결과(Result) 및 재수강 요청(ReTakeRequest) 상태를 제외한 모든 인게임 진행 중에 멈추지 않고 흘러갑니다.
+            return state != ClawStateType.Result && 
+                   state != ClawStateType.ReTakeRequest;
         }
 
         private void StopTimer()
@@ -356,37 +393,73 @@ public void NotifyAscendCompleted()
             }
         }
 
+        /// <summary>
+        /// [기능]: 타이머를 완전히 리셋하고 처음부터 새로 시작합니다. 게임 시작 및 재수강 수락 시에만 호출됩니다.
+        /// [작성자]: 윤승종
+        /// </summary>
         private void ResetAndStartTimer()
         {
             StopTimer();
+            float newLimit = 120f;
             if (m_model != null)
             {
-                m_model.RemainingTime = m_model.GetTimeLimitForCurrentPlay();
+                newLimit = m_model.GetTimeLimitForCurrentPlay();
+                m_model.RemainingTime = newLimit;
             }
             m_timerCts = new CancellationTokenSource();
-            StartTimerAsync(m_timerCts.Token).Forget();
+            StartTimerAsync(newLimit, m_timerCts.Token).Forget();
         }
 
-        private async UniTaskVoid StartTimerAsync(CancellationToken token)
+        /// <summary>
+        /// [기능]: 일시정지된 타이머를 현재 남은 시간(m_model.RemainingTime) 기준으로 재개합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void ResumeTimer()
         {
-            float limit = 120f;
+            StopTimer();
+            float remaining = 120f;
             if (m_model != null)
             {
-                limit = m_model.GetTimeLimitForCurrentPlay();
+                remaining = m_model.RemainingTime;
             }
-            float elapsed = 0f;
 
+            // 남은 시간이 0 이하라면 즉시 시간 초과 처리
+            if (remaining <= 0f)
+            {
+                Debug.Log("[ClawGameViewModel] 타이머 재개 시도 시 남은 시간이 0초 이하입니다. 즉시 시간 초과 처리합니다.");
+                ChangeState(ClawStateType.ReTakeRequest);
+                if (OnReTakeRequested != null)
+                {
+                    OnReTakeRequested.Invoke();
+                }
+                return;
+            }
+
+            m_timerCts = new CancellationTokenSource();
+            StartTimerAsync(remaining, m_timerCts.Token).Forget();
+        }
+
+        /// <summary>
+        /// [기능]: 지정된 남은 시간(remainingSeconds)을 기준으로 실시간 카운트다운을 수행하는 비동기 타이머 코루틴입니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-05-26
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: elapsed 기반 로직을 remainingSeconds 감산 방식으로 전환하여 일시정지/재개 시 정확한 잔여시간을 보장
+        /// </summary>
+        private async UniTaskVoid StartTimerAsync(float remainingSeconds, CancellationToken token)
+        {
+            // 초기 UI 동기화
             if (OnTimeChanged != null)
             {
-                OnTimeChanged.Invoke(limit);
+                OnTimeChanged.Invoke(remainingSeconds);
             }
 
-            while (elapsed < limit)
+            while (remainingSeconds > 0f)
             {
                 await UniTask.Yield(PlayerLoopTiming.Update, token);
-                elapsed += Time.deltaTime;
+                remainingSeconds -= Time.deltaTime;
                 
-                float timeLeft = Mathf.Max(0f, limit - elapsed);
+                float timeLeft = Mathf.Max(0f, remainingSeconds);
                 if (m_model != null)
                 {
                     m_model.RemainingTime = timeLeft;
@@ -398,9 +471,10 @@ public void NotifyAscendCompleted()
                 }
             }
 
-            // 시간 초과 시 자동 하강 대신 재수강 창 대기 상태로 전이
-            if (IsPlayableState(m_currentState))
+            // 시간 초과 시 재수강 창 대기 상태로 전이
+            if (IsTimerActiveState(m_currentState))
             {
+                Debug.Log("[ClawGameViewModel] 제한 시간이 만료되었습니다. 재수강 요청 상태로 전이합니다.");
                 ChangeState(ClawStateType.ReTakeRequest);
                 if (OnReTakeRequested != null)
                 {

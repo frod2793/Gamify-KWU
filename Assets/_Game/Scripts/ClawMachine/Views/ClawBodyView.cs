@@ -1,4 +1,5 @@
 using Cysharp.Threading.Tasks;
+using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
 
@@ -73,9 +74,10 @@ namespace GameArifiction.ClawMachine
         // [Non-Alloc 캐싱용 가비지 제로 버퍼]
         private ContactFilter2D m_dollContactFilter;
         private readonly Collider2D[] m_overlapResults = new Collider2D[32];
-        private readonly System.Collections.Generic.List<ClawMachineDollView> m_leftTouchingList = new System.Collections.Generic.List<ClawMachineDollView>(16);
-        private readonly System.Collections.Generic.List<ClawMachineDollView> m_rightTouchingList = new System.Collections.Generic.List<ClawMachineDollView>(16);
+        private readonly List<ClawMachineDollView> m_leftTouchingList = new List<ClawMachineDollView>(16);
+        private readonly List<ClawMachineDollView> m_rightTouchingList = new List<ClawMachineDollView>(16);
         #endregion
+
 
         #region 유니티 생명주기 (Unity Lifecycle)
         private void Awake()
@@ -510,7 +512,7 @@ namespace GameArifiction.ClawMachine
 
             // 2. 양쪽 집게발에 공통으로 접촉한 인형(교집합) 리스트 추출
             // [정적 검증 호환용 주석]: isLeftTouching && isRightTouching 양쪽 집게발 동시 접촉 정합성이 교집합(commonDolls) 검출을 통해 한 단계 더 우수하게 보장됩니다.
-            System.Collections.Generic.List<ClawMachineDollView> commonDolls = new System.Collections.Generic.List<ClawMachineDollView>();
+            List<ClawMachineDollView> commonDolls = new List<ClawMachineDollView>();
             for (int i = 0; i < m_leftTouchingList.Count; i++)
             {
                 ClawMachineDollView doll = m_leftTouchingList[i];
@@ -519,6 +521,7 @@ namespace GameArifiction.ClawMachine
                     commonDolls.Add(doll);
                 }
             }
+
 
             if (commonDolls.Count == 0)
             {
@@ -593,7 +596,8 @@ namespace GameArifiction.ClawMachine
         /// [마지막 수정 작성자]: 윤승종
         /// [수정 내용]: GC 할당을 완전히 배제하기 위해 멤버 캐싱 버퍼 및 Non-Alloc API 연동 적용
         /// </summary>
-        private void GetTouchingDollsNonAlloc(Collider2D[] clawColliders, System.Collections.Generic.List<ClawMachineDollView> outList)
+        private void GetTouchingDollsNonAlloc(Collider2D[] clawColliders, List<ClawMachineDollView> outList)
+
         {
             if (clawColliders == null)
             {

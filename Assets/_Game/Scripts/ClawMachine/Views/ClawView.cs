@@ -27,8 +27,13 @@ namespace GameArifiction.ClawMachine
         private Color m_wireColor = Color.white;
 
         [SerializeField]
+        [Tooltip("와이어의 굵기(너비)입니다.")]
+        private float m_wireWidth = 0.04f;
+
+        [SerializeField]
         [Tooltip("상승 완료 후 밀착 상태의 최소 줄 길이입니다.")]
         private float m_minRopeDistance = 0.5f;
+
 
         [SerializeField]
         [Tooltip("집게 하강 시 와이어 줄이 늘어날 최대 길이입니다.")]
@@ -164,8 +169,9 @@ namespace GameArifiction.ClawMachine
                 
                 m_wireLineRenderer.startColor = m_wireColor;
                 m_wireLineRenderer.endColor = m_wireColor;
-                m_wireLineRenderer.startWidth = 0.04f;
-                m_wireLineRenderer.endWidth = 0.04f;
+                m_wireLineRenderer.startWidth = m_wireWidth;
+                m_wireLineRenderer.endWidth = m_wireWidth;
+
                 m_wireLineRenderer.positionCount = 2;
                 m_wireLineRenderer.sortingLayerName = "Default";
                 m_wireLineRenderer.sortingOrder = 5;

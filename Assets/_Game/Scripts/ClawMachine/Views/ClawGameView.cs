@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 
 namespace GameArifiction.ClawMachine
 {
@@ -15,21 +16,34 @@ namespace GameArifiction.ClawMachine
     {
         #region UI 참조 (Inspector)
         [SerializeField]
-        [Tooltip("남은 플레이 횟수를 표시할 Text UI 컴포넌트입니다.")]
-        private Text m_playCountText;
-
-        [SerializeField]
-        [Tooltip("제한 시간을 표시할 Text UI 컴포넌트입니다. (시간 제한 모드에서 사용)")]
-        private Text m_timeText; // 시간 제한이 있을 경우 사용
-
-        [SerializeField]
         [Tooltip("좌우 주행과 와이어 길이를 제어하는 천장 카트 View 객체입니다.")]
         private ClawView m_clawView;
 
+
+
         [SerializeField]
-        [Tooltip("재수강 요청을 처리할 팝업 View 컴포넌트입니다.")]
-        private ClawReTakePopupView m_reTakePopup;
+        [Tooltip("최종 정답/실패 결과를 처리할 팝업 View 컴포넌트입니다.")]
+        private ClawGameResultPopupView m_resultPopup;
+
+
+        [Header("UI Controls (Inspector)")]
+        [SerializeField]
+        [Tooltip("좌측 주행 제어 UI 버튼입니다.")]
+        private Button m_leftButton;
+
+        [SerializeField]
+        [Tooltip("우측 주행 제어 UI 버튼입니다.")]
+        private Button m_rightButton;
+
+        [SerializeField]
+        [Tooltip("집게 캐치(하강) UI 버튼입니다.")]
+        private Button m_descendButton;
+
+        [SerializeField]
+        [Tooltip("집게 릴리즈(드랍) UI 버튼입니다.")]
+        private Button m_dropButton;
         #endregion
+
 
         #region 내부 필드 (Private Fields)
         private ClawGameViewModel m_viewModel;
@@ -50,48 +64,135 @@ namespace GameArifiction.ClawMachine
             m_viewModel = viewModel;
             
             // 이벤트 구독
-            m_viewModel.OnPlayCountChanged += UpdatePlayCountUI;
-            m_viewModel.OnTimeChanged += UpdateTimeUI;
-            m_viewModel.OnReTakeRequested += HandleReTakeRequested;
             m_viewModel.OnRemoveDisagreeDollRequested += HandleRemoveDisagreeDoll;
+            m_viewModel.OnStateChanged += UpdateButtonInteractions;
+
+            // [신규]: UI 버튼 클릭 이벤트 코드 바인딩 주입
+            if (m_descendButton != null)
+            {
+                m_descendButton.onClick.AddListener(func_OnDescendButtonClick);
+            }
+            if (m_dropButton != null)
+            {
+                m_dropButton.onClick.AddListener(func_OnDropButtonClick);
+            }
+
+            // [신규]: UI 좌우 이동 버튼 EventTrigger 기반 PointerDown/Up 동적 바인딩 주입 (타입 세이프 가동 보장)
+            RegisterPointerEvent(m_leftButton, EventTriggerType.PointerDown, (data) => func_OnLeftButtonDown());
+            RegisterPointerEvent(m_leftButton, EventTriggerType.PointerUp, (data) => func_OnMoveButtonUp());
+            RegisterPointerEvent(m_rightButton, EventTriggerType.PointerDown, (data) => func_OnRightButtonDown());
+            RegisterPointerEvent(m_rightButton, EventTriggerType.PointerUp, (data) => func_OnMoveButtonUp());
 
             // 하위 View 초기화
             if (m_clawView != null)
             {
                 m_clawView.Initialize(m_viewModel);
             }
+
+            // 초기 버튼 상호작용 상태 동기화
+            UpdateButtonInteractions(m_viewModel.CurrentState);
         }
 
         private void OnDestroy()
         {
+            // 이벤트 구독 해제 및 리스너 해제 (메모리 누수 방지 방어 코드)
+            if (m_descendButton != null)
+            {
+                m_descendButton.onClick.RemoveListener(func_OnDescendButtonClick);
+            }
+            if (m_dropButton != null)
+            {
+                m_dropButton.onClick.RemoveListener(func_OnDropButtonClick);
+            }
+
+            // EventTrigger 동적 바인딩 해제 (메모리 누수 차단)
+            UnregisterPointerEvents(m_leftButton);
+            UnregisterPointerEvents(m_rightButton);
+
             if (m_viewModel != null)
             {
-                m_viewModel.OnPlayCountChanged -= UpdatePlayCountUI;
-                m_viewModel.OnTimeChanged -= UpdateTimeUI;
-                m_viewModel.OnReTakeRequested -= HandleReTakeRequested;
                 m_viewModel.OnRemoveDisagreeDollRequested -= HandleRemoveDisagreeDoll;
+                m_viewModel.OnStateChanged -= UpdateButtonInteractions;
                 m_viewModel.Dispose();
             }
         }
+
+        private void RegisterPointerEvent(Button button, EventTriggerType type, UnityEngine.Events.UnityAction<BaseEventData> action)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            EventTrigger trigger = button.gameObject.GetComponent<EventTrigger>();
+            if (trigger == null)
+            {
+                trigger = button.gameObject.AddComponent<EventTrigger>();
+            }
+
+            EventTrigger.Entry entry = new EventTrigger.Entry();
+            entry.eventID = type;
+            entry.callback.AddListener(action);
+            trigger.triggers.Add(entry);
+        }
+
+        private void UnregisterPointerEvents(Button button)
+        {
+            if (button != null)
+            {
+                EventTrigger trigger = button.gameObject.GetComponent<EventTrigger>();
+                if (trigger != null)
+                {
+                    trigger.triggers.Clear();
+                }
+            }
+        }
+
+
+
+
         #endregion
 
         #region UI 업데이트 로직 (Private Methods)
-        private void UpdatePlayCountUI(int count)
-        {
-            if (m_playCountText != null)
-            {
-                m_playCountText.text = $"남은 횟수: {count}";
-            }
-        }
 
-        private void UpdateTimeUI(float time)
+        /// <summary>
+        /// [기능]: 뷰모델 상태 변화에 맞춰 모든 주행 및 조작 버튼들의 활성/비활성 인터랙션 상태를 실시간 제어합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void UpdateButtonInteractions(ClawStateType state)
         {
-            if (m_timeText != null)
+            if (m_viewModel == null)
             {
-                m_timeText.text = $"남은 시간: {Mathf.CeilToInt(time)}";
+                return;
+            }
+
+            // A. 크레인이 Idle/Moving 등의 가동 준비 상태일 때만 조작 버튼 활성화
+            bool isPlayable = state == ClawStateType.Idle || 
+                              state == ClawStateType.MovingLeft || 
+                              state == ClawStateType.MovingRight;
+
+            if (m_leftButton != null)
+            {
+                m_leftButton.interactable = isPlayable;
+            }
+            if (m_rightButton != null)
+            {
+                m_rightButton.interactable = isPlayable;
+            }
+            if (m_descendButton != null)
+            {
+                m_descendButton.interactable = isPlayable;
+            }
+
+            // B. 릴리즈(놓기) 버튼은 오직 가동 대기 중이면서 집게가 닫혀있을 때만 특별 활성화 허용
+            if (m_dropButton != null)
+            {
+                m_dropButton.interactable = isPlayable && m_viewModel.IsClawClosed;
             }
         }
         #endregion
+
+
 
         #region 키보드 입력 제어 (Private Methods)
         private void HandleKeyboardInput()
@@ -252,23 +353,11 @@ namespace GameArifiction.ClawMachine
 
         #region 이벤트 핸들러 (Event Handlers)
         /// <summary>
-        /// [기능]: 제한 시간 초과에 의해 발생한 재수강 요청 이벤트를 수신하여 모달 팝업창을 띄웁니다.
-        /// [작성자]: 윤승종
-        /// </summary>
-        private void HandleReTakeRequested()
-        {
-            Debug.Log("[ClawGameView] 제한 시간 초과로 인한 재수강 팝업 활성화 요청 수신.");
-            if (m_reTakePopup != null)
-            {
-                m_reTakePopup.func_ShowPopup();
-            }
-        }
-
-        /// <summary>
         /// [기능]: 재수강 수락 시 뷰모델로부터 이벤트를 수신하여 씬 내의 '동의 안 함' 방해 캡슐 1개를 무작위 제거(파괴)합니다.
         /// [작성자]: 윤승종
         /// </summary>
         private void HandleRemoveDisagreeDoll()
+
         {
             ClawMachineDollView[] dolls = FindObjectsByType<ClawMachineDollView>(FindObjectsSortMode.None);
             if (dolls == null || dolls.Length == 0)

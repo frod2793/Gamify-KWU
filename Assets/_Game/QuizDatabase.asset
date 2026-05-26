@@ -20,3 +20,11 @@ MonoBehaviour:
     - "\uD31D\uC5C5"
     - "\uCCB4\uD06C\uBC15\uC2A4"
     - "\uB4DC\uB86D\uB2E4\uC6B4"
+    m_quizType: 0
+  - m_question: "UI/UX\uC758 \uC694\uC18C\uAC00 \uC544\uB2CC \uAC83\uC740?"
+    m_correctAnswer: "\uAD11\uC6B4\uB300"
+    m_wrongAnswers:
+    - "\uD3F0\uD2B8"
+    - "\uD31D\uC5C5"
+    - "\uCCB4\uD06C\uBC15\uC2A4"
+    m_quizType: 1
