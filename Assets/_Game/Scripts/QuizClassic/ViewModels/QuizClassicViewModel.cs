@@ -47,6 +47,17 @@ namespace GameArifiction.QuizClassic
         public List<string> CurrentChoiceTexts => m_currentChoiceTexts;
         public int Score => m_model.Score;
         public int ReTakeCount => m_reTakeCount;
+        public float TimeLeft
+        {
+            get
+            {
+                if (m_model != null)
+                {
+                    return m_model.RemainingTime;
+                }
+                return 30f;
+            }
+        }
 
         #endregion
 
@@ -117,7 +128,8 @@ namespace GameArifiction.QuizClassic
                 }
                 else
                 {
-                    // 다음 문제로 지연 로딩
+                    // 다음 문제로 지연 로딩을 위해 타이머만 명시적으로 중지 (상태는 Playing 유지)
+                    StopTimer();
                     LoadNextQuizDeferred().Forget();
                 }
             }
@@ -125,7 +137,6 @@ namespace GameArifiction.QuizClassic
             {
                 Debug.Log("[QuizClassicViewModel] 오답입니다! 최종 실패 결과 패널을 트리거합니다.");
                 OnQuizFailed?.Invoke();
-                OnReTakeRequested?.Invoke(); // IQuizGameViewModel 결과 패널 연동을 위해 호출
                 ChangeState(QuizStateType.ReTakeRequest);
             }
         }
@@ -248,29 +259,39 @@ namespace GameArifiction.QuizClassic
         private async UniTaskVoid StartTimerAsync(CancellationToken token)
         {
             float limit = m_model.TimeLimitPerQuestion;
-            float elapsed = 0f;
+            float remainingSeconds = limit;
 
-            OnTimeChanged?.Invoke(limit);
+            OnTimeChanged?.Invoke(remainingSeconds);
 
-            while (elapsed < limit)
+            while (remainingSeconds > 0f)
             {
-                await UniTask.Yield(PlayerLoopTiming.Update, token);
-                elapsed += Time.deltaTime;
+                bool isCanceled = await UniTask.Yield(PlayerLoopTiming.Update, token).SuppressCancellationThrow();
+                if (isCanceled || token.IsCancellationRequested)
+                {
+                    return;
+                }
 
-                float timeLeft = Mathf.Max(0f, limit - elapsed);
+                remainingSeconds -= Time.deltaTime;
+
+                float timeLeft = Mathf.Max(0f, remainingSeconds);
                 m_model.RemainingTime = timeLeft;
                 OnTimeChanged?.Invoke(timeLeft);
+            }
+
+            // [추가 가드]: 루프 완료 시점에 이미 취소된 좀비 토큰 세션이라면 즉시 기각 차단
+            if (token.IsCancellationRequested)
+            {
+                return;
             }
 
             // 제한 시간 만료 시 실패(ReTakeRequest) 상태 전이
             if (m_currentState == QuizStateType.Playing)
             {
-                Debug.Log("[QuizClassicViewModel] 시간 만료 초과 감지! 실패 패널 활성화 트리거.");
+                Debug.Log("[QuizClassicViewModel] 제한 시간이 초과되어 퀴즈 최종 실패 판정 및 재수강 요청을 트리거합니다.");
                 OnTimeOver?.Invoke();
                 OnReTakeRequested?.Invoke(); // [연동 추가]: 결과 패널 성공/실패 감지 트리거
                 ChangeState(QuizStateType.ReTakeRequest);
             }
-
         }
 
         #endregion

@@ -33,6 +33,7 @@ namespace GameArifiction.ClawMachine
         private TextMeshProUGUI m_confirmButtonText;
         private TextMeshProUGUI m_cancelButtonText;
         private bool m_isSuccessState;
+        private bool m_isTimeOverState;
         #endregion
 
         #region 초기화 (Initialization)
@@ -113,7 +114,7 @@ namespace GameArifiction.ClawMachine
             if (isSuccess)
             {
                 string activeSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-                if (activeSceneName == "CardGame")
+                if (m_viewModel is QuizClassicViewModel)
                 {
                     // A-1. 클래식 퀴즈 성공(성적표 확인) 시 UI 세팅
                     m_descriptionText.text = "★ 최종 학습 평가 성적표 ★\n\n축하합니다! 클래식 객관식 퀴즈 코스를 우수하게 수료하셨습니다.\n\n최종 평가 결과: [이수 완료]\n배운 개념을 활용하여 실전에 응용해 보십시오!";
@@ -143,24 +144,49 @@ namespace GameArifiction.ClawMachine
             else
             {
                 // B. 실패(오답 또는 제한시간 만료) 시 UI 세팅
-                int currentPenaltySeconds = (m_viewModel.ReTakeCount + 1) * 20;
-                int nextTimeLimit = 120 - currentPenaltySeconds;
-                if (nextTimeLimit < 20)
+                if (m_viewModel is QuizClassicViewModel)
                 {
-                    nextTimeLimit = 20;
-                }
+                    // 클래식 퀴즈 실패 UI (오답 또는 시간 초과 판정 구체화)
+                    if (m_isTimeOverState)
+                    {
+                        m_descriptionText.text = "제한 시간이 초과되었습니다!\n\n제한 시간 마진 내에 문제를 해결하지 못해 실패하셨습니다.\n다시 한번 도전하여 학습 평가 코스를 수료해 보십시오!";
+                    }
+                    else
+                    {
+                        m_descriptionText.text = "틀린 오답을 선택하셨습니다!\n\n오답으로 인해 스테이지 수료에 실패하셨습니다.\n다시 한번 개념을 곱씹으며 재도전해 보십시오!";
+                    }
 
-                m_descriptionText.text = "오답 혹은 제한 시간이 초과되었습니다!\n재수강(리플레이)을 신청하시겠습니까?\n\n" +
-                                         $"[혜택] 방해 캡슐 '동의 안 함' 1개 제거\n" +
-                                         $"[패널티] 제한 시간 {currentPenaltySeconds}초 차감 (다음 판: {nextTimeLimit}초)";
-
-                if (m_confirmButtonText != null)
-                {
-                    m_confirmButtonText.text = "재수강 진행";
+                    if (m_confirmButtonText != null)
+                    {
+                        m_confirmButtonText.text = "재수강 진행";
+                    }
+                    if (m_cancelButtonText != null)
+                    {
+                        m_cancelButtonText.text = "학습 종료";
+                    }
                 }
-                if (m_cancelButtonText != null)
+                else
                 {
-                    m_cancelButtonText.text = "동의 안 함 (종료)";
+                    // 인형뽑기 집게 퀴즈 실패 UI
+                    int currentPenaltySeconds = (m_viewModel.ReTakeCount + 1) * 20;
+                    int nextTimeLimit = 120 - currentPenaltySeconds;
+                    if (nextTimeLimit < 20)
+                    {
+                        nextTimeLimit = 20;
+                    }
+
+                    m_descriptionText.text = "오답 혹은 제한 시간이 초과되었습니다!\n재수강(리플레이)을 신청하시겠습니까?\n\n" +
+                                             $"[혜택] 방해 캡슐 '동의 안 함' 1개 제거\n" +
+                                             $"[패널티] 제한 시간 {currentPenaltySeconds}초 차감 (다음 판: {nextTimeLimit}초)";
+
+                    if (m_confirmButtonText != null)
+                    {
+                        m_confirmButtonText.text = "재수강 진행";
+                    }
+                    if (m_cancelButtonText != null)
+                    {
+                        m_cancelButtonText.text = "동의 안 함 (종료)";
+                    }
                 }
 
                 if (m_cancelButton != null)
@@ -179,12 +205,14 @@ namespace GameArifiction.ClawMachine
         private void HandleQuizFailed()
         {
             Debug.Log("[ClawGameResultPopupView] 오답 실패 이벤트 수신 -> 결과 패널 실패 모드 오픈.");
+            m_isTimeOverState = false;
             func_ShowPopup(false);
         }
 
         private void HandleTimeOver()
         {
-            Debug.Log("[ClawGameResultPopupView] 시간 초과 이벤트 수신 -> 결과 패널 실패 모드 오픈.");
+            Debug.Log("[ClawGameResultPopupView] 시간 초과 이벤트 수신 -> 결과 패널 실패(타임아웃) 모드 오픈.");
+            m_isTimeOverState = true;
             func_ShowPopup(false);
         }
 
@@ -195,7 +223,7 @@ namespace GameArifiction.ClawMachine
                 if (m_isSuccessState)
                 {
                     string activeSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-                    if (activeSceneName == "CardGame")
+                    if (m_viewModel is QuizClassicViewModel)
                     {
                         Debug.Log("[ClawGameResultPopupView] 플레이어가 클래식 퀴즈 성적표를 확인하고 메인(Lobby)으로 이동합니다.");
                         UnityEngine.SceneManagement.SceneManager.LoadScene("Lobby");
@@ -209,6 +237,9 @@ namespace GameArifiction.ClawMachine
                         if (classicInitializer != null)
                         {
                             classicInitializer.gameObject.SetActive(true);
+                            
+                            // [수정]: 유령 타이머 방지를 위해 m_initializeOnStart가 false로 되어있으므로, 명시적으로 수동 개시 호출
+                            classicInitializer.InitializeClassicQuiz();
                             
                             // 이니셜라이저 산하의 클래식 뷰도 활성화 보장
                             QuizClassicView classicView = FindFirstObjectByType<QuizClassicView>(FindObjectsInactive.Include);

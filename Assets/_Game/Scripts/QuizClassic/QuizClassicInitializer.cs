@@ -26,24 +26,31 @@ namespace GameArifiction.QuizClassic
         [Tooltip("문제를 풀 각 퀴즈당 제한 시간(초)입니다. 기본값 30초.")]
         private float m_timeLimitPerQuestion = 30f;
 
+        [SerializeField]
+        [Tooltip("씬 개시(Start) 시점에 자동으로 클래식 퀴즈를 초기화하고 가동할지 여부입니다. 연계 플레이 시에는 반드시 false로 지정해야 합니다.")]
+        private bool m_initializeOnStart = false;
+
         #endregion
 
         #region 유니티 생명주기 (Unity Lifecycle)
 
         private void Start()
         {
-            InitializeClassicQuiz();
+            if (m_initializeOnStart)
+            {
+                InitializeClassicQuiz();
+            }
         }
 
         #endregion
 
-        #region 내부 메서드 (Private Methods)
+        #region 내부 및 공개 메서드 (Methods)
 
         /// <summary>
         /// [기능]: 퀴즈 데이터 목록을 수집하여 MVP/MVVM 단방향 의존성 결합을 진행하고 게임을 공식 스타트시킵니다.
         /// [작성자]: 윤승종
         /// </summary>
-        private void InitializeClassicQuiz()
+        public void InitializeClassicQuiz()
         {
             // 1. 퀴즈 에셋 데이터 로드 및 셔플 리스트 준비
             List<QuizData> quizzes = new List<QuizData>();
@@ -89,7 +96,6 @@ namespace GameArifiction.QuizClassic
             if (m_classicView != null)
             {
                 m_classicView.Initialize(viewModel);
-                Debug.Log("[QuizClassicInitializer] QuizClassicView에 뷰모델 의존성 단방향 주입(DI) 성공.");
             }
             else
             {

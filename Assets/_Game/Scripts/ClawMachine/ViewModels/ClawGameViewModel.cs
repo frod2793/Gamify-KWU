@@ -125,7 +125,6 @@ namespace GameArifiction.ClawMachine
             if (!m_dollAnswers.ContainsKey(dollId))
             {
                 m_dollAnswers.Add(dollId, isCorrect);
-                Debug.Log($"[ClawGameViewModel] 캡슐 퀴즈 정답지 등록 완료: DollId={dollId}, IsCorrect={isCorrect}");
             }
         }
 
@@ -253,6 +252,7 @@ namespace GameArifiction.ClawMachine
         // View에서 각 연출(트윈)이 끝났을 때 호출하여 상태 전환
         public void NotifyDescendCompleted()
         {
+            if (m_currentState == ClawStateType.ReTakeRequest || m_currentState == ClawStateType.Result) return;
             ChangeState(ClawStateType.Grabbing);
         }
 
@@ -267,6 +267,7 @@ namespace GameArifiction.ClawMachine
         {
             IsHoldingDoll = isGrabbed;
             IsClawClosed = true;
+            if (m_currentState == ClawStateType.ReTakeRequest || m_currentState == ClawStateType.Result) return;
             ChangeState(ClawStateType.Ascending);
         }
 /// <summary>
@@ -278,6 +279,7 @@ namespace GameArifiction.ClawMachine
 /// </summary>
 public void NotifyAscendCompleted()
 {
+    if (m_currentState == ClawStateType.ReTakeRequest || m_currentState == ClawStateType.Result) return;
     // [규칙 변경]: 자동 복귀 없이 제자리에서 정지하여 사용자의 추가 이동 및 릴리즈 입력을 대기함
     ChangeState(ClawStateType.Idle);
 }
@@ -292,6 +294,7 @@ public void NotifyAscendCompleted()
         public void NotifyReturnCompleted()
         {
             IsClawClosed = false;
+            if (m_currentState == ClawStateType.ReTakeRequest || m_currentState == ClawStateType.Result) return;
             ChangeState(ClawStateType.Result);
         }
 
@@ -427,10 +430,13 @@ public void NotifyAscendCompleted()
             if (remaining <= 0f)
             {
                 Debug.Log("[ClawGameViewModel] 타이머 재개 시도 시 남은 시간이 0초 이하입니다. 즉시 시간 초과 처리합니다.");
-                ChangeState(ClawStateType.ReTakeRequest);
-                if (OnReTakeRequested != null)
+                if (m_currentState != ClawStateType.ReTakeRequest)
                 {
-                    OnReTakeRequested.Invoke();
+                    ChangeState(ClawStateType.ReTakeRequest);
+                    if (OnReTakeRequested != null)
+                    {
+                        OnReTakeRequested.Invoke();
+                    }
                 }
                 return;
             }
@@ -456,7 +462,9 @@ public void NotifyAscendCompleted()
 
             while (remainingSeconds > 0f)
             {
-                await UniTask.Yield(PlayerLoopTiming.Update, token);
+                bool isCanceled = await UniTask.Yield(PlayerLoopTiming.Update, token).SuppressCancellationThrow();
+                if (isCanceled) return;
+
                 remainingSeconds -= Time.deltaTime;
                 
                 float timeLeft = Mathf.Max(0f, remainingSeconds);

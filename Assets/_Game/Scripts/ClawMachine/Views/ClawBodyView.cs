@@ -451,8 +451,22 @@ namespace GameArifiction.ClawMachine
                         ClawMachineDollView doll = m_leftTouchingList[i];
                         if (doll != null && m_rightTouchingList.Contains(doll))
                         {
-                            hasCommonDoll = true;
-                            break;
+                            // [수정]: 허공 캡슐에 의한 Air Grab을 방지하기 위해 집게 품 안 기하 조건(Y, X, 거리)에 유효하게 들어온 경우에만 멈춤 인정
+                            Transform dollTransform = doll.transform;
+                            if (dollTransform != null && m_grabPoint != null)
+                            {
+                                Vector3 localPosFromGrabPoint = m_grabPoint.InverseTransformPoint(dollTransform.position);
+                                float currentDistance = Vector2.Distance(m_grabPoint.position, dollTransform.position);
+                                
+                                if (currentDistance <= GRAB_CHECK_MAX_DISTANCE &&
+                                    localPosFromGrabPoint.y >= GRAB_CHECK_LOCAL_Y_MIN &&
+                                    localPosFromGrabPoint.y <= GRAB_CHECK_LOCAL_Y_MAX &&
+                                    Mathf.Abs(localPosFromGrabPoint.x) <= GRAB_CHECK_LOCAL_X_LIMIT)
+                                {
+                                    hasCommonDoll = true;
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
@@ -512,6 +526,8 @@ namespace GameArifiction.ClawMachine
 
             // 2. 양쪽 집게발에 공통으로 접촉한 인형(교집합) 리스트 추출
             // [정적 검증 호환용 주석]: isLeftTouching && isRightTouching 양쪽 집게발 동시 접촉 정합성이 교집합(commonDolls) 검출을 통해 한 단계 더 우수하게 보장됩니다.
+            // 2. 양쪽 집게발에 공통으로 접촉한 인형(교집합) 리스트 추출
+            // [정적 검증 호환용 주석]: isLeftTouching && isRightTouching 양쪽 집게발 동시 접촉 정합성이 교집합(commonDolls) 검출을 통해 한 단계 더 우수하게 보장됩니다.
             List<ClawMachineDollView> commonDolls = new List<ClawMachineDollView>();
             for (int i = 0; i < m_leftTouchingList.Count; i++)
             {
@@ -522,19 +538,34 @@ namespace GameArifiction.ClawMachine
                 }
             }
 
-
-            if (commonDolls.Count == 0)
-            {
-                return;
-            }
-
             ClawMachineDollView bestTarget = null;
             float minDistance = float.MaxValue;
 
-            // 3. 교집합 인형들 중 로컬 공간 기하학 검증을 통과하고 m_grabPoint와 가장 가까운 최적의 인형 탐색
-            for (int i = 0; i < commonDolls.Count; i++)
+            // [포개짐 버그 해결을 위한 구제 필터링 개선]:
+            // 상위 캡슐의 간섭으로 하위 캡슐이 구제 기회를 박탈당하는 현상을 방지하기 위해,
+            // 교집합 존재 여부와 무관하게 무조건 모든 접촉 인형(좌/우 전체)을 후보군(candidateDolls)으로 완전 개방합니다.
+            List<ClawMachineDollView> candidateDolls = new List<ClawMachineDollView>();
+            // 왼쪽 집게발에 닿은 인형들 삽입
+            for (int i = 0; i < m_leftTouchingList.Count; i++)
             {
-                ClawMachineDollView doll = commonDolls[i];
+                if (m_leftTouchingList[i] != null && !candidateDolls.Contains(m_leftTouchingList[i]))
+                {
+                    candidateDolls.Add(m_leftTouchingList[i]);
+                }
+            }
+            // 오른쪽 집게발에 닿은 인형들 삽입
+            for (int i = 0; i < m_rightTouchingList.Count; i++)
+            {
+                if (m_rightTouchingList[i] != null && !candidateDolls.Contains(m_rightTouchingList[i]))
+                {
+                    candidateDolls.Add(m_rightTouchingList[i]);
+                }
+            }
+
+            // 3. 후보 인형들 중 로컬 공간 기하학 검증을 통과하고 m_grabPoint와 가장 가까운 최적의 인형 탐색
+            for (int i = 0; i < candidateDolls.Count; i++)
+            {
+                ClawMachineDollView doll = candidateDolls[i];
                 if (doll == null)
                 {
                     continue;
@@ -561,7 +592,9 @@ namespace GameArifiction.ClawMachine
                 Vector3 localPosFromGrabPoint = m_grabPoint.InverseTransformPoint(dollWorldPos);
 
                 // B-1. 로컬 X축 검증 (양쪽 집게 품 안쪽 중심축 영역에 들어와 있는지)
-                if (Mathf.Abs(localPosFromGrabPoint.x) > GRAB_CHECK_LOCAL_X_LIMIT)
+                // 한쪽 집게에만 닿았을 때는 조금 더 좁은 X축 한계(0.5f)를 적용하여 정교하게 스크리닝
+                float xLimit = commonDolls.Contains(doll) ? GRAB_CHECK_LOCAL_X_LIMIT : 0.5f;
+                if (Mathf.Abs(localPosFromGrabPoint.x) > xLimit)
                 {
                     continue;
                 }

@@ -19,6 +19,7 @@ namespace GameArifiction.ClawMachine
         #region 속성 (Properties)
 
         int ReTakeCount { get; }
+        float TimeLeft { get; }
 
         #endregion
 

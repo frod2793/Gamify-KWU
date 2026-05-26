@@ -21,6 +21,10 @@ namespace GameArifiction.QuizClassic
         [Tooltip("출제될 퀴즈 문제를 표시할 텍스트 컴포넌트입니다.")]
         private TextMeshProUGUI m_questionText;
 
+        [SerializeField]
+        [Tooltip("남은 시간을 표시할 텍스트 컴포넌트입니다.")]
+        private TextMeshProUGUI m_timeText;
+
         [Header("선택지 조작 버튼군")]
         [SerializeField]
         [Tooltip("4지선다 객관식 선택지 버튼 배열입니다 (반드시 4개 할당 필요).")]
@@ -46,12 +50,11 @@ namespace GameArifiction.QuizClassic
         {
             if (m_questionText != null)
             {
-                m_originalQuestionColor = m_questionText.color;
-                // [버그 수정]: 씬 배치 프리팹 에셋 상의 알파값 유실 방지. 알파가 0에 가깝다면 강제로 1.0f(완전 불투명)로 원복 보정합니다.
-                if (m_originalQuestionColor.a < 0.05f)
-                {
-                    m_originalQuestionColor.a = 1f;
-                }
+                // [버그 수정]: 에셋 프리팹 결함으로 알파가 0인 상태를 완전히 복원하기 위해 강제 1.0f 불투명 적용
+                Color color = m_questionText.color;
+                color.a = 1f;
+                m_questionText.color = color;
+                m_originalQuestionColor = color;
             }
             else
             {
@@ -72,9 +75,10 @@ namespace GameArifiction.QuizClassic
         {
             m_viewModel = viewModel;
 
-            // 1. 뷰모델 데이터 이벤트 바인딩 (타이머 및 스코어 기능 비활성화로 구독 배제)
+            // 1. 뷰모델 데이터 이벤트 바인딩 (타이머 및 스코어 기능 연쇄 업데이트 재활성화)
             m_viewModel.OnNextQuizLoaded += HandleNextQuizLoaded;
             m_viewModel.OnStateChanged += HandleStateChanged;
+            m_viewModel.OnTimeChanged += UpdateTimeUI;
 
             // 2. 피드백 연쇄 시각 효과 연동
             m_viewModel.OnQuizSuccess += HandleQuizSuccess;
@@ -110,6 +114,7 @@ namespace GameArifiction.QuizClassic
             {
                 m_viewModel.OnNextQuizLoaded -= HandleNextQuizLoaded;
                 m_viewModel.OnStateChanged -= HandleStateChanged;
+                m_viewModel.OnTimeChanged -= UpdateTimeUI;
                 m_viewModel.OnQuizSuccess -= HandleQuizSuccess;
                 m_viewModel.OnQuizFailed -= HandleQuizFailed;
                 m_viewModel.Dispose();
@@ -144,7 +149,6 @@ namespace GameArifiction.QuizClassic
         {
             if (m_viewModel != null)
             {
-                Debug.Log($"[QuizClassicView] 플레이어가 {choiceIndex + 1}번 선택지 버튼을 터치했습니다.");
                 m_viewModel.func_SelectAnswer(choiceIndex);
             }
         }
@@ -236,6 +240,18 @@ namespace GameArifiction.QuizClassic
             m_questionText.text = "⚠ 오답입니다! 스테이지 실패 ⚠";
             m_questionText.DOColor(new Color(0.9f, 0.2f, 0.2f, 1.0f), 0.4f).SetEase(Ease.OutQuad);
             m_questionText.transform.DOShakePosition(0.5f, new Vector3(8f, 0f, 0f), 12, 90f);
+        }
+
+        /// <summary>
+        /// [기능]: 뷰모델로부터 실시간 남은 제한시간을 전달받아 클래식 퀴즈 UI 텍스트에 출력합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void UpdateTimeUI(float timeLeft)
+        {
+            if (m_timeText != null)
+            {
+                m_timeText.text = $"남은 시간: {Mathf.CeilToInt(timeLeft)}초";
+            }
         }
 
         #endregion
