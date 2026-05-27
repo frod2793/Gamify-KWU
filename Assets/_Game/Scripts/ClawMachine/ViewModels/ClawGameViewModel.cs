@@ -11,9 +11,9 @@ namespace GameArifiction.ClawMachine
     /// <summary>
     /// [기능]: 인형뽑기 게임의 View와 Model을 연결하는 ViewModel
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-05-22
+    /// [수정 날짜]: 2026-05-27
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 집게가 오므려져 있는 상태(IsClawClosed) 관리 추가 및 스페이스바 입력 조건 고도화
+    /// [수정 내용]: 오답 제출 후 초기화 없이 타이머를 이어서 진행하도록 하는 ContinueAfterWrongAnswer 구현 추가
     /// </summary>
     public class ClawGameViewModel : IQuizGameViewModel, IDisposable
     {
@@ -346,6 +346,27 @@ public void NotifyAscendCompleted()
         {
             Debug.Log("[ClawGameViewModel] 플레이어가 재수강을 거부했습니다. 최종 결과 화면으로 전이합니다.");
             ChangeState(ClawStateType.Result);
+        }
+
+        /// <summary>
+        /// [기능]: 오답 제출 후 게임판 초기화 없이 그 자리에서 남은 시간 타이머를 재개하여 계속 플레이를 허용합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void ContinueAfterWrongAnswer()
+        {
+            m_currentState = ClawStateType.Idle;
+            OnStateChanged?.Invoke(m_currentState);
+            ResumeTimer();
+            Debug.Log("[ClawGameViewModel] 오답 확인 완료 -> 현재 상태 유지하며 게임을 이어서 진행합니다.");
+        }
+
+        /// <summary>
+        /// [기능]: 정답 입력 후 다음 단계로 이어서 진행 처리합니다 (인형뽑기는 팝업 버튼 분기로 자동 연동되므로 공백 유지).
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void ContinueAfterCorrectAnswer()
+        {
+            // 인형뽑기는 다음 단계인 클래식 퀴즈 활성화가 ResultPopupView의 Confirm 클릭 시 자동 처리되므로 빈 본문으로 둡니다.
         }
 
         public void Dispose()

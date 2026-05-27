@@ -219,8 +219,7 @@ namespace GameArifiction.QuizClassic
 
             DOTween.Kill(m_questionText);
             
-            // 질문 텍스트 초록색 피드백 및 스케일 튕김(Punch) 효과
-            m_questionText.text = "★ 정답입니다! 다음 문제로 넘어갑니다 ★";
+            // 질문 텍스트 초록색 피드백 및 스케일 튕김(Punch) 효과 (지문 내용 보존)
             m_questionText.DOColor(new Color(0.2f, 0.9f, 0.2f, 1.0f), 0.4f).SetEase(Ease.OutQuad);
             m_questionText.transform.DOPunchScale(new Vector3(0.15f, 0.15f, 0f), 0.5f, 8, 1f);
         }
@@ -234,8 +233,7 @@ namespace GameArifiction.QuizClassic
 
             DOTween.Kill(m_questionText);
 
-            // 질문 텍스트 빨간색 피드백 및 좌우 흔들림(Shake) 효과
-            m_questionText.text = "⚠ 오답입니다! 스테이지 실패 ⚠";
+            // 질문 텍스트 빨간색 피드백 및 좌우 흔들림(Shake) 효과 (지문 내용 보존)
             m_questionText.DOColor(new Color(0.9f, 0.2f, 0.2f, 1.0f), 0.4f).SetEase(Ease.OutQuad);
             m_questionText.transform.DOShakePosition(0.5f, new Vector3(8f, 0f, 0f), 12, 90f);
         }

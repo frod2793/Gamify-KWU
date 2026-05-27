@@ -27,6 +27,18 @@ namespace GameArifiction.ClawMachine
 
         void AcceptReTake();
         void RejectReTake();
+        
+        /// <summary>
+        /// [기능]: 오답 입력 후 게임 오버 처리 없이 그 자리에서 이어서 진행할 수 있도록 처리합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        void ContinueAfterWrongAnswer();
+
+        /// <summary>
+        /// [기능]: 정답 입력 후 다음 퀴즈/단계로 이어서 진행할 수 있도록 처리합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        void ContinueAfterCorrectAnswer();
 
         #endregion
     }

@@ -1,6 +1,8 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+using EasyTransition; // [신규]: 이지 트랜지션 기능 수입
 using GameArifiction.QuizClassic;
 using GameArifiction.Player;
 
@@ -9,9 +11,9 @@ namespace GameArifiction.ClawMachine
     /// <summary>
     /// [기능]: 인형뽑기 게임의 최종 정답 성공 또는 오답/시간 초과 실패 결과를 출력하는 결과 패널 UI View
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-05-26
+    /// [수정 날짜]: 2026-05-27
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 클래스명을 ClawGameResultPopupView로 격상하고 버튼 변수명을 m_confirmButton / m_cancelButton으로 역할 맞춤 리팩토링 완료
+    /// [수정 내용]: 로비 복귀 시 이지 트랜지션 연출 효과 연동 로직 추가
     /// </summary>
     public class ClawGameResultPopupView : MonoBehaviour
     {
@@ -34,6 +36,15 @@ namespace GameArifiction.ClawMachine
         [SerializeField]
         [Tooltip("씬 간 플레이어 위치 상태 보존을 위한 ScriptableObject 데이터 자산입니다.")]
         private PlayerSO m_playerSO;
+
+        [Header("이지 트랜지션 설정")]
+        [SerializeField]
+        [Tooltip("로비로 전환 시 화면 전환 연출을 위해 사용할 이지 트랜스 설정 자산입니다.")]
+        private TransitionSettings m_transitionSettings;
+
+        [SerializeField]
+        [Tooltip("트랜스 효과가 진행되기 시작할 딜레이 시간(초)입니다.")]
+        private float m_startDelay = 0f;
 
         private IQuizGameViewModel m_viewModel;
         private TextMeshProUGUI m_confirmButtonText;
@@ -109,6 +120,9 @@ namespace GameArifiction.ClawMachine
         /// <summary>
         /// [기능]: 성공과 실패 상태 분기에 부합하는 안내문 출력 및 버튼 컴포넌트의 가시성/워딩 동적 세팅을 수행합니다.
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-05-27
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 인형뽑기 퀴즈 성공(else 분기) 시 최종 소요 시간을 120초 기준 흘러간 시간으로 표기하고 성적 등급 산정 추가
         /// </summary>
         private void UpdatePanelContent(bool isSuccess)
         {
@@ -119,63 +133,118 @@ namespace GameArifiction.ClawMachine
 
             if (isSuccess)
             {
-                string activeSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+                string activeSceneName = SceneManager.GetActiveScene().name;
                 if (m_viewModel is QuizClassicViewModel)
                 {
-                    // A-1. 클래식 퀴즈 성공(성적표 확인) 시 UI 세팅 및 성적 판정 계산
-                    float totalPlayTime = 0f;
-                    MinigameGrade calculatedGrade = MinigameGrade.D;
-
-                    if (m_playerSO != null)
+                    var classicVM = (QuizClassicViewModel)m_viewModel;
+                    if (classicVM.IsLastQuiz)
                     {
-                        totalPlayTime = m_playerSO.TotalMinigamePlayTime;
+                        // A-1. 클래식 퀴즈 최종 완료 성공(성적표 확인) 시 UI 세팅 및 성적 판정 계산
+                        float totalPlayTime = 0f;
+                        MinigameGrade calculatedGrade = MinigameGrade.D;
+
+                        if (m_playerSO != null)
+                        {
+                            totalPlayTime = m_playerSO.TotalMinigamePlayTime;
+                            
+                            // 성적 판정 기준:
+                            // A - 60초 내
+                            // B - 70~80초 사이 (60초 초과 80초 이하)
+                            // C - 90~100초 사이 (80초 초과 100초 이하)
+                            // D - 110~120초 사이 (100초 초과 120초 이하)
+                            // F - 시간 초과 (120초 초과)
+                            if (totalPlayTime <= 60f)
+                            {
+                                calculatedGrade = MinigameGrade.A;
+                            }
+                            else if (totalPlayTime <= 80f)
+                            {
+                                calculatedGrade = MinigameGrade.B;
+                            }
+                            else if (totalPlayTime <= 100f)
+                            {
+                                calculatedGrade = MinigameGrade.C;
+                            }
+                            else if (totalPlayTime <= 120f)
+                            {
+                                calculatedGrade = MinigameGrade.D;
+                            }
+                            else
+                            {
+                                calculatedGrade = MinigameGrade.F;
+                            }
+
+                            // PlayerSO 데이터에 저장 반영
+                            m_playerSO.SetMinigameGrade("ClawMachineQuiz", calculatedGrade);
+                        }
+
+                        m_descriptionText.text = "★ 최종 학습 평가 성적표 ★\n\n" +
+                                                 "축하합니다! 인형뽑기부터 클래식 퀴즈 코스까지 전체 수료하셨습니다.\n\n" +
+                                                 $"■ 총 소요 시간: {totalPlayTime:F1}초\n" +
+                                                 $"■ 최종 성적 등급: [{calculatedGrade} 등급]\n\n" +
+                                                 "배운 개념을 활용하여 실전에 응용해 보십시오!";
                         
-                        // 성적 판정 기준:
-                        // A - 60초 내
-                        // B - 70~80초 사이 (60초 초과 80초 이하)
-                        // C - 90~100초 사이 (80초 초과 100초 이하)
-                        // D - 110~120초 사이 (100초 초과 120초 이하)
-                        // F - 시간 초과 (120초 초과)
-                        if (totalPlayTime <= 60f)
+                        if (m_confirmButtonText != null)
                         {
-                            calculatedGrade = MinigameGrade.A;
+                            m_confirmButtonText.text = "메인 화면으로";
                         }
-                        else if (totalPlayTime <= 80f)
-                        {
-                            calculatedGrade = MinigameGrade.B;
-                        }
-                        else if (totalPlayTime <= 100f)
-                        {
-                            calculatedGrade = MinigameGrade.C;
-                        }
-                        else if (totalPlayTime <= 120f)
-                        {
-                            calculatedGrade = MinigameGrade.D;
-                        }
-                        else
-                        {
-                            calculatedGrade = MinigameGrade.F;
-                        }
-
-                        // PlayerSO 데이터에 저장 반영
-                        m_playerSO.SetMinigameGrade("ClawMachineQuiz", calculatedGrade);
                     }
-
-                    m_descriptionText.text = "★ 최종 학습 평가 성적표 ★\n\n" +
-                                             "축하합니다! 인형뽑기부터 클래식 퀴즈 코스까지 전체 수료하셨습니다.\n\n" +
-                                             $"■ 총 소요 시간: {totalPlayTime:F1}초\n" +
-                                             $"■ 최종 성적 등급: [{calculatedGrade} 등급]\n\n" +
-                                             "배운 개념을 활용하여 실전에 응용해 보십시오!";
-                    
-                    if (m_confirmButtonText != null)
+                    else
                     {
-                        m_confirmButtonText.text = "메인 화면으로";
+                        // A-1-Sub. 클래식 퀴즈 중간 퀴즈 성공 시 정답 알림 팝업 UI 세팅
+                        m_descriptionText.text = "★ 정답입니다! ★\n\n올바른 정답을 선택하셨습니다.\n다음 단계로 이동해 보십시오!";
+
+                        if (m_confirmButtonText != null)
+                        {
+                            m_confirmButtonText.text = "다음 문제로";
+                        }
                     }
                 }
                 else
                 {
-                    // A-2. 인형뽑기 집게 퀴즈 성공 시 UI 세팅
-                    m_descriptionText.text = "★ 축하합니다! 정답입니다 ★\n\n지정된 퀴즈의 정답 캡슐을 골인시켰습니다.\n성공적으로 과정을 완료하였습니다!";
+                    // A-2. 인형뽑기 집게 퀴즈 성공 시 UI 세팅 및 성적 판정 계산
+                    float elapsedClawTime = Mathf.Max(0f, 120f - m_viewModel.TimeLeft);
+                    MinigameGrade calculatedGrade = MinigameGrade.D;
+
+                    // 성적 판정 기준 (120초 기준 소요 시간 기준):
+                    // A - 60초 내
+                    // B - 70~80초 사이 (60초 초과 80초 이하)
+                    // C - 90~100초 사이 (80초 초과 100초 이하)
+                    // D - 110~120초 사이 (100초 초과 120초 이하)
+                    // F - 시간 초과 (120초 초과)
+                    if (elapsedClawTime <= 60f)
+                    {
+                        calculatedGrade = MinigameGrade.A;
+                    }
+                    else if (elapsedClawTime <= 80f)
+                    {
+                        calculatedGrade = MinigameGrade.B;
+                    }
+                    else if (elapsedClawTime <= 100f)
+                    {
+                        calculatedGrade = MinigameGrade.C;
+                    }
+                    else if (elapsedClawTime <= 120f)
+                    {
+                        calculatedGrade = MinigameGrade.D;
+                    }
+                    else
+                    {
+                        calculatedGrade = MinigameGrade.F;
+                    }
+
+                    if (m_playerSO != null)
+                    {
+                        // PlayerSO 데이터에 저장 반영
+                        m_playerSO.SetMinigameGrade("ClawMachineQuiz", calculatedGrade);
+                    }
+
+                    m_descriptionText.text = "★ 축하합니다! 정답입니다 ★\n\n" +
+                                             "지정된 퀴즈의 정답 캡슐을 골인시켰습니다.\n" +
+                                             "성공적으로 과정을 완료하였습니다!\n\n" +
+                                             $"■ 소요 시간: {elapsedClawTime:F1}초 / 120.0초\n" +
+                                             $"■ 성적 등급: [{calculatedGrade} 등급]\n\n" +
+                                             "다음 단계로 이동하여 최종 학습 평가를 진행해 보십시오!";
                     
                     if (m_confirmButtonText != null)
                     {
@@ -198,48 +267,76 @@ namespace GameArifiction.ClawMachine
                     if (m_isTimeOverState)
                     {
                         m_descriptionText.text = "제한 시간이 초과되었습니다!\n\n제한 시간 마진 내에 문제를 해결하지 못해 실패하셨습니다.\n다시 한번 도전하여 학습 평가 코스를 수료해 보십시오!";
+
+                        if (m_confirmButtonText != null)
+                        {
+                            m_confirmButtonText.text = "재수강 진행";
+                        }
+                        if (m_cancelButtonText != null)
+                        {
+                            m_cancelButtonText.text = "학습 종료";
+                        }
+                        if (m_cancelButton != null)
+                        {
+                            m_cancelButton.gameObject.SetActive(true);
+                        }
                     }
                     else
                     {
-                        m_descriptionText.text = "틀린 오답을 선택하셨습니다!\n\n오답으로 인해 스테이지 수료에 실패하셨습니다.\n다시 한번 개념을 곱씹으며 재도전해 보십시오!";
-                    }
+                        m_descriptionText.text = "★ 틀린 오답입니다! ★\n\n아쉽게도 틀렸습니다. 다시 한번 기회를 드릴 테니 올바른 정답을 골라 보세요!";
 
-                    if (m_confirmButtonText != null)
-                    {
-                        m_confirmButtonText.text = "재수강 진행";
-                    }
-                    if (m_cancelButtonText != null)
-                    {
-                        m_cancelButtonText.text = "학습 종료";
+                        if (m_confirmButtonText != null)
+                        {
+                            m_confirmButtonText.text = "계속하기";
+                        }
+                        if (m_cancelButton != null)
+                        {
+                            m_cancelButton.gameObject.SetActive(false); // 오답 확인 시 취소 버튼 은폐
+                        }
                     }
                 }
                 else
                 {
                     // 인형뽑기 집게 퀴즈 실패 UI
-                    int currentPenaltySeconds = (m_viewModel.ReTakeCount + 1) * 20;
-                    int nextTimeLimit = 120 - currentPenaltySeconds;
-                    if (nextTimeLimit < 20)
+                    if (m_isTimeOverState)
                     {
-                        nextTimeLimit = 20;
+                        int currentPenaltySeconds = (m_viewModel.ReTakeCount + 1) * 20;
+                        int nextTimeLimit = 120 - currentPenaltySeconds;
+                        if (nextTimeLimit < 20)
+                        {
+                            nextTimeLimit = 20;
+                        }
+
+                        m_descriptionText.text = "제한 시간이 초과되었습니다!\n재수강(리플레이)을 신청하시겠습니까?\n\n" +
+                                                 $"[혜택] 방해 캡슐 '동의 안 함' 1개 제거\n" +
+                                                 $"[패널티] 제한 시간 {currentPenaltySeconds}초 차감 (다음 판: {nextTimeLimit}초)";
+
+                        if (m_confirmButtonText != null)
+                        {
+                            m_confirmButtonText.text = "재수강 진행";
+                        }
+                        if (m_cancelButtonText != null)
+                        {
+                            m_cancelButtonText.text = "동의 안 함 (종료)";
+                        }
+                        if (m_cancelButton != null)
+                        {
+                            m_cancelButton.gameObject.SetActive(true);
+                        }
                     }
-
-                    m_descriptionText.text = "오답 혹은 제한 시간이 초과되었습니다!\n재수강(리플레이)을 신청하시겠습니까?\n\n" +
-                                             $"[혜택] 방해 캡슐 '동의 안 함' 1개 제거\n" +
-                                             $"[패널티] 제한 시간 {currentPenaltySeconds}초 차감 (다음 판: {nextTimeLimit}초)";
-
-                    if (m_confirmButtonText != null)
+                    else
                     {
-                        m_confirmButtonText.text = "재수강 진행";
-                    }
-                    if (m_cancelButtonText != null)
-                    {
-                        m_cancelButtonText.text = "동의 안 함 (종료)";
-                    }
-                }
+                        m_descriptionText.text = "★ 틀린 오답입니다! ★\n\n골인시킨 캡슐은 정답이 아닙니다. 다른 캡슐을 조준하여 다시 골인시켜 보세요!";
 
-                if (m_cancelButton != null)
-                {
-                    m_cancelButton.gameObject.SetActive(true);
+                        if (m_confirmButtonText != null)
+                        {
+                            m_confirmButtonText.text = "계속하기";
+                        }
+                        if (m_cancelButton != null)
+                        {
+                            m_cancelButton.gameObject.SetActive(false); // 오답 확인 시 취소 버튼 은폐
+                        }
+                    }
                 }
             }
         }
@@ -270,16 +367,42 @@ namespace GameArifiction.ClawMachine
             {
                 if (m_isSuccessState)
                 {
-                    string activeSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+                    string activeSceneName = SceneManager.GetActiveScene().name;
                     if (m_viewModel is QuizClassicViewModel)
                     {
-                        Debug.Log("[ClawGameResultPopupView] 플레이어가 클래식 퀴즈 성적표를 확인하고 메인(Lobby)으로 이동합니다.");
-                        if (m_playerSO != null)
+                        var classicVM = (QuizClassicViewModel)m_viewModel;
+                        if (classicVM.IsLastQuiz)
                         {
-                            m_playerSO.HasSavedPosition = true;
-                            Debug.Log($"[ClawGameResultPopupView] 로비로 돌아갈 때 마지막 복귀 위치 복원을 위해 HasSavedPosition 플래그를 true로 활성화했습니다. 위치: {m_playerSO.LastPosition}");
+                            Debug.Log("[ClawGameResultPopupView] 플레이어가 클래식 퀴즈 최종 완료 성적표를 확인하고 메인(Lobby)으로 이동합니다.");
+                            if (m_playerSO != null)
+                            {
+                                m_playerSO.HasSavedPosition = true;
+                                Debug.Log($"[ClawGameResultPopupView] 로비로 돌아갈 때 마지막 복귀 위치 복원을 위해 HasSavedPosition 플래그를 true로 활성화했습니다. 위치: {m_playerSO.LastPosition}");
+                            }
+
+                            // 이지 트랜지션이 설정되어 있고 씬에 매니저가 존재하는 경우 전환 연출 연동
+                            if (m_transitionSettings != null)
+                            {
+                                TransitionManager manager = FindFirstObjectByType<TransitionManager>();
+                                if (manager != null)
+                                {
+                                    TransitionManager.Instance().Transition("Lobby", m_transitionSettings, m_startDelay);
+                                }
+                                else
+                                {
+                                    SceneManager.LoadScene("Lobby");
+                                }
+                            }
+                            else
+                            {
+                                SceneManager.LoadScene("Lobby");
+                            }
                         }
-                        UnityEngine.SceneManagement.SceneManager.LoadScene("Lobby");
+                        else
+                        {
+                            Debug.Log("[ClawGameResultPopupView] 플레이어가 중간 퀴즈 정답을 확인하고 다음 문제 출제를 계속합니다.");
+                            classicVM.ContinueAfterCorrectAnswer();
+                        }
                     }
                     else
                     {
@@ -328,8 +451,16 @@ namespace GameArifiction.ClawMachine
                 }
                 else
                 {
-                    Debug.Log("[ClawGameResultPopupView] 플레이어가 '재수강 진행' 동의 버튼을 클릭하여 리플레이를 수행합니다.");
-                    m_viewModel.AcceptReTake();
+                    if (!m_isTimeOverState)
+                    {
+                        Debug.Log("[ClawGameResultPopupView] 플레이어가 오답 확인 후 '계속하기' 버튼을 클릭했습니다. 게임을 이어서 진행합니다.");
+                        m_viewModel.ContinueAfterWrongAnswer();
+                    }
+                    else
+                    {
+                        Debug.Log("[ClawGameResultPopupView] 플레이어가 제한 시간 초과 후 '재수강 진행' 동의 버튼을 클릭하여 리플레이를 수행합니다.");
+                        m_viewModel.AcceptReTake();
+                    }
                 }
             }
             func_HidePopup();

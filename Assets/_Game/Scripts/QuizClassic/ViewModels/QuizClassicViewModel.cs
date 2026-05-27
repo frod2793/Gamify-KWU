@@ -11,6 +11,9 @@ namespace GameArifiction.QuizClassic
     /// <summary>
     /// 클래식 4지선다 퀴즈 게임의 비즈니스 논리적 흐름과 타이머 루프를 통제하는 뷰모델 클래스 (POCO)
     /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-05-27
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: 오답 제출 후 이어서 정답을 계속 고를 수 있는 ContinueAfterWrongAnswer 메서드 구현 추가
     /// </summary>
     public class QuizClassicViewModel : GameArifiction.ClawMachine.IQuizGameViewModel, IDisposable
     {
@@ -50,6 +53,7 @@ namespace GameArifiction.QuizClassic
         public List<string> CurrentChoiceTexts => m_currentChoiceTexts;
         public int Score => m_model.Score;
         public int ReTakeCount => m_reTakeCount;
+        public bool IsLastQuiz => m_model != null && m_model.CurrentQuizIndex >= m_model.QuizList.Count - 1;
         public float TimeLeft
         {
             get
@@ -127,18 +131,18 @@ namespace GameArifiction.QuizClassic
                 OnScoreChanged?.Invoke(m_model.Score);
                 
                 Debug.Log($"[QuizClassicViewModel] 정답 골인! 현재 점수: {m_model.Score}");
-                OnQuizSuccess?.Invoke();
                 
                 // 마지막 문제 클리어 여부 확인
                 if (m_model.CurrentQuizIndex >= m_model.QuizList.Count - 1)
                 {
+                    OnQuizSuccess?.Invoke();
                     ChangeState(QuizStateType.Result);
                 }
                 else
                 {
-                    // 다음 문제로 지연 로딩을 위해 타이머만 명시적으로 중지 (상태는 Playing 유지)
+                    // 중간 문제인 경우 타이머만 중지하고 정답 이벤트 전송 (팝업이 다음 문제 로드 대기)
                     StopTimer();
-                    LoadNextQuizDeferred().Forget();
+                    OnQuizSuccess?.Invoke();
                 }
             }
             else
@@ -168,6 +172,38 @@ namespace GameArifiction.QuizClassic
         {
             Debug.Log("[QuizClassicViewModel] 플레이어가 재수강을 거부하여 결과 종료 처리합니다.");
             ChangeState(QuizStateType.Result);
+        }
+
+        /// <summary>
+        /// [기능]: 오답 제출 후 문제 전환이나 초기화 없이 남은 시간 타이머를 재개하여 계속해서 정답을 고를 수 있도록 합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void ContinueAfterWrongAnswer()
+        {
+            m_currentState = QuizStateType.Playing;
+            OnStateChanged?.Invoke(m_currentState);
+            
+            // 타이머 재개 (Resume)
+            StopTimer();
+            float remaining = m_model.RemainingTime;
+            if (remaining <= 0f)
+            {
+                remaining = 1f; // 안전 마진
+            }
+            m_timerCts = new CancellationTokenSource();
+            StartTimerAsync(m_timerCts.Token).Forget();
+            
+            Debug.Log("[QuizClassicViewModel] 오답 확인 완료 -> 현재 문제를 이어서 진행합니다.");
+        }
+
+        /// <summary>
+        /// [기능]: 중간 퀴즈 정답 팝업 확인 후 다음 문제를 출제하고 타이머를 재개합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void ContinueAfterCorrectAnswer()
+        {
+            m_model.CurrentQuizIndex++;
+            LoadCurrentQuiz();
         }
 
 
