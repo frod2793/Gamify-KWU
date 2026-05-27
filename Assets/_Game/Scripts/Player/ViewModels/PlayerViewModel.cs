@@ -6,9 +6,9 @@ namespace GameArifiction.Player
     /// <summary>
     /// [기능]: 플레이어 이동 로직 및 상태 관리를 담당하는 뷰모델 클래스 (POCO)
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-05-27
+    /// [수정 날짜]: 2026-05-28
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 문서 표준 준수 및 헤더 기입 완료
+    /// [수정 내용]: 인트로 연출 시 플레이어 실제 디바이스 입력 강제 잠금 플래그(IsInputLocked) 구현 및 텔레포트 인터페이스 추가
     /// </summary>
     public class PlayerViewModel
     {
@@ -22,6 +22,7 @@ namespace GameArifiction.Player
         
         private bool m_useBounds;
         private Bounds m_movementBounds;
+        private bool m_isInputLocked;
         #endregion
 
         #region 이벤트 (Events)
@@ -83,6 +84,11 @@ namespace GameArifiction.Player
                 }
             }
         }
+
+        public bool IsInputLocked
+        {
+            get => m_isInputLocked;
+        }
         #endregion
 
         #region 초기화 (Initialization)
@@ -93,6 +99,7 @@ namespace GameArifiction.Player
             m_currentState = PlayerState.IDLE;
             m_isFlipped = false;
             m_useBounds = false;
+            m_isInputLocked = false;
         }
         #endregion
 
@@ -117,6 +124,29 @@ namespace GameArifiction.Player
         }
 
         /// <summary>
+        /// [기능]: 컷씬 등에서 플레이어의 실제 디바이스 입력을 잠금 제어합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void SetInputLocked(bool isLocked)
+        {
+            m_isInputLocked = isLocked;
+            if (isLocked)
+            {
+                CurrentState = PlayerState.IDLE;
+                InputIntensity = 0f;
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 외부 연출 등에서 강제로 플레이어의 위치 좌표를 텔레포트 이동시킵니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void ForceSetPosition(Vector2 position)
+        {
+            CurrentPosition = position;
+        }
+
+        /// <summary>
         /// [기능]: 조이스틱 입력을 처리하여 위치 및 상태 업데이트
         /// [작성자]: 윤승종
         /// [수정 날짜]: 2026-05-27
@@ -128,7 +158,6 @@ namespace GameArifiction.Player
 
             if (intensity > 0.1f)
             {
-                // 이동 처리 및 바운드 제한
                 Vector2 movement = joystickInput * m_model.MoveSpeed * deltaTime;
                 Vector2 newPosition = CurrentPosition + movement;
 
@@ -139,11 +168,8 @@ namespace GameArifiction.Player
                 }
 
                 CurrentPosition = newPosition;
-
-                // 상태 업데이트
                 CurrentState = PlayerState.MOVE;
 
-                // 방향 업데이트 (좌/우)
                 if (joystickInput.x > 0.1f)
                 {
                     IsFlipped = false;
@@ -155,7 +181,6 @@ namespace GameArifiction.Player
             }
             else
             {
-                // 정지 상태 처리
                 CurrentState = PlayerState.IDLE;
             }
         }

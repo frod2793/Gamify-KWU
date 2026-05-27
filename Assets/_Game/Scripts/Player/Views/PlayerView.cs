@@ -9,6 +9,9 @@ namespace GameArifiction.Player
     /// <summary>
     /// [기능]: 플레이어의 입력 전달, 시각적 표현 및 상호작용 감지를 담당하는 뷰 클래스
     /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-05-28
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: 인트로 연출 조작 잠금 기능(IsInputLocked) 분기 추가
     /// </summary>
     public class PlayerView : MonoBehaviour
     {
@@ -37,14 +40,7 @@ namespace GameArifiction.Player
         #endregion
 
         #region 이벤트
-        /// <summary>
-        /// 상호작용 가능한 대상이 플레이어 감지 범위에 들어왔을 때 발생하는 이벤트입니다.
-        /// </summary>
         public event Action<IInteractable> OnInteractableTargetDetected;
-
-        /// <summary>
-        /// 상호작용 대상이 플레이어 감지 범위를 벗어났을 때 발생하는 이벤트입니다.
-        /// </summary>
         public event Action OnInteractableTargetLost;
         #endregion
 
@@ -55,24 +51,10 @@ namespace GameArifiction.Player
         #endregion
 
         #region 유니티 생명주기
-        /// <summary>
-        /// [기능]: 오브젝트 활성화 시 유니티 기본 구동을 준비합니다.
-        /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-05-27
-        /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 유니티 씬 초기화 시 덮어쓰기 오작동 해결을 위해 InitializeMVVM의 구동 위치를 Awake()에서 Start()로 안전 조정
-        /// </summary>
         private void Awake()
         {
         }
 
-        /// <summary>
-        /// [기능]: 씬 초기 로딩이 완료된 시점에 플레이어의 상태 보존 복원 및 MVVM 바인딩을 실행하고 SPUM 프리팹 애니메이션 상태를 초기화합니다.
-        /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-05-27
-        /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: Start() 맨 첫 줄에서 InitializeMVVM()을 구동하여 유니티 물리 컴포넌트의 복구 좌표 덮어쓰기 버그 완벽 차단
-        /// </summary>
         private void Start()
         {
             InitializeMVVM();
@@ -114,6 +96,10 @@ namespace GameArifiction.Player
 
         private void Update()
         {
+            if (m_viewModel != null && m_viewModel.IsInputLocked)
+            {
+                return; // 컷씬 플레이 중일 때는 로컬 입력 핸들링 스킵
+            }
             HandleInput();
         }
 
@@ -146,33 +132,24 @@ namespace GameArifiction.Player
         #endregion
 
         #region 초기화
-        /// <summary>
-        /// [기능]: 플레이어 세션 정보(PlayerSO)가 있는 경우 마지막 보존 위치를 물리 컴포넌트(Rigidbody2D)와 뷰 좌표에 강제 복구 및 MVVM을 초기화합니다.
-        /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-05-27
-        /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: Rigidbody2D 컴포넌트가 있을 경우 rb.position을 동시 싱크하도록 추가하여 물리 바디의 좌표 덮어쓰기 복구 실패 버그 해결 및 디버그용 임시 로그 정리
-        /// </summary>
         private void InitializeMVVM()
         {
             Vector2 startPos = transform.position;
 
-            // PlayerSO 데이터가 있고 마지막 저장 위치 정보가 존재한다면 좌표를 오버라이드 복구
             if (m_playerSO != null)
             {
                 if (m_playerSO.HasSavedPosition)
                 {
                     startPos = m_playerSO.LastPosition;
-                    transform.position = startPos; // 뷰 좌표 강제 싱크
+                    transform.position = startPos;
 
-                    // [추가]: Rigidbody2D 컴포넌트가 있을 경우 물리 좌표를 명시적으로 세팅하여 스폰 위치 덮어쓰기 오작동을 해결합니다.
                     Rigidbody2D rb = GetComponent<Rigidbody2D>();
                     if (rb != null)
                     {
                         rb.position = startPos;
                     }
 
-                    m_playerSO.HasSavedPosition = false; // 1회성 복구가 완료되었으므로 플래그 해제
+                    m_playerSO.HasSavedPosition = false;
                     Debug.Log($"[PlayerView] SO로부터 플레이어의 최종 위치를 감지하여 성공적으로 복구 스폰했습니다: {startPos}");
                 }
             }
@@ -191,11 +168,6 @@ namespace GameArifiction.Player
             }
         }
 
-        /// <summary>
-        /// [기능]: 외부 트리거(예: 포탈) 등으로부터 마지막 좌표 복구 저장을 위임받아 PlayerSO 에셋에 기록합니다.
-        /// [작성자]: 윤승종
-        /// </summary>
-        /// <param name="targetPosition">저장할 복귀 스폰 월드 좌표</param>
         public void SavePosition(Vector2 targetPosition)
         {
             if (m_playerSO != null)
@@ -218,10 +190,6 @@ namespace GameArifiction.Player
         #endregion
 
         #region 공개 메서드
-        /// <summary>
-        /// [기능]: 외부 상호작용 UI 등으로부터 요청을 위임받아 현재 감지 중인 타겟의 상호작용을 실행합니다.
-        /// [작성자]: 윤승종
-        /// </summary>
         public void RequestInteraction()
         {
             if (m_currentInteractable != null)
@@ -234,10 +202,8 @@ namespace GameArifiction.Player
         #region 내부 메서드
         private void HandleInput()
         {
-            // 1. 가상 조이스틱 입력 (모바일 환경 지원)
             Vector2 joystickInput = VirtualJoystick.GetAxis(m_joystickId);
 
-            // 2. 키보드 입력 (PC WebGL 환경 지원 - Input System)
             float horizontal = 0f;
             float vertical = 0f;
 
@@ -261,7 +227,6 @@ namespace GameArifiction.Player
                     horizontal += 1f;
                 }
 
-                // [추가]: PC 환경에서 F 키 혹은 스페이스바를 눌러 즉시 감지 대상과 상호작용하도록 바인딩
                 if (keyboard.fKey.wasPressedThisFrame || keyboard.spaceKey.wasPressedThisFrame)
                 {
                     RequestInteraction();
@@ -269,9 +234,7 @@ namespace GameArifiction.Player
             }
 
             Vector2 keyboardInput = new Vector2(horizontal, vertical);
-
-            // 3. 입력 병합 및 정규화 (대각선 및 중복 입력 시 최대 크기 1 제한)
-            Vector2 combinedInput = joystickInput + keyboardInput;
+            Vector3 combinedInput = joystickInput + keyboardInput;
             if (combinedInput.sqrMagnitude > 1f)
             {
                 combinedInput.Normalize();
@@ -280,13 +243,6 @@ namespace GameArifiction.Player
             m_viewModel.ProcessInput(combinedInput, Time.deltaTime);
         }
 
-        /// <summary>
-        /// [기능]: 뷰모델로부터 전달된 플레이어의 실시간 계산 좌표를 transform과 Rigidbody2D에 반영합니다.
-        /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-05-27
-        /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: Rigidbody2D가 존재할 시 물리 좌표를 동시 동기화하도록 구현
-        /// </summary>
         private void UpdatePosition(Vector2 newPosition)
         {
             transform.position = newPosition;
