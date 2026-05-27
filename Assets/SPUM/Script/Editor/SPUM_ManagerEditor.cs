@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
 using System.IO;
@@ -189,3 +190,4 @@ public class SPUM_AnimationManagerEditor : Editor
     //     target.AllLoad = Resources.LoadAll<UnityEngine.Object>("").ToList();
     // }
 }
+#endif

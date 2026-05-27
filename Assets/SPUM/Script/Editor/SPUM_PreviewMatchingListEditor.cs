@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
 using System.Linq;
@@ -100,3 +101,4 @@ public class SPUM_PreviewMatchingListEditor : Editor
         EditorUtility.SetDirty(matchingList);
     }
 }
+#endif

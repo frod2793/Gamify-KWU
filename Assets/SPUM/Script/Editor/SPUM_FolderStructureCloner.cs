@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
 using System.IO;
@@ -318,3 +319,4 @@ public class SPUMFolderNode
     public bool IsExpanded { get; set; }
     public List<SPUMFolderNode> Children { get; set; } = new List<SPUMFolderNode>();
 }
+#endif
