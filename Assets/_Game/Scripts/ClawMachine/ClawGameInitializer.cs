@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using GamifyKWU.CraneGame.Data;
 using TMPro;
+using GameArifiction.Player;
 
 namespace GameArifiction.ClawMachine
 {
@@ -49,14 +50,25 @@ namespace GameArifiction.ClawMachine
         private int m_maxSpawnAttempts = 30;
 
         [SerializeField]
-        [Tooltip("씬에 이미 배치되어 있는 결과 팝업 View 컴포넌트입니다. 인스펙터 미할당 시 씬에서 자동 탐색합니다.")]
+        [Tooltip("씬에 배치되어 있는 결과 팝업 View 컴포넌트입니다. 인스펙터 미할당 시 씬에서 자동 탐색합니다.")]
         private ClawGameResultPopupView m_resultPopupView;
+
+        [Header("세션 데이터")]
+        [SerializeField]
+        [Tooltip("씬 간 플레이어 위치 상태 보존을 위한 ScriptableObject 데이터 자산입니다.")]
+        private PlayerSO m_playerSO;
         #endregion
 
 
         #region 유니티 생명주기 (Unity Lifecycle)
         private void Start()
         {
+            // [세션 시간 리셋]: 뽑기 게임 개시 시점 기준이므로 총 소요시간 누적값을 0으로 리셋합니다.
+            if (m_playerSO != null)
+            {
+                m_playerSO.TotalMinigamePlayTime = 0f;
+            }
+
             // 1. DTO 수신 (5회 기본 도전 기회, 120초 제한시간)
             var contextDTO = new ClawGameContextDTO(5, 120f, null);
             
@@ -64,7 +76,7 @@ namespace GameArifiction.ClawMachine
             var model = new ClawMachineModel(contextDTO.MaxPlayCount, contextDTO.TimeLimitPerPlay);
             
             // 3. ViewModel 생성
-            var viewModel = new ClawGameViewModel(model);
+            var viewModel = new ClawGameViewModel(model, m_playerSO);
 
             // 4. [퀴즈 복원]: 퀴즈 데이터베이스에서 '집게용' 퀴즈만 무작위 1문제 출제 및 바인딩
             QuizData selectedQuiz = null;

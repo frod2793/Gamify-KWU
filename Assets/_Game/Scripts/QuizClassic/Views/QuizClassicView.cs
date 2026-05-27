@@ -186,6 +186,13 @@ namespace GameArifiction.QuizClassic
             }
         }
 
+        /// <summary>
+        /// [기능]: 뷰모델의 상태 변화에 따라 객관식 버튼들의 상호작용 및 팝업 표시 여부를 제어합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-05-27
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 마지막 문제 정답 시 OnQuizSuccess와 Result 상태 진입에 의해 발생하던 이중 팝업 호출 방지를 위해 Result 진입 시의 중복 팝업 호출 로직 제거
+        /// </summary>
         private void HandleStateChanged(QuizStateType state)
         {
             // 게임 가동 상태에 따라 버튼 인터랙션 제어
@@ -199,15 +206,6 @@ namespace GameArifiction.QuizClassic
                     {
                         m_choiceButtons[i].interactable = isPlayable;
                     }
-                }
-            }
-
-            // 결과 및 재수강 창 진입 시 팝업 가이드
-            if (state == QuizStateType.Result)
-            {
-                if (m_resultPopup != null)
-                {
-                    m_resultPopup.func_ShowPopup(true); // 클리어 성공 패널 오픈
                 }
             }
         }

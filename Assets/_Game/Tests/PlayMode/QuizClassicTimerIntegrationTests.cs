@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using GameArifiction.QuizClassic;
 using GamifyKWU.CraneGame.Data;
+using GameArifiction.Player;
 
 namespace GameArifiction.Tests.PlayMode
 {
@@ -22,7 +23,7 @@ namespace GameArifiction.Tests.PlayMode
             };
             // 2초의 짧은 제한 시간으로 타이머 시나리오 테스트
             m_model = new QuizClassicModel(quizList, 2f);
-            m_viewModel = new QuizClassicViewModel(m_model);
+            m_viewModel = new QuizClassicViewModel(m_model, null);
         }
 
         [TearDown]

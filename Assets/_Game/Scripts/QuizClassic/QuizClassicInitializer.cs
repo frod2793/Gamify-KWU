@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using GamifyKWU.CraneGame.Data;
+using GameArifiction.Player;
 
 namespace GameArifiction.QuizClassic
 {
@@ -29,6 +30,11 @@ namespace GameArifiction.QuizClassic
         [SerializeField]
         [Tooltip("씬 개시(Start) 시점에 자동으로 클래식 퀴즈를 초기화하고 가동할지 여부입니다. 연계 플레이 시에는 반드시 false로 지정해야 합니다.")]
         private bool m_initializeOnStart = false;
+
+        [Header("세션 데이터")]
+        [SerializeField]
+        [Tooltip("씬 간 플레이어 위치 상태 보존을 위한 ScriptableObject 데이터 자산입니다.")]
+        private PlayerSO m_playerSO;
 
         #endregion
 
@@ -90,7 +96,7 @@ namespace GameArifiction.QuizClassic
             QuizClassicModel model = new QuizClassicModel(quizzes, m_timeLimitPerQuestion);
 
             // 3. ViewModel 생성 (POCO)
-            QuizClassicViewModel viewModel = new QuizClassicViewModel(model);
+            QuizClassicViewModel viewModel = new QuizClassicViewModel(model, m_playerSO);
 
             // 4. View 주입 및 초기화 (DI)
             if (m_classicView != null)

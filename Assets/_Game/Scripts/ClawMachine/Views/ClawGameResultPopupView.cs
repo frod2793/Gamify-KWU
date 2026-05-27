@@ -2,6 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using GameArifiction.QuizClassic;
+using GameArifiction.Player;
 
 namespace GameArifiction.ClawMachine
 {
@@ -29,6 +30,11 @@ namespace GameArifiction.ClawMachine
         #endregion
 
         #region 내부 필드 (Private Fields)
+        [Header("세션 데이터")]
+        [SerializeField]
+        [Tooltip("씬 간 플레이어 위치 상태 보존을 위한 ScriptableObject 데이터 자산입니다.")]
+        private PlayerSO m_playerSO;
+
         private IQuizGameViewModel m_viewModel;
         private TextMeshProUGUI m_confirmButtonText;
         private TextMeshProUGUI m_cancelButtonText;
@@ -116,8 +122,50 @@ namespace GameArifiction.ClawMachine
                 string activeSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
                 if (m_viewModel is QuizClassicViewModel)
                 {
-                    // A-1. 클래식 퀴즈 성공(성적표 확인) 시 UI 세팅
-                    m_descriptionText.text = "★ 최종 학습 평가 성적표 ★\n\n축하합니다! 클래식 객관식 퀴즈 코스를 우수하게 수료하셨습니다.\n\n최종 평가 결과: [이수 완료]\n배운 개념을 활용하여 실전에 응용해 보십시오!";
+                    // A-1. 클래식 퀴즈 성공(성적표 확인) 시 UI 세팅 및 성적 판정 계산
+                    float totalPlayTime = 0f;
+                    MinigameGrade calculatedGrade = MinigameGrade.D;
+
+                    if (m_playerSO != null)
+                    {
+                        totalPlayTime = m_playerSO.TotalMinigamePlayTime;
+                        
+                        // 성적 판정 기준:
+                        // A - 60초 내
+                        // B - 70~80초 사이 (60초 초과 80초 이하)
+                        // C - 90~100초 사이 (80초 초과 100초 이하)
+                        // D - 110~120초 사이 (100초 초과 120초 이하)
+                        // F - 시간 초과 (120초 초과)
+                        if (totalPlayTime <= 60f)
+                        {
+                            calculatedGrade = MinigameGrade.A;
+                        }
+                        else if (totalPlayTime <= 80f)
+                        {
+                            calculatedGrade = MinigameGrade.B;
+                        }
+                        else if (totalPlayTime <= 100f)
+                        {
+                            calculatedGrade = MinigameGrade.C;
+                        }
+                        else if (totalPlayTime <= 120f)
+                        {
+                            calculatedGrade = MinigameGrade.D;
+                        }
+                        else
+                        {
+                            calculatedGrade = MinigameGrade.F;
+                        }
+
+                        // PlayerSO 데이터에 저장 반영
+                        m_playerSO.SetMinigameGrade("ClawMachineQuiz", calculatedGrade);
+                    }
+
+                    m_descriptionText.text = "★ 최종 학습 평가 성적표 ★\n\n" +
+                                             "축하합니다! 인형뽑기부터 클래식 퀴즈 코스까지 전체 수료하셨습니다.\n\n" +
+                                             $"■ 총 소요 시간: {totalPlayTime:F1}초\n" +
+                                             $"■ 최종 성적 등급: [{calculatedGrade} 등급]\n\n" +
+                                             "배운 개념을 활용하여 실전에 응용해 보십시오!";
                     
                     if (m_confirmButtonText != null)
                     {
@@ -226,6 +274,11 @@ namespace GameArifiction.ClawMachine
                     if (m_viewModel is QuizClassicViewModel)
                     {
                         Debug.Log("[ClawGameResultPopupView] 플레이어가 클래식 퀴즈 성적표를 확인하고 메인(Lobby)으로 이동합니다.");
+                        if (m_playerSO != null)
+                        {
+                            m_playerSO.HasSavedPosition = true;
+                            Debug.Log($"[ClawGameResultPopupView] 로비로 돌아갈 때 마지막 복귀 위치 복원을 위해 HasSavedPosition 플래그를 true로 활성화했습니다. 위치: {m_playerSO.LastPosition}");
+                        }
                         UnityEngine.SceneManagement.SceneManager.LoadScene("Lobby");
                     }
                     else

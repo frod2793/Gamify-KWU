@@ -1,17 +1,12 @@
 {
-    "name": "GamifyKWU.Runtime",
+    "name": "EasyTransitions.Editor",
     "rootNamespace": "",
     "references": [
-        "UniTask",
-        "Unity.TextMeshPro",
-        "Unity.InputSystem",
-        "SPUM.Runtime",
-        "VirtualJoystick.Runtime",
-        "DOTween.Modules",
-        "UniTask.DOTween",
         "EasyTransitions"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

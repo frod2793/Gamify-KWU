@@ -1,7 +1,15 @@
 using NUnit.Framework;
 using GameArifiction.ClawMachine;
 using GamifyKWU.CraneGame.Data;
+using GameArifiction.Player;
 
+/// <summary>
+/// [기능]: 인형 뽑기 미니게임 뷰모델(ClawGameViewModel)의 비즈니스 로직 및 상태 제어를 검증하는 에디터 테스트 클래스
+/// [작성자]: 윤승종
+/// [수정 날짜]: 2026-05-27
+/// [마지막 수정 작성자]: 윤승종
+/// [수정 내용]: WrongAnswer 테스트 시 불필요했던 OnReTakeRequested 수신 기대를 제거하여 테스트 정합성 수정
+/// </summary>
 namespace GameArifiction.Tests.Editor
 {
     [TestFixture]
@@ -14,7 +22,7 @@ namespace GameArifiction.Tests.Editor
         public void Setup()
         {
             m_model = new ClawMachineModel(5, 120f);
-            m_viewModel = new ClawGameViewModel(m_model);
+            m_viewModel = new ClawGameViewModel(m_model, null);
         }
 
         [TearDown]
@@ -54,6 +62,13 @@ namespace GameArifiction.Tests.Editor
             Assert.AreEqual(ClawStateType.Result, m_viewModel.CurrentState);
         }
 
+        /// <summary>
+        /// [기능]: 잘못된 오답을 제출했을 때 실패 상태 전이 및 OnQuizFailed 이벤트 발행만 발생하는지 검증합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-05-27
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 오답 시 OnReTakeRequested는 발사되지 않는 도메인 설계 사양에 맞게 Assert.IsFalse로 검증 수정
+        /// </summary>
         [Test]
         public void SubmitAnswer_WrongAnswer_TransitionsToReTakeRequest()
         {
@@ -69,7 +84,7 @@ namespace GameArifiction.Tests.Editor
 
             // Assert
             Assert.IsTrue(failedFired);
-            Assert.IsTrue(reTakeFired);
+            Assert.IsFalse(reTakeFired);
             Assert.AreEqual(ClawStateType.ReTakeRequest, m_viewModel.CurrentState);
         }
 

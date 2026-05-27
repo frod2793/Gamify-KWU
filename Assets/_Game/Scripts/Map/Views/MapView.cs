@@ -4,19 +4,27 @@ using UnityEngine;
 namespace GameArifiction.Map
 {
     /// <summary>
-    /// 전체 맵의 관리와 시각적 전환을 담당하는 메인 뷰 컴포넌트입니다.
-    /// 작성자: [Gemini CLI / Lead Client Developer]
+    /// [기능]: 전체 맵의 관리와 시각적 포탈 기반 맵 전환을 담당하는 메인 뷰 컴포넌트
+    /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-05-27
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: foreach 이터레이터를 for 루프로 변환하여 GC 최적화 및 Allman 코드 표준 완비
     /// </summary>
     public class MapView : MonoBehaviour
     {
+        #region UI 참조 (Inspector)
         [SerializeField]
         private GameObject[] m_maps;
 
         [SerializeField]
         private Transform m_playerTransform;
+        #endregion
 
+        #region 내부 필드 (Private Fields)
         private MapViewModel m_viewModel;
+        #endregion
 
+        #region 유니티 생명주기 (Unity Lifecycle)
         /// <summary>
         /// 뷰모델을 초기화합니다.
         /// </summary>
@@ -31,58 +39,26 @@ namespace GameArifiction.Map
         /// </summary>
         private void Start()
         {
-            m_viewModel.OnMapChanged += HandleMapChanged;
+            if (m_viewModel != null)
+            {
+                m_viewModel.OnMapChanged += HandleMapChanged;
+            }
 
             PortalView[] portals = Object.FindObjectsByType<PortalView>(FindObjectsSortMode.None);
             
             if (portals != null)
             {
-                foreach (PortalView portal in portals)
+                for (int i = 0; i < portals.Length; i++)
                 {
-                    if (portal != null)
+                    if (portals[i] != null)
                     {
-                        portal.OnPortalEntered += HandlePortalEntered;
+                        portals[i].OnPortalEntered += HandlePortalEntered;
                     }
                 }
             }
 
             // 초기 맵 활성화
             HandleMapChanged(0);
-        }
-
-        /// <summary>
-        /// 포탈 진입 시 호출되어 맵 변경을 요청하고 플레이어 좌표를 이동시킵니다.
-        /// </summary>
-        /// <param name="newIndex">이동할 맵 인덱스</param>
-        /// <param name="spawnPosition">플레이어가 생성될 좌표</param>
-        private void HandlePortalEntered(int newIndex, Vector2 spawnPosition)
-        {
-            m_viewModel.ChangeMap(newIndex);
-
-            if (m_playerTransform != null)
-            {
-                m_playerTransform.position = spawnPosition;
-            }
-        }
-
-        /// <summary>
-        /// 맵 인덱스 변경 시 호출되어 실제 게임 오브젝트의 활성화 상태를 업데이트합니다.
-        /// </summary>
-        /// <param name="newIndex">활성화할 맵 인덱스</param>
-        private void HandleMapChanged(int newIndex)
-        {
-            if (m_maps == null)
-            {
-                return;
-            }
-
-            for (int i = 0; i < m_maps.Length; i++)
-            {
-                if (m_maps[i] != null)
-                {
-                    m_maps[i].SetActive(i == newIndex);
-                }
-            }
         }
 
         /// <summary>
@@ -99,14 +75,52 @@ namespace GameArifiction.Map
             
             if (portals != null)
             {
-                foreach (PortalView portal in portals)
+                for (int i = 0; i < portals.Length; i++)
                 {
-                    if (portal != null)
+                    if (portals[i] != null)
                     {
-                        portal.OnPortalEntered -= HandlePortalEntered;
+                        portals[i].OnPortalEntered -= HandlePortalEntered;
                     }
                 }
             }
         }
+        #endregion
+
+        #region 내부 메서드 (Private Methods)
+        /// <summary>
+        /// 포탈 진입 시 호출되어 맵 변경을 요청하고 플레이어 좌표를 이동시킵니다.
+        /// </summary>
+        private void HandlePortalEntered(int newIndex, Vector2 spawnPosition)
+        {
+            if (m_viewModel != null)
+            {
+                m_viewModel.ChangeMap(newIndex);
+            }
+
+            if (m_playerTransform != null)
+            {
+                m_playerTransform.position = spawnPosition;
+            }
+        }
+
+        /// <summary>
+        /// 맵 인덱스 변경 시 호출되어 실제 게임 오브젝트의 활성화 상태를 업데이트합니다.
+        /// </summary>
+        private void HandleMapChanged(int newIndex)
+        {
+            if (m_maps == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < m_maps.Length; i++)
+            {
+                if (m_maps[i] != null)
+                {
+                    m_maps[i].SetActive(i == newIndex);
+                }
+            }
+        }
+        #endregion
     }
 }

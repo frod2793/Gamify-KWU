@@ -4,6 +4,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using GamifyKWU.CraneGame.Data;
+using GameArifiction.Player;
 
 namespace GameArifiction.ClawMachine
 {
@@ -18,6 +19,7 @@ namespace GameArifiction.ClawMachine
     {
         #region 내부 필드 (Private Fields)
         private readonly ClawMachineModel m_model;
+        private readonly PlayerSO m_playerSO;
         private ClawStateType m_currentState;
         private CancellationTokenSource m_timerCts;
 
@@ -79,9 +81,10 @@ namespace GameArifiction.ClawMachine
         #endregion
 
         #region 초기화 (Initialization)
-        public ClawGameViewModel(ClawMachineModel model)
+        public ClawGameViewModel(ClawMachineModel model, PlayerSO playerSO)
         {
             m_model = model;
+            m_playerSO = playerSO;
             m_currentState = ClawStateType.Idle;
         }
 
@@ -465,7 +468,14 @@ public void NotifyAscendCompleted()
                 bool isCanceled = await UniTask.Yield(PlayerLoopTiming.Update, token).SuppressCancellationThrow();
                 if (isCanceled) return;
 
-                remainingSeconds -= Time.deltaTime;
+                float dt = Time.deltaTime;
+                remainingSeconds -= dt;
+
+                // [시간 누적]: 뽑기 게임 진행 중에 흘러간 시간을 PlayerSO에 실시간 누적합니다.
+                if (m_playerSO != null)
+                {
+                    m_playerSO.TotalMinigamePlayTime += dt;
+                }
                 
                 float timeLeft = Mathf.Max(0f, remainingSeconds);
                 if (m_model != null)

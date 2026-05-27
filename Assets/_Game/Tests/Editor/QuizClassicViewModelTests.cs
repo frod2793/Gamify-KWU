@@ -2,6 +2,7 @@ using NUnit.Framework;
 using System.Collections.Generic;
 using GameArifiction.QuizClassic;
 using GamifyKWU.CraneGame.Data;
+using GameArifiction.Player;
 
 namespace GameArifiction.Tests.Editor
 {
@@ -20,7 +21,7 @@ namespace GameArifiction.Tests.Editor
                 new QuizData("Q2", "Correct2", new List<string> { "W4", "W5", "W6" }, QuizType.Classic)
             };
             m_model = new QuizClassicModel(quizList, 30f);
-            m_viewModel = new QuizClassicViewModel(m_model);
+            m_viewModel = new QuizClassicViewModel(m_model, null);
         }
 
         [TearDown]

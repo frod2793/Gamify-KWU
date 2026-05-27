@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using GameArifiction.Player;
 using UnityEngine;
 using GamifyKWU.CraneGame.Data;
 
@@ -16,8 +17,10 @@ namespace GameArifiction.QuizClassic
         #region 내부 필드 (Private Fields)
 
         private readonly QuizClassicModel m_model;
+        private readonly PlayerSO m_playerSO;
         private QuizStateType m_currentState;
         private CancellationTokenSource m_timerCts;
+        private CancellationTokenSource m_nextQuizCts;
         private int m_reTakeCount; // 리플레이 재수강 시도 횟수 트래킹용
 
         // [신규]: 퀴즈 정답 추적 및 캡슐 퀴즈 데이터 매핑 딕셔너리
@@ -64,9 +67,10 @@ namespace GameArifiction.QuizClassic
 
         #region 초기화 (Initialization)
 
-        public QuizClassicViewModel(QuizClassicModel model)
+        public QuizClassicViewModel(QuizClassicModel model, PlayerSO playerSO)
         {
             m_model = model;
+            m_playerSO = playerSO;
             ChangeState(QuizStateType.Idle);
         }
 
@@ -77,9 +81,13 @@ namespace GameArifiction.QuizClassic
         /// <summary>
         /// [기능]: 미니게임을 정식 개시하고 첫 퀴즈를 출제합니다.
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-05-27
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 게임 시작 시 지연 로딩 태스크(CancellationToken)를 초기화하도록 보완
         /// </summary>
         public void StartGame()
         {
+            StopNextQuizDeferred();
             if (m_model.QuizList.Count == 0)
             {
                 Debug.LogWarning("[QuizClassicViewModel] 출제할 퀴즈 목록이 비어있습니다.");
@@ -163,9 +171,17 @@ namespace GameArifiction.QuizClassic
         }
 
 
+        /// <summary>
+        /// [기능]: 객체 해제 시 타이머 및 지연 퀴즈 출제 비동기 태스크를 안전하게 해제합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-05-27
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 지연 퀴즈 출제 태스크 취소를 위한 StopNextQuizDeferred 추가
+        /// </summary>
         public void Dispose()
         {
             StopTimer();
+            StopNextQuizDeferred();
         }
 
         #endregion
@@ -204,13 +220,42 @@ namespace GameArifiction.QuizClassic
             ChangeState(QuizStateType.Playing);
         }
 
+        /// <summary>
+        /// [기능]: 정답 처리 후 연출 마진을 준 뒤 다음 퀴즈를 지연 출제합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-05-27
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 유령 타이머 방지를 위해 CancellationToken을 연동한 안전 비동기 대기 구현
+        /// </summary>
         private async UniTaskVoid LoadNextQuizDeferred()
         {
+            StopNextQuizDeferred();
+            m_nextQuizCts = new CancellationTokenSource();
+            CancellationToken token = m_nextQuizCts.Token;
+
             // 정답 애니메이션이 화면에 출력되는 짧은 안착 마진 대기 (1.2초)
-            await UniTask.Delay(1200);
+            bool isCanceled = await UniTask.Delay(1200, cancellationToken: token).SuppressCancellationThrow();
+            if (isCanceled || token.IsCancellationRequested)
+            {
+                return;
+            }
             
             m_model.CurrentQuizIndex++;
             LoadCurrentQuiz();
+        }
+
+        /// <summary>
+        /// [기능]: 지연 퀴즈 출제용 비동기 태스크를 취소하고 CTS를 정리합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void StopNextQuizDeferred()
+        {
+            if (m_nextQuizCts != null)
+            {
+                m_nextQuizCts.Cancel();
+                m_nextQuizCts.Dispose();
+                m_nextQuizCts = null;
+            }
         }
 
         private void ChangeState(QuizStateType newState)
@@ -271,7 +316,14 @@ namespace GameArifiction.QuizClassic
                     return;
                 }
 
-                remainingSeconds -= Time.deltaTime;
+                float dt = Time.deltaTime;
+                remainingSeconds -= dt;
+
+                // [시간 누적]: 클래식 퀴즈 풀이 중에도 흘러간 시간을 PlayerSO에 실시간 누적합니다.
+                if (m_playerSO != null)
+                {
+                    m_playerSO.TotalMinigamePlayTime += dt;
+                }
 
                 float timeLeft = Mathf.Max(0f, remainingSeconds);
                 m_model.RemainingTime = timeLeft;

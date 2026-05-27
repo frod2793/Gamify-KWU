@@ -175,6 +175,11 @@ namespace EasyTransition
             //Destroying the transition
             Destroy(gameObject, destroyTime);
         }
+
+        private void OnDestroy()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoad;
+        }
     }
 
 }

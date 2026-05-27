@@ -37,6 +37,10 @@ namespace GamifyKWU.CraneGame.Data
         [SerializeField]
         [Tooltip("해당 퀴즈가 사용될 미니게임의 유형입니다.")]
         private QuizType m_quizType = QuizType.ClawMachine;
+
+        [SerializeField]
+        [Tooltip("퀴즈 정답에 대한 상세 설명 내용입니다.")]
+        private string m_explanation;
         #endregion
 
         #region 공개 프로퍼티 (Properties)
@@ -71,15 +75,24 @@ namespace GamifyKWU.CraneGame.Data
                 return m_quizType;
             }
         }
+
+        public string Explanation
+        {
+            get
+            {
+                return m_explanation;
+            }
+        }
         #endregion
 
         #region 생성자 (Constructor)
-        public QuizData(string question, string correctAnswer, List<string> wrongAnswers, QuizType quizType = QuizType.ClawMachine)
+        public QuizData(string question, string correctAnswer, List<string> wrongAnswers, QuizType quizType = QuizType.ClawMachine, string explanation = "")
         {
             m_question = question;
             m_correctAnswer = correctAnswer;
             m_wrongAnswers = wrongAnswers;
             m_quizType = quizType;
+            m_explanation = explanation;
         }
         #endregion
     }
