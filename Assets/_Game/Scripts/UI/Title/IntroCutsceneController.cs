@@ -52,11 +52,6 @@ namespace GamifyKWU.UI.Title
         [Tooltip("말풍선 패널 내부에서 튜토리얼 워딩을 순차 출력할 텍스트메쉬 프로 컴포넌트입니다.")]
         private TextMeshProUGUI m_speechText;
 
-        [Header("말풍선 위치 및 월드 변환 보정 설정")]
-        [SerializeField]
-        [Tooltip("월드 좌표를 UI 좌표로 변환할 때 사용할 씬 메인 카메라입니다. 미지정 시 Camera.main을 사용합니다.")]
-        private Camera m_uiCamera;
-
         [SerializeField]
         [Tooltip("말풍선 UI RectTransform입니다. 앵커 및 좌표 추적을 위해 필수 지정합니다.")]
         private RectTransform m_speechBubbleRect;
@@ -74,13 +69,20 @@ namespace GamifyKWU.UI.Title
         [Tooltip("텍스트 한 글자당 찍히는 타자 지연 속도(초)입니다.")]
         private float m_typingSpeed = 0.05f;
 
+        [Header("디버그 옵션")]
+        [SerializeField]
+        [Tooltip("활성화 시, 시청 완료 기록 및 세션 복원 여부를 강제 우회하여 항상 인트로를 구동합니다.")]
+        private bool m_forcePlayIntro = true;
+
         #endregion
 
         #region 내부 필드 (Private Fields)
 
         private string[] m_tutorialTexts = new string[]
         {
-            "아휴... 광운대학교 마스코트로서 어느덧 [XX]년...\n그냥 얼굴만 비추면 다 되는 줄 알았는데, 총장님께서 마스코트의 가치를 증명하라며 성적표를 받아오라고 하시네?\n\n그래서 여러 학과 중에 제일 재밌어 보이는 **'게임콘텐츠학과'**로 냉큼 달려왔지!\n와~ 보니까 신기하고 재밌어 보이는 미니게임들이 엄청 많은걸?\n\n조아써! 이 게임들을 전부 플레이하고, 아주 우수한 성적을 받아서 총장님께 당당하게 보여드리는 거야! 다들 우니를 도와줄 거지?"
+            "아휴... 광운대학교 마스코트로서 어느덧 [XX]년...\n그냥 얼굴만 비추면 다 되는 줄 알았는데, 총장님께서 마스코트의 가치를 증명하라며 성적표를 받아오라고 하시네?",
+            "그래서 여러 학과 중에 제일 재밌어 보이는 **'게임콘텐츠학과'**로 냉큼 달려왔지!\n와~ 보니까 신기하고 재밌어 보이는 미니게임들이 엄청 많은걸?",
+            "조아써! 이 게임들을 전부 플레이하고, 아주 우수한 성적을 받아서 총장님께 당당하게 보여드리는 거야! 다들 우니를 도와줄 거지?"
         };
         private int m_currentTextIndex = 0;
         private bool m_isIntroRunning = false;
@@ -88,6 +90,7 @@ namespace GamifyKWU.UI.Title
         private CancellationTokenSource m_typingCts;
         private bool m_isTypingActive = false;
         private string m_fullTextOfCurrentPage = string.Empty;
+        private GameArifiction.Camera.CameraFollow m_cameraFollow;
 
         #endregion
 
@@ -100,12 +103,16 @@ namespace GamifyKWU.UI.Title
                 m_speechBubblePanel.SetActive(false);
             }
 
-            if (m_uiCamera == null)
+            if (m_cameraFollow == null)
             {
-                m_uiCamera = Camera.main;
+                var mainCam = Camera.main;
+                if (mainCam != null)
+                {
+                    m_cameraFollow = mainCam.GetComponent<GameArifiction.Camera.CameraFollow>();
+                }
             }
 
-            if (m_playerSO != null)
+            if (m_playerSO != null && !m_forcePlayIntro)
             {
                 if (m_playerSO.IsIntroPlayed || m_playerSO.HasSavedPosition)
                 {
@@ -161,7 +168,7 @@ namespace GamifyKWU.UI.Title
                 return;
             }
 
-            if (m_playerSO != null)
+            if (m_playerSO != null && !m_forcePlayIntro)
             {
                 if (m_playerSO.IsIntroPlayed || m_playerSO.HasSavedPosition)
                 {
@@ -249,6 +256,17 @@ namespace GamifyKWU.UI.Title
             // 3. 목적지 도착 후 가상 입력 zero를 주입해 정지 애니메이션(IDLE) 자동 복원
             playerVM.ProcessInput(Vector2.zero, Time.deltaTime);
 
+            // 3.5. 대사 시작 전 카메라 줌인 연출 선행 개시 및 대기
+            if (m_cameraFollow != null)
+            {
+                m_cameraFollow.ZoomIn();
+                float delaySeconds = m_cameraFollow.ZoomDuration;
+                if (delaySeconds > 0f)
+                {
+                    await UniTask.Delay(System.TimeSpan.FromSeconds(delaySeconds), cancellationToken: token);
+                }
+            }
+
             // 4. 말풍선 튜토리얼 텍스트 팝업 개시
             m_currentTextIndex = 0;
             ShowSpeechBubble();
@@ -260,17 +278,13 @@ namespace GamifyKWU.UI.Title
 
         private void UpdateBubblePosition()
         {
-            if (m_playerView == null || m_speechBubbleRect == null)
+            if (m_playerView == null || m_speechBubbleRect == null || m_cameraFollow == null)
             {
                 return;
             }
 
-            if (m_uiCamera == null)
-            {
-                m_uiCamera = Camera.main;
-            }
-
-            if (m_uiCamera == null)
+            var activeCamera = m_cameraFollow.MainCamera;
+            if (activeCamera == null)
             {
                 return;
             }
@@ -278,7 +292,7 @@ namespace GamifyKWU.UI.Title
             Vector3 worldPos = m_playerView.transform.position;
             worldPos.y += m_worldOffsetY;
 
-            Vector2 screenPoint = m_uiCamera.WorldToScreenPoint(worldPos);
+            Vector2 screenPoint = activeCamera.WorldToScreenPoint(worldPos);
 
             RectTransform canvasRect = m_speechBubbleRect.parent as RectTransform;
             if (canvasRect != null)
@@ -382,6 +396,11 @@ namespace GamifyKWU.UI.Title
                 m_speechBubblePanel.transform.DOScale(Vector3.zero, 0.2f)
                     .SetEase(Ease.InBack)
                     .OnComplete(() => m_speechBubblePanel.SetActive(false));
+            }
+
+            if (m_cameraFollow != null)
+            {
+                m_cameraFollow.ZoomOut();
             }
 
             if (m_playerView != null)
