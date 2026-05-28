@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bfbde03c2418f5641ac31ebef70a545e, type: 3}
+  m_Name: GradeRunnerConfigSO
+  m_EditorClassIdentifier: GamifyKWU.Runtime::GameArifiction.GradeRunner.GradeRunnerConfigSO
+  m_gameDuration: 30
+  m_phase2TransitionTime: 10
+  m_maxGradePoint: 5
+  m_startGradePoint: 2.5
+  m_codePenalty: 0.5
+  m_cheatSheetBonus: 1
+  m_codeSpawnIntervalMinP1: 0.5
+  m_codeSpawnIntervalMaxP1: 0.7
+  m_codeSpawnIntervalMinP2: 0.3
+  m_codeSpawnIntervalMaxP2: 0.5
+  m_fallDurationMin: 6
+  m_fallDurationMax: 8
+  m_playerTraverseDurationMin: 4
+  m_playerTraverseDurationMax: 5
+  m_feedbackDisplayDuration: 1
+  m_introDialogue: "\uC790, \uC9C0\uAE08\uBD80\uD130 \uCF54\uB529 \uD14C\uC2A4\uD2B8\uB97C
+    \uC2DC\uC791\uD558\uACA0\uB2E4!"
+  m_phase2Dialogue: "\uD087\uD558\uD558\uD570!!!\n\uC544\uC9C1 \uB05D\uB098\uC9C0
+    \uC54A\uC558\uB2E4! \n\uBA54\uBAA8\uC7A5 \uCF54\uB529 \uD14C\uC2A4\uD2B8\uB97C
+    \uC2DC\uC791\uD558\uC9C0!"

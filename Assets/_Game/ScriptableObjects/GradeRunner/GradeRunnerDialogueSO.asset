@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 935e387edc97a0f4799277609ecdc20b, type: 3}
+  m_Name: GradeRunnerDialogueSO
+  m_EditorClassIdentifier: GamifyKWU.Runtime::GameArifiction.GradeRunner.GradeRunnerDialogueSO
+  m_introDialogue: "\uC790, \uC9C0\uAE08\uBD80\uD130 \uCF54\uB529 \uD14C\uC2A4\uD2B8\uB97C
+    \uC2DC\uC791\uD558\uACA0\uB2E4!"
+  m_phase2Dialogue: "\uC544\uC9C1 \uB05D\uB098\uC9C0 \uC54A\uC558\uB2E4! \uC9C4\uC815\uD55C
+    \uB9E4\uC6B4\uB9DB\uC744 \uBCF4\uC5EC\uC8FC\uC9C0!"
