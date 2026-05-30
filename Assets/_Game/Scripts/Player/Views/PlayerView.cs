@@ -35,8 +35,8 @@ namespace GameArifiction.Player
         private bool m_useMovementBounds = false;
 
         [SerializeField]
-        [Tooltip("플레이어 이동 가능 영역 (Center & Size)")]
-        private Bounds m_movementBounds;
+        [Tooltip("플레이어 이동 가능 영역을 획득할 대상 맵 오브젝트입니다.")]
+        private GameObject m_mapObject;
         #endregion
 
         #region 이벤트
@@ -48,6 +48,7 @@ namespace GameArifiction.Player
         private PlayerViewModel m_viewModel;
         private bool m_isInitialized = false;
         private IInteractable m_currentInteractable;
+        private PolygonCollider2D m_cachedFloorCollider;
         #endregion
 
         #region 유니티 생명주기
@@ -162,9 +163,31 @@ namespace GameArifiction.Player
             m_viewModel.OnFlipChanged += UpdateFlip;
             m_viewModel.OnIntensityChanged += UpdateAnimationSpeed;
 
-            if (m_useMovementBounds)
+            if (m_useMovementBounds && m_mapObject != null)
             {
-                m_viewModel.SetBounds(m_movementBounds);
+                int floorLayer = LayerMask.NameToLayer("Floor");
+                PolygonCollider2D[] colliders = m_mapObject.GetComponentsInChildren<PolygonCollider2D>(true);
+                
+                int colliderCount = colliders.Length;
+                for (int i = 0; i < colliderCount; i++)
+                {
+                    if (colliders[i] != null && colliders[i].gameObject.layer == floorLayer)
+                    {
+                        m_cachedFloorCollider = colliders[i];
+                        break;
+                    }
+                }
+
+                if (m_cachedFloorCollider != null)
+                {
+                    // 뷰모델의 기본 사각형 Bounds 제한은 해제하고 뷰포트 폴리곤에서 직접 정밀 처리
+                    m_viewModel.ClearBounds();
+                    Debug.Log($"[PlayerView] 맵의 Floor 레이어 PolygonCollider2D 감지 완료. 다각형 이동 제한 영역 바인딩 성공.");
+                }
+                else
+                {
+                    Debug.LogWarning("[PlayerView] m_mapObject에서 'Floor' 레이어를 가진 PolygonCollider2D를 찾을 수 없어 이동 제한 영역을 적용하지 못했습니다.");
+                }
             }
         }
 
@@ -190,6 +213,22 @@ namespace GameArifiction.Player
         #endregion
 
         #region 공개 메서드
+        /// <summary>
+        /// [기능]: 외부 및 LifetimeScope에서 플레이어 세션 데이터 자산에 안전하게 접근할 수 있도록 노출합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public PlayerSO PlayerSO => m_playerSO;
+
+        /// <summary>
+        /// [기능]: 외부 및 컨트롤러에서 리플렉션 없이 안전하게 뷰모델의 상태와 잠금 명령을 다룰 수 있도록 뷰모델 인스턴스를 노출합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        /// <returns>플레이어의 뷰모델 인스턴스</returns>
+        public PlayerViewModel GetViewModel()
+        {
+            return m_viewModel;
+        }
+
         public void RequestInteraction()
         {
             if (m_currentInteractable != null)
@@ -202,7 +241,13 @@ namespace GameArifiction.Player
         #region 내부 메서드
         private void HandleInput()
         {
-            Vector2 joystickInput = VirtualJoystick.GetAxis(m_joystickId);
+            Vector2 joystickInput = Vector2.zero;
+            
+            // 씬에 활성화된 VirtualJoystick 인스턴스가 존재할 경우에만 안전하게 조이스틱 입력 수신 (경고 및 컴파일 에러 방지)
+            if (VirtualJoystick.CountActiveInstances() > 0)
+            {
+                joystickInput = VirtualJoystick.GetAxis(m_joystickId);
+            }
 
             float horizontal = 0f;
             float vertical = 0f;
@@ -245,12 +290,28 @@ namespace GameArifiction.Player
 
         private void UpdatePosition(Vector2 newPosition)
         {
-            transform.position = newPosition;
+            Vector2 targetPos = newPosition;
+
+            // 폴리곤 영역 클램핑 정밀 계산
+            if (m_useMovementBounds && m_cachedFloorCollider != null)
+            {
+                // 해당 위치가 폴리곤 영역 밖인 경우
+                if (!m_cachedFloorCollider.OverlapPoint(newPosition))
+                {
+                    // 폴리곤 경계선에서 가장 가까운 포인트로 흡착 클램프
+                    targetPos = m_cachedFloorCollider.ClosestPoint(newPosition);
+
+                    // POCO 동기화를 위해 뷰모델 내부 좌표도 클램핑된 피드백 위치로 동적 리셋
+                    m_viewModel.ForceSetPosition(targetPos);
+                }
+            }
+
+            transform.position = targetPos;
 
             Rigidbody2D rb = GetComponent<Rigidbody2D>();
             if (rb != null)
             {
-                rb.position = newPosition;
+                rb.position = targetPos;
             }
         }
 
@@ -309,8 +370,47 @@ namespace GameArifiction.Player
         {
             if (m_useMovementBounds)
             {
-                Gizmos.color = Color.green;
-                Gizmos.DrawWireCube(m_movementBounds.center, m_movementBounds.size);
+                PolygonCollider2D poly = m_cachedFloorCollider;
+                if (poly == null && m_mapObject != null)
+                {
+                    // 런타임 실행 이전 에디터 상태에서도 실시간 기즈모 확인을 위한 폴백 검색 작동
+                    int floorLayer = LayerMask.NameToLayer("Floor");
+                    PolygonCollider2D[] colliders = m_mapObject.GetComponentsInChildren<PolygonCollider2D>(true);
+                    
+                    int colliderCount = colliders.Length;
+                    for (int i = 0; i < colliderCount; i++)
+                    {
+                        if (colliders[i] != null && colliders[i].gameObject.layer == floorLayer)
+                        {
+                            poly = colliders[i];
+                            break;
+                        }
+                    }
+                }
+
+                if (poly != null)
+                {
+                    Gizmos.color = Color.green;
+
+                    // 폴리곤의 모든 외각 경로(Path)를 루프로 순회하며 씬에 실시간 아웃라인 선화 렌더링
+                    int pathCount = poly.pathCount;
+                    for (int p = 0; p < pathCount; p++)
+                    {
+                        Vector2[] points = poly.GetPath(p);
+                        int pointCount = points.Length;
+                        if (pointCount < 2)
+                        {
+                            continue;
+                        }
+
+                        for (int i = 0; i < pointCount; i++)
+                        {
+                            Vector3 p1 = poly.transform.TransformPoint(points[i]);
+                            Vector3 p2 = poly.transform.TransformPoint(points[(i + 1) % pointCount]);
+                            Gizmos.DrawLine(p1, p2);
+                        }
+                    }
+                }
             }
         }
         #endregion

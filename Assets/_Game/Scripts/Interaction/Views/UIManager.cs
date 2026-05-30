@@ -28,41 +28,12 @@ namespace GameArifiction.Interaction
         #endregion
 
         #region 내부 필드 (Private Fields)
-        [Header("세션 데이터")]
-        [SerializeField]
-        [Tooltip("미니게임 복귀 여부 체크를 위해 활용할 플레이어 세션 데이터입니다.")]
-        private GameArifiction.Player.PlayerSO m_playerSO;
         #endregion
 
         #region 유니티 생명주기 (Unity Lifecycle)
-        private void Start()
-        {
-            InitializeTitlePanelVisibility();
-        }
         #endregion
 
         #region 초기화 (Initialization)
-        /// <summary>
-        /// [기능]: 미니게임 플레이 후 로비로 돌아온 경우인지 체크하여, 그렇다면 타이틀 패널을 비활성화하고 그렇지 않다면 활성화합니다.
-        /// [작성자]: 윤승종
-        /// </summary>
-        private void InitializeTitlePanelVisibility()
-        {
-            if (m_titleView != null)
-            {
-                // PlayerSO에 마지막 저장 위치(HasSavedPosition)가 기록되어 있다면 미니게임 등 외부 씬에서 복귀한 세션 상태로 판별합니다.
-                if (m_playerSO != null && m_playerSO.HasSavedPosition)
-                {
-                    Debug.Log("[UIManager] 미니게임 클리어 후 복귀한 세션이 감지되어 타이틀 패널을 비활성화 처리합니다.");
-                    m_titleView.gameObject.SetActive(false);
-                }
-                else
-                {
-                    Debug.Log("[UIManager] 최초 진입 세션으로 판별되어 타이틀 패널을 활성화합니다.");
-                    m_titleView.gameObject.SetActive(true);
-                }
-            }
-        }
         #endregion
 
         #region 공개 메서드

@@ -59,9 +59,10 @@ namespace GameArifiction.ClawMachine
         #endregion
 
         #region 초기화 (Initialization)
-        public void Initialize(ClawGameViewModel viewModel)
+        public void Initialize(ClawGameViewModel viewModel, ClawGameResultPopupView resultPopup)
         {
             m_viewModel = viewModel;
+            m_resultPopup = resultPopup;
             
             // 이벤트 구독
             m_viewModel.OnRemoveDisagreeDollRequested += HandleRemoveDisagreeDoll;
@@ -353,12 +354,17 @@ namespace GameArifiction.ClawMachine
 
         #region 이벤트 핸들러 (Event Handlers)
         /// <summary>
-        /// [기능]: 재수강 수락 시 뷰모델로부터 이벤트를 수신하여 씬 내의 '동의 안 함' 방해 캡슐 1개를 무작위 제거(파괴)합니다.
+        /// [기능]: 재수강 수락 시 뷰모델로부터 이벤트를 수신하여 집게 위치를 원복하고 오답 캡슐 1개를 무작위 제거합니다.
         /// [작성자]: 윤승종
         /// </summary>
         private void HandleRemoveDisagreeDoll()
-
         {
+            // [집게 위치 초기화]: 재시도가 트리거되었으므로 카트와 집게의 물리 상태를 원점 복원시킵니다.
+            if (m_clawView != null)
+            {
+                m_clawView.func_ResetClawToInitialState();
+            }
+
             ClawMachineDollView[] dolls = FindObjectsByType<ClawMachineDollView>(FindObjectsSortMode.None);
             if (dolls == null || dolls.Length == 0)
             {
@@ -366,30 +372,31 @@ namespace GameArifiction.ClawMachine
                 return;
             }
 
-            System.Collections.Generic.List<ClawMachineDollView> disagreeDolls = new System.Collections.Generic.List<ClawMachineDollView>();
+            // [오답 캡슐 수집]: IsCorrect가 false인 방해 캡슐들만 모아 혜택 타겟으로 적용합니다.
+            System.Collections.Generic.List<ClawMachineDollView> wrongDolls = new System.Collections.Generic.List<ClawMachineDollView>();
             for (int i = 0; i < dolls.Length; i++)
             {
                 ClawMachineDollView doll = dolls[i];
-                if (doll != null && doll.IsDisagree)
+                if (doll != null && !doll.IsCorrect)
                 {
-                    disagreeDolls.Add(doll);
+                    wrongDolls.Add(doll);
                 }
             }
 
-            if (disagreeDolls.Count > 0)
+            if (wrongDolls.Count > 0)
             {
-                int randomIndex = UnityEngine.Random.Range(0, disagreeDolls.Count);
-                ClawMachineDollView targetDoll = disagreeDolls[randomIndex];
+                int randomIndex = UnityEngine.Random.Range(0, wrongDolls.Count);
+                ClawMachineDollView targetDoll = wrongDolls[randomIndex];
                 if (targetDoll != null)
                 {
                     string targetId = targetDoll.DollId;
                     Destroy(targetDoll.gameObject);
-                    Debug.Log($"[ClawGameView] 재수강 난이도 완화 적용 완료: '동의 안 함' 방해 캡슐({targetId})을 제거했습니다.");
+                    Debug.Log($"[ClawGameView] 재수강 난이도 완화 적용 완료: 방해(오답) 캡슐({targetId}) 1개를 제거했습니다.");
                 }
             }
             else
             {
-                Debug.Log("[ClawGameView] 제거할 '동의 안 함' 방해 캡슐이 씬에 더 이상 존재하지 않습니다.");
+                Debug.Log("[ClawGameView] 제거할 방해(오답) 캡슐이 씬에 더 이상 존재하지 않습니다.");
             }
         }
         #endregion

@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using EasyTransition;
+using VContainer;
 
 /// <summary>
 /// [기능]: 타이틀 화면 UI의 시각적 요소와 플레이어 입력을 담당하며, Transition 패키지를 제어하는 뷰 클래스입니다.
@@ -21,6 +22,9 @@ namespace GamifyKWU.UI.Title
         #region 내부 필드 (Private Fields)
 
         private TitleViewModel m_viewModel;
+
+        [Inject]
+        private IntroCutsceneController m_introController;
 
         #endregion
 
@@ -125,15 +129,14 @@ namespace GamifyKWU.UI.Title
             Debug.Log("[TitleView] 트랜지션 컷포인트에 도달하여 타이틀 패널을 비활성화 처리하고 인트로 연출을 트리거합니다.");
             gameObject.SetActive(false);
 
-            // 씬 내에 있는 IntroCutsceneController를 찾아서 컷씬 시작을 명령합니다.
-            IntroCutsceneController introController = FindFirstObjectByType<IntroCutsceneController>();
-            if (introController != null)
+            // 씬 내에 주입받은 IntroCutsceneController의 컷씬 시작을 명령합니다.
+            if (m_introController != null)
             {
-                introController.StartIntroCutscene();
+                m_introController.StartIntroCutscene();
             }
             else
             {
-                Debug.LogWarning("[TitleView] 씬 내에 IntroCutsceneController를 찾을 수 없습니다.");
+                Debug.LogWarning("[TitleView] m_introController가 주입되지 않았습니다.");
             }
         }
 
@@ -145,10 +148,13 @@ namespace GamifyKWU.UI.Title
         {
             gameObject.SetActive(false);
 
-            IntroCutsceneController introController = FindFirstObjectByType<IntroCutsceneController>();
-            if (introController != null)
+            if (m_introController != null)
             {
-                introController.StartIntroCutscene();
+                m_introController.StartIntroCutscene();
+            }
+            else
+            {
+                Debug.LogWarning("[TitleView] m_introController가 주입되지 않았습니다.");
             }
         }
 

@@ -9,7 +9,8 @@
         "VirtualJoystick.Runtime",
         "DOTween.Modules",
         "UniTask.DOTween",
-        "EasyTransitions"
+        "EasyTransitions",
+        "VContainer"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

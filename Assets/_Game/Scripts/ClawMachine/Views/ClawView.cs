@@ -126,6 +126,39 @@ namespace GameArifiction.ClawMachine
         }
         #endregion
 
+        #region 공개 메서드 (Public Methods)
+        /// <summary>
+        /// [기능]: 재수강(재시도) 시 카트(ClawRoot)의 위치를 시작 원점 좌표로 원복하고 줄 길이 및 집게 상태를 완전 리셋합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void func_ResetClawToInitialState()
+        {
+            CancelAnimations();
+            
+            if (m_clawRoot != null)
+            {
+                m_clawRoot.localPosition = m_initialPosition;
+                m_prevCartX = m_clawRoot.position.x;
+            }
+
+            m_currentRopeLength = m_minRopeDistance;
+            m_currentAngle = 0f;
+            m_angularVelocity = 0f;
+            m_moveDirection = 0f;
+            m_isMoving = false;
+            m_isInAnimSequence = false;
+
+            if (m_clawBody != null)
+            {
+                m_clawBody.ResetPhysicsToKinematic();
+                m_clawBody.SetClawsOpenImmediately();
+                m_clawBody.ReleaseDoll();
+            }
+
+            Debug.Log("[ClawView] [ClawView] 재시도로 인한 집게 카트 및 로프 길이, 헤드 물리 상태 초기화 완료.");
+        }
+        #endregion
+
         #region 초기화 (Initialization)
         public void Initialize(ClawGameViewModel viewModel)
         {

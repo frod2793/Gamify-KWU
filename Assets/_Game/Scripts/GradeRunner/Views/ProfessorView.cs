@@ -259,7 +259,7 @@ namespace GameArifiction.GradeRunner
             {
                 m_dialogueBubble.gameObject.SetActive(true);
                 m_dialogueBubble.alpha = 0f;
-                m_dialogueBubble.DOFade(1f, 0.25f);
+                m_dialogueBubble.DOFade(1f, 0.25f).ToUniTask().Forget();
             }
 
             if (m_dialogueText != null)
@@ -294,7 +294,7 @@ namespace GameArifiction.GradeRunner
                         {
                             onComplete.Invoke();
                         }
-                    });
+                    }).ToUniTask().Forget();
                 }
                 else
                 {

@@ -58,6 +58,22 @@ namespace GameArifiction.ClawMachine
             }
         }
 
+        /// <summary>
+        /// [기능]: 해당 캡슐의 정답 여부를 반환합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public bool IsCorrect
+        {
+            get
+            {
+                if (m_model != null)
+                {
+                    return m_model.IsCorrect;
+                }
+                return false;
+            }
+        }
+
         public bool IsGrabbed
         {
             get { return m_isGrabbed; }

@@ -11,6 +11,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Game/Scenes/CraneGame.unity
     guid: 06236435276e13a479cf2845485bde5d
+  - enabled: 1
+    path: Assets/_Game/Scenes/GradeRunner.unity
+    guid: f7d7b44a6eac42e458f44968e4308bbc
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

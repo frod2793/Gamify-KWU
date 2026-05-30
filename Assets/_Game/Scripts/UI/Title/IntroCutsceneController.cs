@@ -6,6 +6,7 @@ using Cysharp.Threading.Tasks;
 using GameArifiction.Player;
 using GameArifiction.Interaction;
 using TMPro;
+using VContainer;
 
 /// <summary>
 /// [기능]: 최초 플레이 시 플레이어가 입구에서 시작 지점까지 걷고 말풍선 튜토리얼을 띄우는 인트로 연출 제어기입니다.
@@ -19,6 +20,7 @@ namespace GamifyKWU.UI.Title
 
         [Header("연출 대상 참조")]
         [SerializeField]
+        [Inject]
         [Tooltip("씬 상에 존재하는 실제 제어 대상인 플레이어 뷰 컴포넌트입니다.")]
         private PlayerView m_playerView;
 
@@ -193,21 +195,15 @@ namespace GamifyKWU.UI.Title
 
             if (m_playerView == null)
             {
-                m_playerView = FindFirstObjectByType<PlayerView>();
-            }
-
-            if (m_playerView == null)
-            {
-                Debug.LogError("[IntroCutsceneController] 씬에 PlayerView가 없어 인트로를 재생할 수 없습니다.");
+                Debug.LogError("[IntroCutsceneController] 씬에 주입되거나 할당된 PlayerView가 없어 인트로를 재생할 수 없습니다.");
                 return;
             }
 
             // PlayerView의 Start() 초기화(InitializeMVVM)가 실행될 시간을 보장하기 위해 1프레임 대기합니다.
             await UniTask.Yield(PlayerLoopTiming.Update, token);
 
-            // 플레이어 조작 ViewModel 획득 (리플렉션 활용)
-            var viewModelField = typeof(PlayerView).GetField("m_viewModel", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            PlayerViewModel playerVM = viewModelField?.GetValue(m_playerView) as PlayerViewModel;
+            // 플레이어 조작 ViewModel을 리플렉션 없이 안전하게 획득
+            PlayerViewModel playerVM = m_playerView.GetViewModel();
 
             if (playerVM == null)
             {
@@ -405,8 +401,7 @@ namespace GamifyKWU.UI.Title
 
             if (m_playerView != null)
             {
-                var viewModelField = typeof(PlayerView).GetField("m_viewModel", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                PlayerViewModel playerVM = viewModelField?.GetValue(m_playerView) as PlayerViewModel;
+                PlayerViewModel playerVM = m_playerView.GetViewModel();
 
                 if (playerVM != null)
                 {

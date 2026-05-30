@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using EasyTransition; // [신규]: 이지 트랜지션 기능 수입
+using VContainer;
 using GameArifiction.QuizClassic;
 using GameArifiction.Player;
 
@@ -45,6 +46,18 @@ namespace GameArifiction.ClawMachine
         [SerializeField]
         [Tooltip("트랜스 효과가 진행되기 시작할 딜레이 시간(초)입니다.")]
         private float m_startDelay = 0f;
+
+        [Inject]
+        public QuizClassicFlowController QuizFlowController { get; set; }
+
+        [Inject]
+        public QuizClassicView QuizClassicViewInstance { get; set; }
+
+        [Inject]
+        public ClawGameView ClawGameViewInstance { get; set; }
+
+        [Inject]
+        public ClawSceneReferencesDTO SceneReferences { get; set; }
 
         private IQuizGameViewModel m_viewModel;
         private TextMeshProUGUI m_confirmButtonText;
@@ -261,24 +274,27 @@ namespace GameArifiction.ClawMachine
             else
             {
                 // B. 실패(오답 또는 제한시간 만료) 시 UI 세팅
+                if (m_confirmButton != null)
+                {
+                    m_confirmButton.gameObject.SetActive(true);
+                }
+
                 if (m_viewModel is QuizClassicViewModel)
                 {
                     // 클래식 퀴즈 실패 UI (오답 또는 시간 초과 판정 구체화)
                     if (m_isTimeOverState)
                     {
-                        m_descriptionText.text = "제한 시간이 초과되었습니다!\n\n제한 시간 마진 내에 문제를 해결하지 못해 실패하셨습니다.\n다시 한번 도전하여 학습 평가 코스를 수료해 보십시오!";
+                        m_descriptionText.text = "★ 제한 시간이 초과되었습니다! ★\n\n" +
+                                                 "제한 시간이 모두 경과하여 퀴즈에 실패하셨습니다.\n" +
+                                                 "재수강(리플레이)을 진행하여 다시 도전해 보십시오!";
 
                         if (m_confirmButtonText != null)
                         {
                             m_confirmButtonText.text = "재수강 진행";
                         }
-                        if (m_cancelButtonText != null)
-                        {
-                            m_cancelButtonText.text = "학습 종료";
-                        }
                         if (m_cancelButton != null)
                         {
-                            m_cancelButton.gameObject.SetActive(true);
+                            m_cancelButton.gameObject.SetActive(false); // 오직 재시도 버튼만 노출
                         }
                     }
                     else
@@ -307,21 +323,20 @@ namespace GameArifiction.ClawMachine
                             nextTimeLimit = 20;
                         }
 
-                        m_descriptionText.text = "제한 시간이 초과되었습니다!\n재수강(리플레이)을 신청하시겠습니까?\n\n" +
-                                                 $"[혜택] 방해 캡슐 '동의 안 함' 1개 제거\n" +
-                                                 $"[패널티] 제한 시간 {currentPenaltySeconds}초 차감 (다음 판: {nextTimeLimit}초)";
+                        m_descriptionText.text = "★ 제한 시간이 초과되었습니다! ★\n\n" +
+                                                 "제한 시간이 모두 경과하여 퀴즈에 실패하셨습니다.\n" +
+                                                 "재수강(리플레이)을 신청하여 다시 도전하십시오!\n\n" +
+                                                 $"■ 현재 재수강 횟수: {m_viewModel.ReTakeCount}회\n" +
+                                                 $"■ 재수강 혜택: 방해 캡슐(오답 캡슐) 1개 영구 제거\n" +
+                                                 $"■ 재수강 패널티: 다음 판 제한 시간 {nextTimeLimit}초 (20초 단축)";
 
                         if (m_confirmButtonText != null)
                         {
                             m_confirmButtonText.text = "재수강 진행";
                         }
-                        if (m_cancelButtonText != null)
-                        {
-                            m_cancelButtonText.text = "동의 안 함 (종료)";
-                        }
                         if (m_cancelButton != null)
                         {
-                            m_cancelButton.gameObject.SetActive(true);
+                            m_cancelButton.gameObject.SetActive(false); // 오직 재수강 진행 버튼만 노출
                         }
                     }
                     else
@@ -406,46 +421,46 @@ namespace GameArifiction.ClawMachine
                     }
                     else
                     {
-                        Debug.Log("[ClawGameResultPopupView] 플레이어가 '다음 단계로' 버튼을 선택하여 동일 씬 내의 클래식 퀴즈 팝업/뷰를 활성화합니다.");
+                        Debug.Log("[ClawGameResultPopupView] 플레이어가 '다음 단계로' 버튼을 선택하여 클래식 퀴즈 뷰를 활성화합니다.");
                         
-                        // 1. 클래식 퀴즈 이니셜라이저 활성화 (비활성화 상태 탐색 포함)
-                        QuizClassicInitializer classicInitializer = FindFirstObjectByType<QuizClassicInitializer>(FindObjectsInactive.Include);
-                        if (classicInitializer != null)
+                        // 1. 클래식 퀴즈 뷰 활성화
+                        if (QuizClassicViewInstance != null)
                         {
-                            classicInitializer.gameObject.SetActive(true);
-                            
-                            // [수정]: 유령 타이머 방지를 위해 m_initializeOnStart가 false로 되어있으므로, 명시적으로 수동 개시 호출
-                            classicInitializer.InitializeClassicQuiz();
-                            
-                            // 이니셜라이저 산하의 클래식 뷰도 활성화 보장
-                            QuizClassicView classicView = FindFirstObjectByType<QuizClassicView>(FindObjectsInactive.Include);
-                            if (classicView != null)
-                            {
-                                classicView.gameObject.SetActive(true);
-                            }
+                            QuizClassicViewInstance.gameObject.SetActive(true);
+                            Debug.Log("[ClawGameResultPopupView] QuizClassicView 오브젝트를 성공적으로 활성화했습니다.");
                         }
                         else
                         {
-                            // 폴백: 이니셜라이저 유실 대비 뷰 다이렉트 활성화
-                            QuizClassicView classicView = FindFirstObjectByType<QuizClassicView>(FindObjectsInactive.Include);
-                            if (classicView != null)
-                            {
-                                classicView.gameObject.SetActive(true);
-                            }
+                            Debug.LogError("[ClawGameResultPopupView] 주입받은 QuizClassicViewInstance가 null입니다.");
+                        }
+
+                        if (QuizFlowController != null)
+                        {
+                            QuizFlowController.StartClassicQuiz();
+                        }
+                        else
+                        {
+                            Debug.LogError("[ClawGameResultPopupView] QuizClassicFlowController 의존성이 주입되지 않았습니다.");
                         }
 
                         // 2. 현재 인형뽑기 메인 뷰 비활성화
-                        ClawGameView clawGameView = FindFirstObjectByType<ClawGameView>(FindObjectsInactive.Include);
-                        if (clawGameView != null)
+                        if (ClawGameViewInstance != null)
                         {
-                            clawGameView.gameObject.SetActive(false);
+                            ClawGameViewInstance.gameObject.SetActive(false);
+                        }
+                        else
+                        {
+                            Debug.LogWarning("[ClawGameResultPopupView] 주입받은 ClawGameViewInstance가 null입니다.");
                         }
 
                         // 3. 인형뽑기 3D 물리 공간 기기 오브젝트 비활성화
-                        GameObject clawWorld = GameObject.Find("ClawMachine_World");
-                        if (clawWorld != null)
+                        if (SceneReferences != null && SceneReferences.ClawMachineWorld != null)
                         {
-                            clawWorld.SetActive(false);
+                            SceneReferences.ClawMachineWorld.SetActive(false);
+                        }
+                        else
+                        {
+                            Debug.LogWarning("[ClawGameResultPopupView] 주입받은 SceneReferences 또는 ClawMachineWorld가 null입니다.");
                         }
                     }
                 }
