@@ -43,7 +43,7 @@ namespace GameArifiction.GradeRunner
                 return;
             }
 
-            if (m_viewModel.CurrentState != GradeRunnerState.Playing && m_viewModel.CurrentState != GradeRunnerState.Phase2Cutscene)
+            if (!m_viewModel.IsPlayable)
             {
                 return;
             }
@@ -203,7 +203,7 @@ namespace GameArifiction.GradeRunner
         /// </summary>
         private void OnTriggerEnter2D(Collider2D collision)
         {
-            if (m_viewModel == null || (m_viewModel.CurrentState != GradeRunnerState.Playing && m_viewModel.CurrentState != GradeRunnerState.Phase2Cutscene))
+            if (m_viewModel == null || !m_viewModel.IsPlayable)
             {
                 return;
             }

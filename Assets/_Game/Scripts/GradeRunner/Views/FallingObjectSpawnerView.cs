@@ -88,6 +88,7 @@ namespace GameArifiction.GradeRunner
             if (m_viewModel != null)
             {
                 m_viewModel.OnSpawnFallingObject += HandleSpawnFallingObject;
+                m_viewModel.OnClearFallingObjects += HandleClearFallingObjects;
             }
 
             Debug.Log("[FallingObjectSpawnerView] 스포너 뷰 초기화 및 의존성 주입 완료.");
@@ -98,6 +99,7 @@ namespace GameArifiction.GradeRunner
             if (m_viewModel != null)
             {
                 m_viewModel.OnSpawnFallingObject -= HandleSpawnFallingObject;
+                m_viewModel.OnClearFallingObjects -= HandleClearFallingObjects;
             }
         }
 
@@ -258,6 +260,33 @@ namespace GameArifiction.GradeRunner
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// [기능]: 게임 시작/재시작 시 풀에 담긴 모든 낙하 오브젝트를 씬 검색 없이 O(1) 계열의 루프로 일괄 비활성화(회수)합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void HandleClearFallingObjects()
+        {
+            int codeCount = m_codePool.Count;
+            for (int i = 0; i < codeCount; i++)
+            {
+                if (m_codePool[i] != null && m_codePool[i].gameObject.activeSelf)
+                {
+                    m_codePool[i].func_Deactivate();
+                }
+            }
+
+            int cheatSheetCount = m_cheatSheetPool.Count;
+            for (int i = 0; i < cheatSheetCount; i++)
+            {
+                if (m_cheatSheetPool[i] != null && m_cheatSheetPool[i].gameObject.activeSelf)
+                {
+                    m_cheatSheetPool[i].func_Deactivate();
+                }
+            }
+
+            Debug.Log("[FallingObjectSpawnerView] 씬 탐색 없이 활성화 상태였던 모든 낙하 오브젝트 풀 회수 완료.");
         }
 
         #endregion

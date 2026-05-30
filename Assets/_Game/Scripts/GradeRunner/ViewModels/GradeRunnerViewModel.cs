@@ -63,6 +63,7 @@ namespace GameArifiction.GradeRunner
         public event Action<GradeRunnerPhase> OnPhaseChanged; 
         public event Action<float, Vector2> OnScoreFeedback; // 학점 변화량, 충돌 위치
         public event Action<FallingObjectType, CodeColorType, float> OnSpawnFallingObject; // 스폰할 오브젝트 정보 (타입, 색상, 스폰 가속도)
+        public event Action OnClearFallingObjects; // 스폰된 모든 낙하물 청소 이벤트
         public event Action<GradeRunnerResultDTO> OnGameResult;
 
         public event Action OnIntroCutsceneStarted; // 도입부 교수님 등장 대사 이벤트
@@ -78,6 +79,11 @@ namespace GameArifiction.GradeRunner
         public float RemainingTime => m_model.RemainingTime;
         public float MaxGradePoint => m_model.MaxGradePoint;
         public float GameDuration => m_model.GameDuration;
+
+        /// <summary>
+        /// [기능]: 현재 게임이 실질적 플레이 진행이 가능한 활성 상태인지를 판별합니다.
+        /// </summary>
+        public bool IsPlayable => m_currentState == GradeRunnerState.Playing || m_currentState == GradeRunnerState.Phase2Cutscene;
 
         public string IntroDialogue => m_dialogueSO != null ? m_dialogueSO.IntroDialogue : "자, 지금부터 코딩 테스트를 시작하겠다!";
         public string Phase2Dialogue => m_dialogueSO != null ? m_dialogueSO.Phase2Dialogue : "아직 끝나지 않았다! 진정한 매운맛을 보여주지!";
@@ -110,6 +116,9 @@ namespace GameArifiction.GradeRunner
         public void StartGame()
         {
             StopGameTasks();
+
+            // 스폰되어 있는 잔여 코드/족보 오브젝트들 일괄 제거(회수) 이벤트 통보
+            OnClearFallingObjects?.Invoke();
 
             m_model.CurrentGradePoint = m_config.StartGradePoint;
             m_model.RemainingTime = m_config.GameDuration;
@@ -195,7 +204,7 @@ namespace GameArifiction.GradeRunner
         /// </summary>
         public void ApplyCodeHit(Vector2 hitPosition)
         {
-            if (m_currentState != GradeRunnerState.Playing && m_currentState != GradeRunnerState.Phase2Cutscene)
+            if (!IsPlayable)
             {
                 return;
             }
@@ -215,7 +224,7 @@ namespace GameArifiction.GradeRunner
         /// </summary>
         public void ApplyCheatSheetPickup(Vector2 hitPosition)
         {
-            if (m_currentState != GradeRunnerState.Playing && m_currentState != GradeRunnerState.Phase2Cutscene)
+            if (!IsPlayable)
             {
                 return;
             }
@@ -287,13 +296,10 @@ namespace GameArifiction.GradeRunner
                     return;
                 }
 
-                while (m_isPaused)
+                await WaitWhilePausedAsync(token);
+                if (token.IsCancellationRequested)
                 {
-                    bool isPausedCanceled = await UniTask.Yield(PlayerLoopTiming.Update, token).SuppressCancellationThrow();
-                    if (isPausedCanceled || token.IsCancellationRequested)
-                    {
-                        return;
-                    }
+                    return;
                 }
 
                 float dt = Time.deltaTime;
@@ -430,13 +436,10 @@ namespace GameArifiction.GradeRunner
                     return;
                 }
 
-                while (m_isPaused)
+                await WaitWhilePausedAsync(token);
+                if (token.IsCancellationRequested)
                 {
-                    bool isPausedCanceled = await UniTask.Yield(PlayerLoopTiming.Update, token).SuppressCancellationThrow();
-                    if (isPausedCanceled || token.IsCancellationRequested)
-                    {
-                        return;
-                    }
+                    return;
                 }
 
                 // 색상 가중치에 따른 랜덤 색상 추첨 (빨강 8%, 보라 23%, 노랑 23%, 하늘 23%, 녹색 23%)
@@ -509,6 +512,22 @@ namespace GameArifiction.GradeRunner
                 return (MinigameGrade.D, "D");
             }
             return (MinigameGrade.F, "F");
+        }
+
+        /// <summary>
+        /// [기능]: 일시정지 활성화 상태 동안 비동기적으로 대기 루프를 유지하는 공통 헬퍼 메서드입니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private async UniTask WaitWhilePausedAsync(CancellationToken token)
+        {
+            while (m_isPaused)
+            {
+                bool isCanceled = await UniTask.Yield(PlayerLoopTiming.Update, token).SuppressCancellationThrow();
+                if (isCanceled || token.IsCancellationRequested)
+                {
+                    return;
+                }
+            }
         }
 
         #endregion

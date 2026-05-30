@@ -470,8 +470,29 @@ namespace GameArifiction.ClawMachine
         {
             if (m_viewModel != null && !m_isSuccessState)
             {
-                Debug.Log("[ClawGameResultPopupView] 플레이어가 재수강 거절 버튼을 클릭했습니다.");
+                Debug.Log("[ClawGameResultPopupView] 플레이어가 재수강 거절 버튼을 클릭했습니다. Lobby로 복귀합니다.");
                 m_viewModel.RejectReTake();
+
+                // 로비 씬 복원 활성화 플래그 주입
+                if (m_playerSO != null)
+                {
+                    m_playerSO.HasSavedPosition = true;
+                }
+
+                // 이지 트랜지션 연출 적용
+                if (m_transitionSettings != null)
+                {
+                    TransitionManager manager = FindFirstObjectByType<TransitionManager>();
+                    if (manager != null)
+                    {
+                        TransitionManager.Instance().Transition("Lobby", m_transitionSettings, m_startDelay);
+                        func_HidePopup();
+                        return;
+                    }
+                }
+
+                // 트랜지션 유실 시 일반 씬 매니저 다이렉트 전이 폴백
+                SceneManager.LoadScene("Lobby");
             }
             func_HidePopup();
         }

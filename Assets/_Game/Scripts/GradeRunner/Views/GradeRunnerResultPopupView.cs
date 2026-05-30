@@ -15,11 +15,6 @@ namespace GameArifiction.GradeRunner
     {
         #region UI 참조 (Inspector)
 
-        [Header("팝업 컨테이너")]
-        [SerializeField]
-        [Tooltip("도트윈 등장 애니메이션 연출을 적용할 팝업 루트 트랜스폼입니다.")]
-        private Transform m_popupContainer;
-
         [Header("텍스트 정보")]
         [SerializeField]
         [Tooltip("최종 학점 등급(A/B/C/D/F)을 큼직하게 노출할 텍스트 컴포넌트입니다.")]
@@ -128,28 +123,14 @@ namespace GameArifiction.GradeRunner
         #region UI 버튼 클릭 이벤트 핸들러 (Public Methods)
 
         /// <summary>
-        /// [기능]: 다시하기 버튼 클릭 시 씬 내의 찌꺼기 낙하물들을 모두 소멸시키고 뷰모델의 재시작 루틴을 트리거합니다.
+        /// [기능]: 다시하기 버튼 클릭 시 뷰모델의 재시작 루틴을 트리거하여 씬 초기화 및 게임을 재개합니다.
         /// [작성자]: 윤승종
         /// </summary>
         public void func_OnRetryButtonClicked()
         {
             Debug.Log("[GradeRunnerResultPopupView] 플레이어가 미니게임 다시하기를 선택했습니다.");
 
-            // 씬 내에 잔존 중인 활성 낙하 오브젝트들을 전부 찾아 비활성화(풀 회수)
-            FallingObjectView[] activeObjects = FindObjectsByType<FallingObjectView>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
-            if (activeObjects != null)
-            {
-                int objectCount = activeObjects.Length;
-                for (int i = 0; i < objectCount; i++)
-                {
-                    if (activeObjects[i] != null)
-                    {
-                        activeObjects[i].func_Deactivate();
-                    }
-                }
-            }
-
-            // 팝업을 닫고 뷰모델 게임 재시작
+            // 팝업을 닫고 뷰모델 게임 재시작 (낙하 오브젝트들은 뷰모델 재시작 이벤트 송출에 의해 스포너에서 알아서 자동 정리됨)
             gameObject.SetActive(false);
             if (m_viewModel != null)
             {
@@ -220,12 +201,9 @@ namespace GameArifiction.GradeRunner
             gameObject.SetActive(true);
 
             // 프리미엄 팝업 모달 등장 연출 (Scale 0.0 -> 1.0 바운싱 기법)
-            if (m_popupContainer != null)
-            {
-                m_popupContainer.DOKill();
-                m_popupContainer.localScale = Vector3.zero;
-                m_popupContainer.DOScale(Vector3.one, 0.45f).SetEase(Ease.OutBack);
-            }
+            transform.DOKill();
+            transform.localScale = Vector3.zero;
+            transform.DOScale(Vector3.one, 0.45f).SetEase(Ease.OutBack);
         }
 
         #endregion
