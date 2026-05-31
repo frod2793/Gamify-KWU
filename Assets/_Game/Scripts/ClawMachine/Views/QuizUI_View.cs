@@ -1,44 +1,38 @@
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace GameArifiction.ClawMachine
 {
     /// <summary>
-    /// [기능]: UI Canvas 상단에 퀴즈 질문 및 상세 설명을 출력하고 제한시간 타이머를 제어하는 UI View
+    /// [기능]: UI Canvas 상단에 제한시간 타이머를 제어하고 게임 시작 전 퀴즈 문제 팝업을 연동하는 UI View.
     /// [작성자]: 윤승종
     /// </summary>
     public class QuizUI_View : MonoBehaviour
     {
         #region 참조 (Inspector)
         [SerializeField]
-        [Tooltip("퀴즈 질문을 표시할 TextMeshProUGUI 컴포넌트입니다.")]
-        private TextMeshProUGUI m_questionText;
-
-        [SerializeField]
         [Tooltip("남은 제한 시간을 표시할 TextMeshProUGUI 컴포넌트입니다.")]
         private TextMeshProUGUI m_timeText;
 
+        [Header("퀴즈 문제 팝업 UI (Inspector)")]
         [SerializeField]
-        [Tooltip("답안에 대한 상세 설명 내용을 표시할 텍스트 컴포넌트입니다. (스크롤 뷰 내에 위치)")]
-        private TextMeshProUGUI m_explanationText;
+        [Tooltip("게임 시작 전 퀴즈 문제를 모달처럼 보여줄 팝업 패널입니다.")]
+        private GameObject m_quizPopupPanel;
         #endregion
 
         #region 내부 필드 (Private Fields)
         private ClawGameViewModel m_viewModel;
-        private Color m_originalTextColor;
         #endregion
 
         #region 유니티 생명주기 (Unity Lifecycle)
         private void Awake()
         {
-            if (m_questionText != null)
+            // 초기 팝업 패널 비활성화 방어막 가동
+            if (m_quizPopupPanel != null)
             {
-                m_originalTextColor = m_questionText.color;
-            }
-            else
-            {
-                m_originalTextColor = Color.white;
+                m_quizPopupPanel.SetActive(false);
             }
         }
 
@@ -48,11 +42,6 @@ namespace GameArifiction.ClawMachine
             {
                 m_viewModel.OnStateChanged -= HandleStateChanged;
                 m_viewModel.OnTimeChanged -= UpdateTimeUI;
-            }
-
-            if (m_questionText != null)
-            {
-                DOTween.Kill(m_questionText);
             }
         }
         #endregion
@@ -66,9 +55,28 @@ namespace GameArifiction.ClawMachine
             m_viewModel.OnStateChanged += HandleStateChanged;
             m_viewModel.OnTimeChanged += UpdateTimeUI;
 
-            // 초기 문제 및 제한 시간 타이머 UI 동기화 갱신
-            UpdateQuizUI();
+            // 초기 제한 시간 타이머 UI 동기화 갱신
             UpdateTimeUI(m_viewModel.TimeLeft);
+
+            if (m_quizPopupPanel != null)
+            {
+                m_quizPopupPanel.SetActive(false);
+            }
+        }
+        #endregion
+
+        #region UI 이벤트 콜백 (Public Methods)
+        /// <summary>
+        /// [기능]: 퀴즈 문제 확인(시작) 버튼 클릭 시 호출되어 뷰모델의 퀴즈 종료 및 카운트다운을 트리거합니다.
+        ///         (에디터 상에서 Button.OnClick 이벤트에 직접 등록하여 사용합니다.)
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void func_OnStartButtonClicked()
+        {
+            if (m_viewModel != null)
+            {
+                m_viewModel.func_CompleteQuizReveal();
+            }
         }
         #endregion
 
@@ -85,46 +93,29 @@ namespace GameArifiction.ClawMachine
             }
         }
 
-        /// <summary>
-        /// [기능]: 뷰모델에 등록된 현재 퀴즈 질문 및 상세 설명을 텍스트 컴포넌트에 출력하고 시각 요소를 리셋합니다.
-        /// [작성자]: 윤승종
-        /// </summary>
-        private void UpdateQuizUI()
+        private void HandleStateChanged(ClawStateType state)
         {
-            if (m_viewModel == null || m_questionText == null)
+            // 재수강 등으로 게임이 리셋되어 Idle 상태로 복귀했을 때 타이머를 다시 안전하게 업데이트해줍니다.
+            if (state == ClawStateType.Idle)
             {
-                return;
+                UpdateTimeUI(m_viewModel.TimeLeft);
             }
 
-            var quiz = m_viewModel.CurrentQuiz;
-            if (quiz != null)
+            // [퀴즈 문제 팝업 흐름 제어]: QuizReveal 상태일 때 팝업 패널을 띄웁니다.
+            if (state == ClawStateType.QuizReveal)
             {
-                m_questionText.text = quiz.Question;
-                m_questionText.color = m_originalTextColor;
-                m_questionText.transform.localScale = Vector3.one;
-
-                if (m_explanationText != null)
+                if (m_quizPopupPanel != null)
                 {
-                    m_explanationText.text = quiz.Explanation;
+                    m_quizPopupPanel.SetActive(true);
                 }
             }
             else
             {
-                m_questionText.text = "인형뽑기 문제를 준비 중입니다...";
-                if (m_explanationText != null)
+                // 그 외 플레이 및 카운트다운 등의 상태에서는 팝업을 안전히 하이드시킵니다.
+                if (m_quizPopupPanel != null)
                 {
-                    m_explanationText.text = string.Empty;
+                    m_quizPopupPanel.SetActive(false);
                 }
-            }
-        }
-
-        private void HandleStateChanged(ClawStateType state)
-        {
-            // 재수강 등으로 게임이 리셋되어 Idle 상태로 복귀했을 때 퀴즈 UI 및 타이머를 다시 안전하게 업데이트해줍니다.
-            if (state == ClawStateType.Idle)
-            {
-                UpdateQuizUI();
-                UpdateTimeUI(m_viewModel.TimeLeft);
             }
         }
         #endregion

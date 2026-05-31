@@ -1,0 +1,36 @@
+{
+  "KnowledgeGraph": {
+    "nodes": [
+      {
+        "id": "BimaHall",
+        "name": "飞魔馆 (Bima Hall)",
+        "description": "光云大学的标志性建筑，主要是工学院和计算机信息工程学部的教学与研究中心，象征着勇于挑战与创新的精神。"
+      },
+      {
+        "id": "ChamvitHall",
+        "name": "参光馆 (Chamvit Hall)",
+        "description": "配备最新研究设施与前沿多媒体教室的现代化大楼，是培养创意融合型人才的摇篮。"
+      },
+      {
+        "id": "GamificationIntro",
+        "name": "游戏化概论 (Introduction to Gamification)",
+        "description": "将游戏机制和设计元素应用于非游戏情境（如大学生活、学习）中，旨在激发学习兴趣与提升参与度的核心课程。"
+      },
+      {
+        "id": "GradeRunner",
+        "name": "学分逃生 (Grade Runner)",
+        "description": "一款躲避不及格学分（F）并争取获得优秀评级（A+）的紧张刺激的2D避障迷你游戏。"
+      }
+    ]
+  },
+  "DashboardUI": {
+    "title": "校园游戏化仪表板 (Dashboard)",
+    "labelStudentId": "学生学号:",
+    "labelGpa": "当前绩点 (GPA):",
+    "labelGameStats": "迷你游戏战绩:",
+    "labelPlayTime": "累计体验时间:",
+    "labelRanking": "全校绩点排名:",
+    "btnRefresh": "刷新数据",
+    "btnClose": "关闭"
+  }
+}

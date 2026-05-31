@@ -22,6 +22,7 @@ namespace GameArifiction.ClawMachine
         private readonly PlayerSO m_playerSO;
         private readonly QuizDatabaseSO m_quizDatabase;
         private readonly ClawSceneReferencesDTO m_sceneReferences;
+        private readonly ClawGameTutorialPopupView m_tutorialPopupView;
 
         // 씬 참조 캐싱 및 기본 상수 제어
         private Transform m_dollsContainer;
@@ -44,7 +45,8 @@ namespace GameArifiction.ClawMachine
             ClawGameView gameView,
             PlayerSO playerSO,
             QuizDatabaseSO quizDatabase,
-            ClawSceneReferencesDTO sceneReferences)
+            ClawSceneReferencesDTO sceneReferences,
+            ClawGameTutorialPopupView tutorialPopupView)
         {
             m_viewModel = viewModel;
             m_quizUIView = quizUIView;
@@ -54,6 +56,7 @@ namespace GameArifiction.ClawMachine
             m_playerSO = playerSO;
             m_quizDatabase = quizDatabase;
             m_sceneReferences = sceneReferences;
+            m_tutorialPopupView = tutorialPopupView;
         }
         #endregion
 
@@ -146,6 +149,11 @@ namespace GameArifiction.ClawMachine
             if (m_quizUIView != null)
             {
                 m_quizUIView.Initialize(m_viewModel);
+            }
+            if (m_tutorialPopupView != null)
+            {
+                m_tutorialPopupView.Initialize(m_viewModel);
+                Debug.Log("[ClawGameFlowController] ClawGameTutorialPopupView 초기화 완료.");
             }
 
             // 7. 실시간 타이머 및 인게임 가동 개시

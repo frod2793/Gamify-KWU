@@ -46,6 +46,9 @@ namespace GameArifiction.ClawMachine
         // [신규]: 퀴즈 성공 및 실패 브로드캐스트 이벤트
         public event Action OnQuizSuccess;
         public event Action OnQuizFailed;
+
+        // [신규]: 시작 카운트다운 문자열 전파 이벤트
+        public event Action<string> OnCountdownChanged;
         #endregion
 
         #region 속성 (Properties)
@@ -94,8 +97,8 @@ namespace GameArifiction.ClawMachine
         /// </summary>
         public void StartGame()
         {
-            ResetAndStartTimer();
-            Debug.Log("[ClawGameViewModel] 인형뽑기 게임 공식 시작 -> 실시간 타이머 작동 개시.");
+            ChangeState(ClawStateType.Tutorial);
+            Debug.Log("[ClawGameViewModel] 인형뽑기 게임 시작 -> 튜토리얼 팝업 대기 상태 진입.");
         }
         #endregion
 
@@ -369,6 +372,60 @@ public void NotifyAscendCompleted()
             // 인형뽑기는 다음 단계인 클래식 퀴즈 활성화가 ResultPopupView의 Confirm 클릭 시 자동 처리되므로 빈 본문으로 둡니다.
         }
 
+        /// <summary>
+        /// [기능]: 튜토리얼 완료 처리를 수행하고 퀴즈 문제 노출 상태(QuizReveal)로 전이합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void func_CompleteTutorial()
+        {
+            if (m_currentState == ClawStateType.Tutorial)
+            {
+                ChangeState(ClawStateType.QuizReveal);
+                Debug.Log("[ClawGameViewModel] 튜토리얼 완료 -> 퀴즈 문제 팝업 노출 상태 진입.");
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 퀴즈 문제 팝업 확인(시작) 처리를 완료하고 카운트다운을 개시합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void func_CompleteQuizReveal()
+        {
+            if (m_currentState == ClawStateType.QuizReveal)
+            {
+                StopTimer();
+                m_timerCts = new CancellationTokenSource();
+                ChangeState(ClawStateType.Countdown);
+                StartCountdownAsync(m_timerCts.Token).Forget();
+                Debug.Log("[ClawGameViewModel] 퀴즈 확인 완료 -> 게임 개시 전 카운트다운 돌입.");
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 3초 동안 게임 시작 카운트다운을 비동기로 수행하고 START! 연출 후 공식 게임을 개시합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private async UniTaskVoid StartCountdownAsync(CancellationToken token)
+        {
+            for (int i = 3; i > 0; i--)
+            {
+                OnCountdownChanged?.Invoke(i.ToString());
+                Debug.Log($"[ClawGameViewModel] 시작 전 카운트다운: {i}");
+                await UniTask.Delay(TimeSpan.FromSeconds(1f), cancellationToken: token);
+            }
+
+            OnCountdownChanged?.Invoke("START!");
+            Debug.Log("[ClawGameViewModel] 시작 전 카운트다운 완료! 게임 스타트.");
+            await UniTask.Delay(TimeSpan.FromSeconds(0.8f), cancellationToken: token);
+
+            OnCountdownChanged?.Invoke(string.Empty);
+
+            // 공식 플레이 상태(Idle)로 복귀하고 실시간 제한시간 타이머 가동 개시
+            m_currentState = ClawStateType.Idle;
+            OnStateChanged?.Invoke(m_currentState);
+            ResetAndStartTimer();
+        }
+
         public void Dispose()
         {
             StopTimer();
@@ -405,9 +462,12 @@ public void NotifyAscendCompleted()
 
         private bool IsTimerActiveState(ClawStateType state)
         {
-            // 타이머는 성공 결과(Result) 및 재수강 요청(ReTakeRequest) 상태를 제외한 모든 인게임 진행 중에 멈추지 않고 흘러갑니다.
+            // 타이머는 성공 결과(Result), 재수강 요청(ReTakeRequest), 튜토리얼(Tutorial), 카운트다운(Countdown), 퀴즈 문제 팝업(QuizReveal) 상태를 제외한 모든 인게임 진행 중에 멈추지 않고 흘러갑니다.
             return state != ClawStateType.Result && 
-                   state != ClawStateType.ReTakeRequest;
+                   state != ClawStateType.ReTakeRequest &&
+                   state != ClawStateType.Tutorial &&
+                   state != ClawStateType.Countdown &&
+                   state != ClawStateType.QuizReveal;
         }
 
         private void StopTimer()

@@ -14,6 +14,9 @@ namespace GameArifiction.ClawMachine
         Ascending,      // 상승 중
         Returning,      // 원래 위치로 복귀 중
         Result,         // 결과 확인
-        ReTakeRequest   // [신규]: 시간초과 시 재수강 요청 및 팝업 대기 상태
+        ReTakeRequest,  // [신규]: 시간초과 시 재수강 요청 및 팝업 대기 상태
+        Tutorial,       // [신규]: 튜토리얼 팝업 대기 상태
+        Countdown,      // [신규]: 게임 개시 전 3초 카운트다운 연출 상태
+        QuizReveal      // [신규]: 퀴즈 문제 팝업 노출 상태
     }
 }

@@ -96,6 +96,7 @@ namespace GameArifiction.ClawMachine
             builder.RegisterComponentInHierarchy<QuizUI_View>();
             builder.RegisterComponentInHierarchy<ClawMachineExitView>();
             builder.RegisterComponentInHierarchy<ClawGameResultPopupView>();
+            builder.RegisterComponentInHierarchy<ClawGameTutorialPopupView>();
 
             // 클래식 퀴즈(QuizClassic) 뷰
             builder.RegisterComponentInHierarchy<QuizClassicView>();
