@@ -10,13 +10,13 @@ namespace GameArifiction.ClawMachine
     /// [작성자]: 윤승종
     /// [수정 날짜]: 2026-05-31
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 와이어 렌더링 방식을 LineRenderer에서 풀링된 다관절 스프라이트 마디 배치 방식으로 대폭 개선 및 Mathf.CeilingToInt 컴파일 오류 해결
+    /// [수정 내용]: 와이어 탑(m_clawRoot) 기준 물리 진자 수식 일원화 및 집게 렌더링 끝점 이탈 방지용 오프셋 회전 교정 완료
     /// </summary>
     public class ClawView : MonoBehaviour
     {
         #region 참조 (Inspector)
         [SerializeField]
-        [Tooltip("좌우로 주행하는 천장 카트의 Transform 객체입니다.")]
+        [Tooltip("좌우로 주행 및 진자 물리/와이어의 최상단 축이 되는 와이어 탑(Wire Top)이자 카트의 Transform 객체입니다.")]
         private Transform m_clawRoot;
 
         [SerializeField]
@@ -78,6 +78,30 @@ namespace GameArifiction.ClawMachine
         [Tooltip("집게가 바닥/인형에 안착한 후, 실제로 오므리기까지 대기하는 시간(초)입니다.")]
         private float m_grabDelay = 0.2f;
 
+        [Header("와이어 미세 위치 보정 설정 (Wire Offset)")]
+        [SerializeField]
+        [Tooltip("와이어의 월드 Z축 깊이 값입니다. 2D 표준은 0입니다.")]
+        private float m_wireZDepth = 0f;
+
+        [SerializeField]
+        [Tooltip("천장 카트(ClawRoot) 기준 와이어 시작점의 로컬 미세 보정 좌표(Offset)입니다.")]
+        private Vector3 m_wireStartOffset = Vector3.zero;
+
+        [SerializeField]
+        [Tooltip("집게 헤드(ClawBody) 기준 와이어 끝점의 로컬 미세 보정 좌표(Offset)입니다.")]
+        private Vector3 m_wireEndOffset = Vector3.zero;
+
+        [Header("밧줄 다관절 지연 시뮬레이터 (Rope Lag Settings)")]
+        [SerializeField]
+        [Tooltip("카트 주행 시 밧줄 마디가 상위 마디를 추종하는 지연 속도(유연도)입니다. 낮을수록 활처럼 크게 휩니다.")]
+        private float m_ropeLagElasticity = 10.0f;
+
+        [SerializeField]
+        [Tooltip("카트 정지 시 밧줄이 다시 수직 일직선으로 신속하게 복원되는 강도입니다.")]
+        private float m_ropeRestoration = 12.0f;
+
+        private List<Vector3> m_segmentWorldPositions = new List<Vector3>();
+
         [Header("애니메이션 (Animation)")]
         [SerializeField] private float m_descendDuration = 0.8f;
         [SerializeField] private float m_ascendDuration = 0.8f;
@@ -116,7 +140,7 @@ namespace GameArifiction.ClawMachine
         #region 유니티 생명주기 (Unity Lifecycle)
         private void Awake()
         {
-            // [전면 재설계]: 물리 컴포넌트 자동 제거 (있을 경우 대비)
+            // 하이어라키에서 의도치 않게 추가될 수 있는 Rigidbody2D 컴포넌트 강제 방어 제거
             var rb = GetComponent<Rigidbody2D>();
             if (rb != null) Destroy(rb);
 
@@ -192,7 +216,7 @@ namespace GameArifiction.ClawMachine
                 m_clawBody.ReleaseDoll();
             }
 
-            Debug.Log("[ClawView] [ClawView] 재시도로 인한 집게 카트 및 로프 길이, 헤드 물리 상태 초기화 완료.");
+            Debug.Log("[ClawView] 재시도로 인한 집게 카트 및 로프 길이, 헤드 물리 상태 초기화 완료.");
         }
         #endregion
 
@@ -228,7 +252,6 @@ namespace GameArifiction.ClawMachine
         /// [작성자]: 윤승종
         /// [수정 날짜]: 2026-05-31
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: Mathf.CeilingToInt 오타를 Mathf.CeilToInt로 수정하여 컴파일 오류 해결
         /// </summary>
         private void InitializeWire()
         {
@@ -306,28 +329,31 @@ namespace GameArifiction.ClawMachine
         /// <summary>
         /// [기능]: 물리 프레임마다 현재 줄 길이와 진자 각도에 따른 집게 헤드의 물리 목표 위치와 회전을 주입합니다.
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-05-24
+        /// [수정 날짜]: 2026-05-31
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 물리 타겟 지연 필드(m_laggedPhysicsTarget)를 제거하여, 렌더링 끝점과 물리 강체 위치 불일치 유격을 완벽 방지하고 순수 진자각 타겟을 주입하도록 수정
         /// </summary>
         private void UpdatePhysicsPosition()
         {
             if (m_clawBody != null && m_clawRoot != null)
             {
                 Quaternion rotation = Quaternion.Euler(0, 0, m_currentAngle);
-                Vector3 offset = rotation * Vector3.down * m_currentRopeLength;
+                Vector3 idealOffset = rotation * Vector3.down * m_currentRopeLength;
+                Vector3 idealTargetPosition = m_clawRoot.position + idealOffset;
 
-                Vector3 targetPosition = m_clawRoot.position + offset;
+                // 실시간 진자 운동 공식에 기초하여 목표 물리 회전(Tilt)을 주입
                 Quaternion targetRotation = m_clawRoot.rotation * rotation;
 
-                m_clawBody.UpdatePhysicsTarget(targetPosition, targetRotation, m_currentRopeLength);
+                m_clawBody.UpdatePhysicsTarget(idealTargetPosition, targetRotation, m_currentRopeLength);
             }
         }
 
         /// <summary>
-        /// [기능]: 줄 스프라이트와 집게의 시각적 형태를 와이어 길이와 회전에 맞추어 렌더링합니다. (다관절 곡선/출렁임 연출)
+        /// [기능]: 다관절 스프라이트 마디들이 가속도에 반응하여 시간차 지연(Lag)을 겪으며 활처럼 휘어지는 렌더링을 처리합니다.
         /// [작성자]: 윤승종
         /// [수정 날짜]: 2026-05-31
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: LineRenderer 대신 풀링된 스프라이트 마디들을 사용하며, 처짐 및 사인파 기반 파동 출렁임을 가미해 역동적인 와이어 렌더링 구현
+        /// [수정 내용]: m_laggedEndPos 지연 변수를 제거하고 N+1개 정점 구조를 통해 렌더-강체 밀착을 극대화했으며, endPos 오프셋에 가해지던 로컬 회전을 제거해 어긋나는 현상 교정 완료
         /// </summary>
         private void RenderClawAndWire()
         {
@@ -336,17 +362,32 @@ namespace GameArifiction.ClawMachine
                 return;
             }
 
-            Vector3 startPos = m_clawRoot.position;
-            Vector3 endPos = m_clawBody.transform.position;
+            // 1. 보정된 시작/끝점 월드 좌표 산출
+            Vector3 startPos = m_clawRoot.position + m_wireStartOffset;
+            // 집게 헤드 위치는 실시간 물리 강체 좌표를 준수하며, 고정 오프셋을 더합니다.
+            Vector3 endPos = m_clawBody.transform.position + m_wireEndOffset;
+
+            // 2D 표준 평면 Z축 동기화 고정
+            startPos.z = m_wireZDepth;
+            endPos.z = m_wireZDepth;
 
             Vector3 direction = endPos - startPos;
             float distance = direction.magnitude;
 
-            // 현재 길이에 맞춰 필요한 마디 개수 계산
-            int neededSegments = Mathf.FloorToInt(distance / m_segmentSpacing);
+            // 마디 간의 미세한 틈새 유격을 원천 차단하기 위해 올림(CeilToInt)으로 계산
+            int neededSegments = Mathf.CeilToInt(distance / m_segmentSpacing);
+            if (neededSegments <= 0)
+            {
+                for (int i = 0; i < m_wireSegments.Count; i++)
+                {
+                    if (m_wireSegments[i].activeSelf) m_wireSegments[i].SetActive(false);
+                }
+                return;
+            }
+
             int poolCount = m_wireSegments.Count;
 
-            // 풀링된 마디 개수가 부족할 경우 런타임에 동적 추가 (안전 대책)
+            // 동적 풀 팽창 안전 보증
             if (neededSegments > poolCount)
             {
                 int addCount = neededSegments - poolCount + 5;
@@ -374,31 +415,74 @@ namespace GameArifiction.ClawMachine
                 poolCount = m_wireSegments.Count;
             }
 
-            // Zero Allocation 포지션 리스트 캐시 갱신
-            m_segmentPositions.Clear();
+            // 마디(Sprite)들을 고정점과 끝점에 완전 연결하기 위해 N+1개의 정점을 생성
+            int pointCount = neededSegments + 1;
 
-            // 1차 패스: 각 마디의 곡선 및 출렁임이 반영된 월드 좌표를 미리 계산 및 저장
-            Vector3 normal = Vector3.Cross(direction.normalized, Vector3.forward).normalized;
-
-            for (int i = 0; i < neededSegments; i++)
+            // 2. 가상 마디 점 버퍼 크기 맞추기 및 동기화 (Zero-Alloc)
+            while (m_segmentWorldPositions.Count < pointCount)
             {
-                // 0부터 1까지의 비율
-                float t = (float)(i + 1) / (neededSegments + 1);
-                Vector3 basePos = Vector3.Lerp(startPos, endPos, t);
-
-                // 중력에 의한 중앙 처짐 포물선 (Central Sagging: quadratic curve)
-                float sagAmount = 4.0f * t * (1.0f - t);
-                Vector3 sagOffset = Vector3.down * (m_wireSagIntensity * sagAmount);
-
-                // 진자 속도에 비례한 가로 흔들림/출렁임 파동 계산 (Sine wave propagation)
-                float waveValue = Mathf.Sin(Time.time * m_waveSpeed - t * m_waveFrequency) * m_waveAmplitude * sagAmount * Mathf.Clamp(m_angularVelocity, -2.5f, 2.5f);
-                Vector3 waveOffset = normal * waveValue;
-
-                Vector3 targetPos = basePos + sagOffset + waveOffset;
-                m_segmentPositions.Add(targetPos);
+                m_segmentWorldPositions.Add(startPos);
+            }
+            if (m_segmentWorldPositions.Count > pointCount)
+            {
+                m_segmentWorldPositions.RemoveRange(pointCount, m_segmentWorldPositions.Count - pointCount);
             }
 
-            // 2차 패스: 계산된 마디 포지션을 이용해 위치 및 자연스러운 꺾임 각도 회전 설정
+            // 3. 다관절 지연 체인 (Lag-Chain Physics) 월드 궤적 연산
+            float currentElasticity = m_isMoving ? m_ropeLagElasticity : m_ropeRestoration;
+            
+            m_segmentPositions.Clear();
+            Vector3 prevLeader = startPos;
+            Vector3 normal = Vector3.Cross(direction.normalized, Vector3.forward).normalized;
+
+            for (int i = 0; i < pointCount; i++)
+            {
+                float t = (float)i / neededSegments; // 0.0 (시작) ~ 1.0 (끝)
+                
+                // 이미 집게 헤드(endPos) 자체가 관성에 의해 지연된 물리 궤적을 띄고 있으므로, 직선 궤적은 양 끝단을 완벽히 잇습니다.
+                Vector3 idealBasePos = Vector3.Lerp(startPos, endPos, t);
+
+                Vector3 oldPos = m_segmentWorldPositions[i];
+                oldPos.z = m_wireZDepth;
+
+                Vector3 finalSegmentPos;
+                if (i == 0)
+                {
+                    finalSegmentPos = startPos; // 최상단은 무조건 카트와 완벽 부착
+                }
+                else if (i == pointCount - 1)
+                {
+                    finalSegmentPos = endPos;   // 최하단은 무조건 집게 헤드 홀더와 완벽 부착
+                }
+                else
+                {
+                    Vector3 lagTarget = Vector3.Lerp(oldPos, prevLeader, Time.deltaTime * currentElasticity);
+                    float dampWeight = m_isMoving ? Mathf.Lerp(0.85f, 0.0f, t) : Mathf.Lerp(0.95f, 0.0f, t);
+                    finalSegmentPos = Vector3.Lerp(lagTarget, idealBasePos, 1.0f - dampWeight);
+                }
+
+                // 처짐 및 흔들림 파동 2차 결합
+                float sagAmount = 4.0f * t * (1.0f - t);
+                Vector3 sagOffset = Vector3.down * (m_wireSagIntensity * 0.5f * sagAmount);
+                float waveValue = Mathf.Sin(Time.time * m_waveSpeed - t * m_waveFrequency) * (m_waveAmplitude * 0.375f) * sagAmount * Mathf.Clamp(m_angularVelocity, -2.5f, 2.5f);
+                Vector3 waveOffset = normal * waveValue;
+
+                Vector3 renderedPos = finalSegmentPos + sagOffset + waveOffset;
+                
+                // 파동 적용 후에도 시작점과 끝점은 100% 고정되도록 클램핑
+                if (i == 0) renderedPos = startPos;
+                else if (i == pointCount - 1) renderedPos = endPos;
+                
+                renderedPos.z = m_wireZDepth;
+
+                m_segmentWorldPositions[i] = finalSegmentPos;
+                m_segmentPositions.Add(renderedPos);
+                
+                prevLeader = finalSegmentPos;
+            }
+
+            // 4. 와이어 조각 오브젝트 최종 물리적 꺾임 회전 렌더링 배치
+            // 각 마디(Sprite) i는 정점 P_i 에 위치하고, 바로 다음 정점 P_(i+1) 을 바라보도록 회전합니다.
             for (int i = 0; i < poolCount; i++)
             {
                 GameObject segment = m_wireSegments[i];
@@ -407,12 +491,15 @@ namespace GameArifiction.ClawMachine
                     if (i < neededSegments)
                     {
                         Vector3 targetPos = m_segmentPositions[i];
-
-                        // 자연스럽게 꺾이기 위한 다음 위치 정의 (마지막 마디는 집게 헤드 방향)
-                        Vector3 nextPos = (i == neededSegments - 1) ? endPos : m_segmentPositions[i + 1];
+                        Vector3 nextPos = m_segmentPositions[i + 1];
                         Vector3 segmentDirection = nextPos - targetPos;
 
-                        float angle = Mathf.Atan2(segmentDirection.y, segmentDirection.x) * Mathf.Rad2Deg + 90f;
+                        float angle = 0f;
+                        if (segmentDirection.sqrMagnitude > 0.0001f)
+                        {
+                            angle = Mathf.Atan2(segmentDirection.y, segmentDirection.x) * Mathf.Rad2Deg + 90f;
+                        }
+
                         Quaternion segmentRotation = Quaternion.Euler(0f, 0f, angle);
 
                         segment.transform.position = targetPos;

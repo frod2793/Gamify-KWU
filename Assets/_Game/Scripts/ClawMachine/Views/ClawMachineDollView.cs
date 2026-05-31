@@ -1,4 +1,6 @@
 using Cysharp.Threading.Tasks;
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 namespace GameArifiction.ClawMachine
@@ -6,22 +8,46 @@ namespace GameArifiction.ClawMachine
     /// <summary>
     /// [기능]: 개별 인형의 물리 및 시각적 표현을 담당하는 View
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-05-24
+    /// [수정 날짜]: 2026-05-31
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: Kinematic 전환 대신 simulated 옵션 제어 방식으로 물리 snap 텔레포트 버그 완벽 패치
+    /// [수정 내용]: 캡슐 답안(정답/오답)에 따른 스프라이트 매핑 설정 추가 및 유니티 안전성 규칙 전수 검증 보완
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D), typeof(Collider2D))]
     public class ClawMachineDollView : MonoBehaviour
     {
+        #region 구조체 정의 (Structures)
+        /// <summary>
+        /// [기능]: 퀴즈 답안지 텍스트(예: "A", "B", "C" 등)에 따라 개별 캡슐에 매핑될 스프라이트 정보를 관리하는 구조체
+        /// [작성자]: 윤승종
+        /// </summary>
+        [System.Serializable]
+        public struct AnswerSpriteConfig
+        {
+            [Tooltip("스프라이트를 매핑할 답안지 텍스트 내용 (예: '아이콘', '폰트' 혹은 퀴즈 선택지 텍스트와 일치해야 합니다)")]
+            public string AnswerTextKey;
+
+            [Tooltip("적용할 캡슐 스프라이트 리소스")]
+            public Sprite CapsuleSprite;
+
+            [Tooltip("적용할 캡슐 스프라이트의 색상 보정값 (기본값 White)")]
+            public Color SpriteColor;
+        }
+        #endregion
+
         #region 참조 (Inspector)
         [SerializeField]
         [Tooltip("캡슐 위에 선택지 텍스트를 출력할 3D TextMeshPro 컴포넌트입니다.")]
-        private TMPro.TextMeshPro m_answerTextMesh;
+        private TextMeshPro m_answerTextMesh;
+
+        [SerializeField]
+        [Tooltip("답안지 텍스트 내용별로 매핑 연출될 캡슐 스프라이트 구성 목록입니다.")]
+        private List<AnswerSpriteConfig> m_answerSpriteConfigs = new List<AnswerSpriteConfig>();
         #endregion
 
         #region 내부 필드 (Private Fields)
         private DollModel m_model;
         private Rigidbody2D m_rigidbody;
+        private SpriteRenderer m_spriteRenderer;
 
         // 릴리즈 복원용 원본 상태 캐싱
         private Transform m_originalParent;
@@ -45,7 +71,7 @@ namespace GameArifiction.ClawMachine
             }
         }
 
-        // [신규]: 방해 캡슐 여부를 뷰에서 조회하기 위한 래퍼 속성 (널 조건부 연산자 사용 차단)
+        // 방해 캡슐 여부를 뷰에서 조회하기 위한 래퍼 속성
         public bool IsDisagree
         {
             get
@@ -89,19 +115,56 @@ namespace GameArifiction.ClawMachine
                 m_rigidbody.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             }
 
+            // 동일 게임 오브젝트에 부착된 SpriteRenderer 컴포넌트 자동 탐색 및 캐싱
+            m_spriteRenderer = GetComponent<SpriteRenderer>();
+
             // 다중 콜라이더 캐싱 (일시적 물리 비활성화 기능용)
             m_colliders = GetComponentsInChildren<Collider2D>();
         }
         #endregion
 
         #region 초기화 (Initialization)
+        /// <summary>
+        /// [기능]: 인형의 데이터 모델을 설정하고, 출제된 퀴즈 답안 정보(텍스트 및 정답 여부)에 따라 텍스트 및 스프라이트 리소스를 연계 초기화합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-05-31
+        /// </summary>
         public void Initialize(DollModel model)
         {
             m_model = model;
 
-            if (m_model != null && m_answerTextMesh != null)
+            if (m_model != null)
             {
-                m_answerTextMesh.text = m_model.AnswerText;
+                if (m_answerTextMesh != null)
+                {
+                    m_answerTextMesh.text = m_model.AnswerText;
+                }
+
+                // 퀴즈 답안지 텍스트와 직렬화 설정 리스트를 비교하여 맞춤형 캡슐 스프라이트 적용
+                if (m_spriteRenderer != null && m_answerSpriteConfigs != null && m_answerSpriteConfigs.Count > 0)
+                {
+                    string answerText = m_model.AnswerText;
+                    for (int i = 0; i < m_answerSpriteConfigs.Count; i++)
+                    {
+                        AnswerSpriteConfig config = m_answerSpriteConfigs[i];
+                        if (config.AnswerTextKey == answerText)
+                        {
+                            if (config.CapsuleSprite != null)
+                            {
+                                m_spriteRenderer.sprite = config.CapsuleSprite;
+                                
+                                // 투명색이 아닌 유효한 색상일 경우에만 색상 보정치를 입힙니다.
+                                if (config.SpriteColor.a > 0.001f)
+                                {
+                                    m_spriteRenderer.color = config.SpriteColor;
+                                }
+
+                                Debug.Log($"[ClawMachineDollView] 답안 키워드 매칭에 의해 캡슐 스프라이트 교체 적용됨. (답안: {answerText}, Sprite: {config.CapsuleSprite.name})");
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         }
         #endregion
@@ -126,8 +189,7 @@ namespace GameArifiction.ClawMachine
                 m_originalParent = transform.parent;
                 m_originalInterpolation = m_rigidbody.interpolation;
 
-                // [수정]: bodyType = Kinematic 전환 대신, simulated = false로 물리 엔진 계산만 꺼둡니다.
-                // 뚝 떨어지는 물리 snap 현상을 원천 방지하는 핵심 설계입니다.
+                // 집게 하강 안착 시 강체의 물리 동역학 계산(simulated)만 일시 차단하여 유격 및 스냅 렉 차단
                 m_rigidbody.linearVelocity = Vector2.zero;
                 m_rigidbody.angularVelocity = 0f;
                 m_rigidbody.simulated = false;
@@ -146,29 +208,28 @@ namespace GameArifiction.ClawMachine
             }
             else
             {
-                // 인형을 씬 최상단(Root)으로 분리 (이미 콜라이더가 완전히 꺼져 있는 상태이므로 튕김 리스크가 절대 없음!)
+                // 인형을 씬 최상단(Root)으로 분리
                 transform.SetParent(null, true);
 
-                // [물리 동기화]: SetParent 직후 변경된 월드 계층 구조 정보를 물리 엔진 내부 시뮬레이터에 강제로 반영합니다.
+                // 계층 구조 변경 정보 반영
                 Physics2D.SyncTransforms();
 
-                // [중요]: 보간 버퍼에 쌓여있던 과거 틱의 잔여 정보 때문에 텔레포트되는 유니티 Snap 버그를 차단하기 위해
-                // 물리 보간(Interpolation)을 강제로 완전히 끕니다!
+                // 물리 보간(Interpolation) 초기화로 급격한 위치 이동 시 튕김 방지
                 m_rigidbody.interpolation = RigidbodyInterpolation2D.None;
 
-                // [수정]: 캡슐의 Dynamic 상태를 상시 유지하되, 릴리즈 순간 시뮬레이션을 다시 재개(simulated = true)합니다.
+                // 캡슐 릴리즈 순간 물리 엔진 시뮬레이션 복구
                 m_rigidbody.simulated = true;
 
-                // [물리 좌표 덮어쓰기 후행 보장]: 물리 복원이 완전히 적용된 직후에 월드 렌더 좌표를 물리 엔진 강체 좌표 버퍼에 주입합니다.
+                // 월드 렌더 좌표를 물리 엔진 강체 좌표 버퍼에 직접 주입
                 m_rigidbody.position = transform.position;
                 m_rigidbody.rotation = transform.rotation.eulerAngles.z;
 
-                // Dynamic 물리 상태 전이 직전 속도 정보 완전 리셋 (잔여 관성 튕김 차단)
+                // 물리 상태 전이 직전 속도 값 완전 리셋
                 m_rigidbody.linearVelocity = Vector2.zero;
                 m_rigidbody.angularVelocity = 0f;
                 m_rigidbody.WakeUp();
 
-                // 0.2초간 안전 낙하 유도 후 콜라이더 및 보간 복원 비동기 루틴 구동
+                // 일정 거리 낙하 안전 확보 후 콜라이더 및 보간 상태 복원 구동
                 RestoreCollidersAndInterpolationAsync(this.GetCancellationTokenOnDestroy()).Forget();
 
                 m_isGrabbed = false;
