@@ -33,7 +33,7 @@ namespace GameArifiction.QuizClassic
         [Header("결과 연출용 팝업")]
         [SerializeField]
         [Tooltip("정답 클리어 및 최종 오답 실패 결과를 연출할 결과 패널 뷰입니다.")]
-        private ClawGameResultPopupView m_resultPopup;
+        private QuizClassicResultPopupView m_resultPopup;
 
         #endregion
 
@@ -83,6 +83,7 @@ namespace GameArifiction.QuizClassic
             // 2. 피드백 연쇄 시각 효과 연동
             m_viewModel.OnQuizSuccess += HandleQuizSuccess;
             m_viewModel.OnQuizFailed += HandleQuizFailed;
+            m_viewModel.OnWrongAnswerSelected += HandleWrongAnswerSelected;
 
             // 3. 버튼 리스너 바인딩 (인덱스 캡처 방지용 내부 Scope 변수 사용)
             if (m_choiceButtons != null && m_choiceButtons.Length == 4)
@@ -117,6 +118,7 @@ namespace GameArifiction.QuizClassic
                 m_viewModel.OnTimeChanged -= UpdateTimeUI;
                 m_viewModel.OnQuizSuccess -= HandleQuizSuccess;
                 m_viewModel.OnQuizFailed -= HandleQuizFailed;
+                m_viewModel.OnWrongAnswerSelected -= HandleWrongAnswerSelected;
                 m_viewModel.Dispose();
             }
 
@@ -236,6 +238,22 @@ namespace GameArifiction.QuizClassic
             // 질문 텍스트 빨간색 피드백 및 좌우 흔들림(Shake) 효과 (지문 내용 보존)
             m_questionText.DOColor(new Color(0.9f, 0.2f, 0.2f, 1.0f), 0.4f).SetEase(Ease.OutQuad);
             m_questionText.transform.DOShakePosition(0.5f, new Vector3(8f, 0f, 0f), 12, 90f);
+        }
+
+        /// <summary>
+        /// [기능]: 잘못된 오답 번호를 받았을 때 해당 버튼을 비활성화합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void HandleWrongAnswerSelected(int choiceIndex)
+        {
+            if (m_choiceButtons != null && choiceIndex >= 0 && choiceIndex < m_choiceButtons.Length)
+            {
+                if (m_choiceButtons[choiceIndex] != null)
+                {
+                    m_choiceButtons[choiceIndex].interactable = false;
+                    Debug.Log($"[QuizClassicView] 오답 보기 버튼 비활성화 처리 완료: 선택지 인덱스 {choiceIndex}");
+                }
+            }
         }
 
         /// <summary>

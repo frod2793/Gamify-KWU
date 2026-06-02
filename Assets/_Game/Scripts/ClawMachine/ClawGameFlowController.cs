@@ -19,14 +19,11 @@ namespace GameArifiction.ClawMachine
         private readonly ClawMachineExitView m_exitView;
         private readonly ClawGameResultPopupView m_resultPopupView;
         private readonly ClawGameView m_gameView;
-        private readonly PlayerSO m_playerSO;
         private readonly QuizDatabaseSO m_quizDatabase;
         private readonly ClawSceneReferencesDTO m_sceneReferences;
         private readonly ClawGameTutorialPopupView m_tutorialPopupView;
 
         // 씬 참조 캐싱 및 기본 상수 제어
-        private Transform m_dollsContainer;
-        private BoxCollider2D m_spawnAreaCollider;
         private const float SPAWN_MIN_DISTANCE = 0.6f;
         private const int MAX_SPAWN_ATTEMPTS = 30;
         #endregion
@@ -43,7 +40,6 @@ namespace GameArifiction.ClawMachine
             ClawMachineExitView exitView,
             ClawGameResultPopupView resultPopupView,
             ClawGameView gameView,
-            PlayerSO playerSO,
             QuizDatabaseSO quizDatabase,
             ClawSceneReferencesDTO sceneReferences,
             ClawGameTutorialPopupView tutorialPopupView)
@@ -53,7 +49,6 @@ namespace GameArifiction.ClawMachine
             m_exitView = exitView;
             m_resultPopupView = resultPopupView;
             m_gameView = gameView;
-            m_playerSO = playerSO;
             m_quizDatabase = quizDatabase;
             m_sceneReferences = sceneReferences;
             m_tutorialPopupView = tutorialPopupView;
@@ -70,20 +65,9 @@ namespace GameArifiction.ClawMachine
             Debug.Log("[ClawGameFlowController] 인형뽑기 게임 흐름 제어를 개시합니다.");
 
             // [성능 최적화]: DTO를 통해 전달받은 참조를 바로 사용합니다. (GameObject.Find 완전 배제)
-            if (m_sceneReferences != null)
-            {
-                m_dollsContainer = m_sceneReferences.DollsContainer;
-                m_spawnAreaCollider = m_sceneReferences.SpawnAreaCollider;
-            }
-            else
+            if (m_sceneReferences == null)
             {
                 Debug.LogError("[ClawGameFlowController] ClawSceneReferencesDTO가 주입되지 않았습니다.");
-            }
-
-            // 1. 세션 시간 리셋
-            if (m_playerSO != null)
-            {
-                m_playerSO.TotalMinigamePlayTime = 0f;
             }
 
             if (m_viewModel == null)
@@ -170,13 +154,13 @@ namespace GameArifiction.ClawMachine
         /// </summary>
         private void SpawnQuizDolls(ClawGameViewModel viewModel, QuizData quiz)
         {
-            if (m_dollsContainer == null)
+            if (m_sceneReferences == null || m_sceneReferences.DollsContainer == null)
             {
-                Debug.LogError("[ClawGameFlowController] Dolls_Container가 지정되지 않았습니다.");
+                Debug.LogError("[ClawGameFlowController] DollsContainer DTO 참조가 지정되지 않았습니다.");
                 return;
             }
 
-            if (m_sceneReferences == null || m_sceneReferences.CapsulePrefab == null)
+            if (m_sceneReferences.CapsulePrefab == null)
             {
                 Debug.LogError("[ClawGameFlowController] 템플릿 Capsule 프리팹 참조가 DTO에 없습니다.");
                 return;
@@ -219,7 +203,7 @@ namespace GameArifiction.ClawMachine
 
             for (int i = 0; i < choices.Count; i++)
             {
-                GameObject dollGo = UnityEngine.Object.Instantiate(templateCapsule, m_dollsContainer);
+                GameObject dollGo = UnityEngine.Object.Instantiate(templateCapsule, m_sceneReferences.DollsContainer);
                 if (dollGo != null)
                 {
                     string answerText = choices[i];
@@ -266,14 +250,14 @@ namespace GameArifiction.ClawMachine
         /// </summary>
         private Vector3 GetRandomNonOverlappingPosition(List<Vector2> existingPositions)
         {
-            Vector3 defaultPos = m_dollsContainer != null ? m_dollsContainer.position : Vector3.zero;
-            if (m_spawnAreaCollider == null)
+            Vector3 defaultPos = m_sceneReferences != null && m_sceneReferences.DollsContainer != null ? m_sceneReferences.DollsContainer.position : Vector3.zero;
+            if (m_sceneReferences == null || m_sceneReferences.SpawnAreaCollider == null)
             {
-                Debug.LogWarning("[ClawGameFlowController] m_spawnAreaCollider가 설정되지 않아 기본 위치에 스폰합니다.");
+                Debug.LogWarning("[ClawGameFlowController] SpawnAreaCollider DTO 참조가 설정되지 않아 기본 위치에 스폰합니다.");
                 return defaultPos;
             }
 
-            Bounds bounds = m_spawnAreaCollider.bounds;
+            Bounds bounds = m_sceneReferences.SpawnAreaCollider.bounds;
             Vector3 bestPos = Vector3.zero;
 
             for (int attempt = 0; attempt < MAX_SPAWN_ATTEMPTS; attempt++)

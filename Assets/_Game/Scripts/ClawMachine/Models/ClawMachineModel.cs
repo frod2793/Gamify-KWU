@@ -35,7 +35,7 @@ namespace GameArifiction.ClawMachine
             {
                 return m_remainingPlayCount;
             }
-            set
+            private set
             {
                 m_remainingPlayCount = value;
             }
@@ -98,6 +98,27 @@ namespace GameArifiction.ClawMachine
                 return 20f; // 극단적인 제한 시간 감축을 막기 위해 최소 20초 마진 확보
             }
             return calculatedLimit;
+        }
+
+        /// <summary>
+        /// [기능]: 플레이 횟수를 1회 차감합니다. (0 미만으로 내려가지 않음)
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void ConsumePlayCount()
+        {
+            if (m_remainingPlayCount > 0)
+            {
+                m_remainingPlayCount--;
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 플레이 횟수를 지정된 값으로 복원합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void RestorePlayCount(int count)
+        {
+            m_remainingPlayCount = count;
         }
         #endregion
     }

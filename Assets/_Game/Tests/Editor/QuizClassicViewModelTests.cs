@@ -82,14 +82,23 @@ namespace GameArifiction.Tests.Editor
             m_viewModel.StartGame();
             int wrongIndex = m_viewModel.CurrentChoiceTexts.IndexOf("W1");
             bool failedFired = false;
+            bool wrongAnswerSelectedFired = false;
+            int wrongAnswerSelectedIndex = -1;
             m_viewModel.OnQuizFailed += () => failedFired = true;
+            m_viewModel.OnWrongAnswerSelected += (idx) => 
+            {
+                wrongAnswerSelectedFired = true;
+                wrongAnswerSelectedIndex = idx;
+            };
 
             // Act
             m_viewModel.func_SelectAnswer(wrongIndex);
 
             // Assert
             Assert.IsTrue(failedFired);
-            Assert.AreEqual(QuizStateType.ReTakeRequest, m_viewModel.CurrentState);
+            Assert.IsTrue(wrongAnswerSelectedFired);
+            Assert.AreEqual(wrongIndex, wrongAnswerSelectedIndex);
+            Assert.AreEqual(QuizStateType.Playing, m_viewModel.CurrentState); // 오답 시 퀴즈 창 유지
         }
 
         [Test]
@@ -97,8 +106,9 @@ namespace GameArifiction.Tests.Editor
         {
             // Arrange
             m_viewModel.StartGame();
-            int wrongIndex = m_viewModel.CurrentChoiceTexts.IndexOf("W1");
-            m_viewModel.func_SelectAnswer(wrongIndex); // Fail -> ReTakeRequest
+            // 재수강 테스트를 위해서 상태를 강제로 ReTakeRequest로 돌림 (시간초과 시와 동일)
+            System.Reflection.MethodInfo changeStateMethod = typeof(QuizClassicViewModel).GetMethod("ChangeState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            changeStateMethod.Invoke(m_viewModel, new object[] { QuizStateType.ReTakeRequest });
             
             // Act
             m_viewModel.AcceptReTake();

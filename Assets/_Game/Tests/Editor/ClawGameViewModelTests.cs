@@ -94,7 +94,7 @@ namespace GameArifiction.Tests.Editor
             // Arrange
             m_viewModel.RegisterDollAnswer("doll_2", false);
             m_viewModel.func_SubmitAnswer("doll_2"); // Moves to ReTakeRequest
-            m_model.RemainingPlayCount = 0; // deplete count
+            m_model.RestorePlayCount(0); // deplete count
 
             // Act
             m_viewModel.AcceptReTake();

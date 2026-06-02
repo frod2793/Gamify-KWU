@@ -97,6 +97,10 @@ namespace GameArifiction.ClawMachine
         /// </summary>
         public void StartGame()
         {
+            if (m_playerSO != null)
+            {
+                m_playerSO.TotalMinigamePlayTime = 0f;
+            }
             ChangeState(ClawStateType.Tutorial);
             Debug.Log("[ClawGameViewModel] 인형뽑기 게임 시작 -> 튜토리얼 팝업 대기 상태 진입.");
         }
@@ -208,7 +212,7 @@ namespace GameArifiction.ClawMachine
             // 플레이 횟수는 0까지만 깎이며 마이너스로 깨져 내려가지 않게 마진 방어합니다.
             if (m_model.RemainingPlayCount > 0)
             {
-                m_model.RemainingPlayCount--;
+                m_model.ConsumePlayCount();
                 OnPlayCountChanged?.Invoke(m_model.RemainingPlayCount);
             }
 
@@ -319,7 +323,7 @@ public void NotifyAscendCompleted()
             {
                 m_model.ReTakeCount++;
                 // [버그 수정]: 재수강 성공 시 플레이어에게 다시 5회의 도전 기회를 원복 충전하여 하강 불가 현상을 종결합니다.
-                m_model.RemainingPlayCount = 5;
+                m_model.RestorePlayCount(5);
                 
                 Debug.Log($"[ClawGameViewModel] 플레이어가 재수강을 수락했습니다. 재수강 횟수: {m_model.ReTakeCount}회, 잔여 기회 복원: {m_model.RemainingPlayCount}회, 다음 플레이 제한시간: {m_model.GetTimeLimitForCurrentPlay()}초");
                 
@@ -385,45 +389,15 @@ public void NotifyAscendCompleted()
             }
         }
 
-        /// <summary>
-        /// [기능]: 퀴즈 문제 팝업 확인(시작) 처리를 완료하고 카운트다운을 개시합니다.
-        /// [작성자]: 윤승종
-        /// </summary>
         public void func_CompleteQuizReveal()
         {
             if (m_currentState == ClawStateType.QuizReveal)
             {
-                StopTimer();
-                m_timerCts = new CancellationTokenSource();
-                ChangeState(ClawStateType.Countdown);
-                StartCountdownAsync(m_timerCts.Token).Forget();
-                Debug.Log("[ClawGameViewModel] 퀴즈 확인 완료 -> 게임 개시 전 카운트다운 돌입.");
+                m_currentState = ClawStateType.Idle;
+                OnStateChanged?.Invoke(m_currentState);
+                ResetAndStartTimer();
+                Debug.Log("[ClawGameViewModel] 퀴즈 확인 완료 -> 카운트다운 없이 즉시 게임 개시.");
             }
-        }
-
-        /// <summary>
-        /// [기능]: 3초 동안 게임 시작 카운트다운을 비동기로 수행하고 START! 연출 후 공식 게임을 개시합니다.
-        /// [작성자]: 윤승종
-        /// </summary>
-        private async UniTaskVoid StartCountdownAsync(CancellationToken token)
-        {
-            for (int i = 3; i > 0; i--)
-            {
-                OnCountdownChanged?.Invoke(i.ToString());
-                Debug.Log($"[ClawGameViewModel] 시작 전 카운트다운: {i}");
-                await UniTask.Delay(TimeSpan.FromSeconds(1f), cancellationToken: token);
-            }
-
-            OnCountdownChanged?.Invoke("START!");
-            Debug.Log("[ClawGameViewModel] 시작 전 카운트다운 완료! 게임 스타트.");
-            await UniTask.Delay(TimeSpan.FromSeconds(0.8f), cancellationToken: token);
-
-            OnCountdownChanged?.Invoke(string.Empty);
-
-            // 공식 플레이 상태(Idle)로 복귀하고 실시간 제한시간 타이머 가동 개시
-            m_currentState = ClawStateType.Idle;
-            OnStateChanged?.Invoke(m_currentState);
-            ResetAndStartTimer();
         }
 
         public void Dispose()
@@ -487,10 +461,9 @@ public void NotifyAscendCompleted()
         private void ResetAndStartTimer()
         {
             StopTimer();
-            float newLimit = 120f;
+            float newLimit = m_model != null ? m_model.GetTimeLimitForCurrentPlay() : 120f;
             if (m_model != null)
             {
-                newLimit = m_model.GetTimeLimitForCurrentPlay();
                 m_model.RemainingTime = newLimit;
             }
             m_timerCts = new CancellationTokenSource();
@@ -504,11 +477,7 @@ public void NotifyAscendCompleted()
         private void ResumeTimer()
         {
             StopTimer();
-            float remaining = 120f;
-            if (m_model != null)
-            {
-                remaining = m_model.RemainingTime;
-            }
+            float remaining = m_model != null ? m_model.RemainingTime : (m_model != null ? m_model.TimeLimitPerPlay : 120f);
 
             // 남은 시간이 0 이하라면 즉시 시간 초과 처리
             if (remaining <= 0f)

@@ -100,6 +100,7 @@ namespace GameArifiction.ClawMachine
 
             // 클래식 퀴즈(QuizClassic) 뷰
             builder.RegisterComponentInHierarchy<QuizClassicView>();
+            builder.RegisterComponentInHierarchy<QuizClassicResultPopupView>();
         }
         #endregion
     }

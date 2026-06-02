@@ -41,6 +41,7 @@ namespace GameArifiction.QuizClassic
 
         public event Action OnQuizSuccess;
         public event Action OnQuizFailed;
+        public event Action<int> OnWrongAnswerSelected; // [신규]: 잘못 선택된 선택지 인덱스 브로드캐스트
         public event Action OnTimeOver;
         public event Action OnReTakeRequested; // IQuizGameViewModel 상속 호환용
 
@@ -147,9 +148,10 @@ namespace GameArifiction.QuizClassic
             }
             else
             {
-                Debug.Log("[QuizClassicViewModel] 오답입니다! 최종 실패 결과 패널을 트리거합니다.");
+                Debug.Log($"[QuizClassicViewModel] 오답 선택됨! 선택지 인덱스: {choiceIndex}");
+                OnWrongAnswerSelected?.Invoke(choiceIndex);
                 OnQuizFailed?.Invoke();
-                ChangeState(QuizStateType.ReTakeRequest);
+                // [기획 연동]: 틀렸을 시 ReTakeRequest로 전이하지 않고, 최종 퀴즈 화면을 유지하며 정답이 아닌 보기가 비활성화되도록 함
             }
         }
 
