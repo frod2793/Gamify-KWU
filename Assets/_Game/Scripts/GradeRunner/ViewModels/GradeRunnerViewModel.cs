@@ -3,6 +3,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using GameArifiction.Player;
 using UnityEngine;
+using VContainer.Unity;
 
 /// <summary>
 /// [기능]: 2D 피하기 미니게임(GradeRunner)의 핵심 타이머 루프, 장애물/아이템 스폰 주기 통제, 충돌 연산 및 점수/등급 판정을 수행하는 ViewModel (POCO)
@@ -28,7 +29,7 @@ namespace GameArifiction.GradeRunner
         Phase2  // 2페이즈 (분노/열정의 교수님)
     }
 
-    public class GradeRunnerViewModel : IDisposable
+    public class GradeRunnerViewModel : IStartable, IDisposable
     {
         #region 내부 필드 (Private Fields)
 
@@ -51,6 +52,7 @@ namespace GameArifiction.GradeRunner
         private bool m_spawned7;
         private bool m_spawned3;
         private bool m_allCheatSheetsSpawned;
+        private float m_mobileInputX; // 모바일 가상 패드 입력 값
 
         #endregion
 
@@ -88,6 +90,18 @@ namespace GameArifiction.GradeRunner
         public string IntroDialogue => m_dialogueSO != null ? m_dialogueSO.IntroDialogue : "자, 지금부터 코딩 테스트를 시작하겠다!";
         public string Phase2Dialogue => m_dialogueSO != null ? m_dialogueSO.Phase2Dialogue : "아직 끝나지 않았다! 진정한 매운맛을 보여주지!";
 
+        public float MobileInputX
+        {
+            get
+            {
+                return m_mobileInputX;
+            }
+            set
+            {
+                m_mobileInputX = value;
+            }
+        }
+
         #endregion
 
         #region 초기화 (Initialization)
@@ -108,6 +122,15 @@ namespace GameArifiction.GradeRunner
         #endregion
 
         #region 공개 메서드 (Public Methods)
+
+        /// <summary>
+        /// [기능]: VContainer IStartable 진입점. 게임을 가동시킵니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void Start()
+        {
+            StartGame();
+        }
 
         /// <summary>
         /// [기능]: 미니게임을 시작하고 도입부 컷씬 연출을 트리거합니다.

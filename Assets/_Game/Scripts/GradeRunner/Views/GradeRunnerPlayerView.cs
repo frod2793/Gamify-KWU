@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using VContainer;
 
 /// <summary>
 /// [기능]: 2D 피하기 미니게임(GradeRunner)의 플레이어 이동 제어, 화면 이탈 방지 경계 제한 및 낙하물 충돌 처리를 전담하는 View 컴포넌트.
@@ -31,6 +32,13 @@ namespace GameArifiction.GradeRunner
 
         #region 유니티 생명주기 (Unity Lifecycle)
 
+        private void Start()
+        {
+            CalculateMovementBounds();
+            m_isInitialized = true;
+            Debug.Log($"[GradeRunnerPlayerView] 플레이어 뷰 초기화 완료. 최종 이동 제한 경계(땅 기준): [{m_minX:F2} ~ {m_maxX:F2}]");
+        }
+
         private void Update()
         {
             if (!m_isInitialized)
@@ -56,15 +64,13 @@ namespace GameArifiction.GradeRunner
         #region 초기화 (Initialization)
 
         /// <summary>
-        /// [기능]: 뷰모델 의존성을 주입하고 땅(Ground) 너비 기준 또는 화면 기준의 가로 이동 물리 한계 경계를 산정합니다.
+        /// [기능]: VContainer를 통해 뷰모델 의존성을 주입합니다.
         /// [작성자]: 윤승종
         /// </summary>
-        public void Initialize(GradeRunnerViewModel viewModel)
+        [Inject]
+        public void Construct(GradeRunnerViewModel viewModel)
         {
             m_viewModel = viewModel;
-            CalculateMovementBounds();
-            m_isInitialized = true;
-            Debug.Log($"[GradeRunnerPlayerView] 플레이어 뷰 초기화 완료. 최종 이동 제한 경계(땅 기준): [{m_minX:F2} ~ {m_maxX:F2}]");
         }
 
         #endregion
@@ -172,6 +178,12 @@ namespace GameArifiction.GradeRunner
                 {
                     inputX = 1f;
                 }
+            }
+
+            // 키보드 입력이 없을 경우 모바일 가상 패드 입력 감지 (동시 지원)
+            if (Mathf.Approximately(inputX, 0f) && m_viewModel != null)
+            {
+                inputX = m_viewModel.MobileInputX;
             }
 
             if (Mathf.Approximately(inputX, 0f))

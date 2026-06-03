@@ -2,6 +2,7 @@ using DG.Tweening;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using System.Threading;
+using VContainer;
 
 /// <summary>
 /// [기능]: 2D 피하기 미니게임(GradeRunner)에서 플레이어를 향해 코드를 떨어뜨리는 교수 캐릭터의 뷰(View) 컴포넌트.
@@ -67,6 +68,20 @@ namespace GameArifiction.GradeRunner
 
         #region 유니티 생명주기 (Unity Lifecycle)
 
+        private void Start()
+        {
+            m_startPositionX = transform.position.x; // 최초 스폰 당시 시작 X좌표 기록
+
+            // 초기 비주얼 세팅: 말풍선 숨김 및 1페이즈 기본 상태 준비 (도입부에서 페이드인 예정이므로 일단 꺼두거나 투명하게 대기)
+            if (m_dialogueBubble != null)
+            {
+                m_dialogueBubble.gameObject.SetActive(false);
+            }
+
+            SetVisualActiveOnly(m_phase1Visual);
+            Debug.Log("[ProfessorView] 교수님 공격 캐릭터 뷰 초기화 성공.");
+        }
+
         private void OnDestroy()
         {
             UnsubscribeEvents();
@@ -78,29 +93,19 @@ namespace GameArifiction.GradeRunner
         #region 초기화 (Initialization)
 
         /// <summary>
-        /// [기능]: 뷰모델 의존성을 주입하고 페이즈 교체 및 컷씬 이벤트를 연동하며 초기 비주얼 상태를 세팅합니다.
+        /// [기능]: VContainer를 통해 뷰모델 의존성을 주입합니다.
         /// [작성자]: 윤승종
         /// </summary>
-        public void Initialize(GradeRunnerViewModel viewModel)
+        [Inject]
+        public void Construct(GradeRunnerViewModel viewModel)
         {
             m_viewModel = viewModel;
-            m_startPositionX = transform.position.x; // 최초 스폰 당시 시작 X좌표 기록
-
             if (m_viewModel != null)
             {
                 m_viewModel.OnPhaseChanged += HandlePhaseChanged;
                 m_viewModel.OnIntroCutsceneStarted += HandleIntroCutscene;
                 m_viewModel.OnPhase2CutsceneStarted += HandlePhase2Cutscene;
             }
-
-            // 초기 비주얼 세팅: 말풍선 숨김 및 1페이즈 기본 상태 준비 (도입부에서 페이드인 예정이므로 일단 꺼두거나 투명하게 대기)
-            if (m_dialogueBubble != null)
-            {
-                m_dialogueBubble.gameObject.SetActive(false);
-            }
-
-            SetVisualActiveOnly(m_phase1Visual);
-            Debug.Log("[ProfessorView] 교수님 공격 캐릭터 뷰 초기화 성공.");
         }
 
         private void UnsubscribeEvents()

@@ -3009,6 +3009,8 @@ MonoBehaviour:
   m_gradeLetterText: {fileID: 582608512}
   m_feedbackTextPrefab: {fileID: 3980471741371052986, guid: ccf2d159fa667bf4091ef27a99c6a44e, type: 3}
   m_feedbackContainer: {fileID: 943016846}
+  m_leftMoveButton: {fileID: 0}
+  m_rightMoveButton: {fileID: 0}
 --- !u!1 &1337776400
 GameObject:
   m_ObjectHideFlags: 0
@@ -3085,6 +3087,37 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1337776400}
   m_CullTransparentMesh: 1
+--- !u!1 &1372713030
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1372713031}
+  m_Layer: 0
+  m_Name: gradern
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1372713031
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1372713030}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.81472, y: -0.84519, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1374689581
 GameObject:
   m_ObjectHideFlags: 0
@@ -3387,14 +3420,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 1778189766}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 445791e2c9c489f4aa695ebb83c4ea62, type: 3}
+  m_Script: {fileID: 11500000, guid: 2e15ba7e3ef772746b3b64ca443e3122, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GamifyKWU.Runtime::GameArifiction.GradeRunner.GradeRunnerInitializer
-  m_hudView: {fileID: 1324019687}
-  m_playerView: {fileID: 629540544}
-  m_spawnerView: {fileID: 1269457930}
-  m_resultPopup: {fileID: 768884840}
-  m_professorView: {fileID: 56563592}
+  parentReference:
+    TypeName: 
+  autoRun: 1
+  autoInjectGameObjects: []
   m_config: {fileID: 11400000, guid: f06130ff8a30bfa4ebf9d3631d16c8d9, type: 2}
   m_dialogueSO: {fileID: 11400000, guid: 14e8605041c82b146bfdbcab74904945, type: 2}
   m_playerSO: {fileID: 11400000, guid: b0718fcbf5b323844b90327f2c1fb228, type: 2}
@@ -4484,3 +4516,4 @@ SceneRoots:
   - {fileID: 1374689585}
   - {fileID: 1019113802}
   - {fileID: 1232358078}
+  - {fileID: 1372713031}

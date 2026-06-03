@@ -3,6 +3,8 @@ using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using VContainer;
 
 /// <summary>
 /// [기능]: 2D 피하기 미니게임(GradeRunner)의 실시간 HUD 요소(ss:SS 타이머바, 성적 프로그래스바 및 등급 텍스트, 플레이어 위치 비례 스코어 피드백)를 렌더링하고 연출하는 UI View
@@ -45,6 +47,15 @@ namespace GameArifiction.GradeRunner
         [Tooltip("피드백 텍스트들이 동적으로 추가되어 렌더링될 HUD 캔버스 내의 부모 Transform입니다.")]
         private Transform m_feedbackContainer;
 
+        [Header("모바일 조작 버튼 (UGUI)")]
+        [SerializeField]
+        [Tooltip("모바일 가상 패드 좌측 이동 UGUI 버튼입니다.")]
+        private Button m_leftMoveButton;
+
+        [SerializeField]
+        [Tooltip("모바일 가상 패드 우측 이동 UGUI 버튼입니다.")]
+        private Button m_rightMoveButton;
+
         #endregion
 
         #region 내부 필드 (Private Fields)
@@ -75,6 +86,11 @@ namespace GameArifiction.GradeRunner
             }
         }
 
+        private void Start()
+        {
+            Debug.Log("[GradeRunnerHudView] HUD UI 뷰 초기화 및 데이터 바인딩 성공.");
+        }
+
         private void OnDestroy()
         {
             UnsubscribeEvents();
@@ -85,13 +101,13 @@ namespace GameArifiction.GradeRunner
         #region 초기화 (Initialization)
 
         /// <summary>
-        /// [기능]: 뷰모델 의존성 이벤트들을 바인딩하고 스코어바 구간별 초기 상태 색상을 지정합니다.
+        /// [기능]: VContainer를 통해 뷰모델 의존성을 주입합니다.
         /// [작성자]: 윤승종
         /// </summary>
-        public void Initialize(GradeRunnerViewModel viewModel)
+        [Inject]
+        public void Construct(GradeRunnerViewModel viewModel)
         {
             m_viewModel = viewModel;
-
             if (m_viewModel != null)
             {
                 m_viewModel.OnTimeChanged += UpdateTimerUI;
@@ -100,7 +116,7 @@ namespace GameArifiction.GradeRunner
                 m_viewModel.OnScoreFeedback += HandleScoreFeedback;
             }
 
-            Debug.Log("[GradeRunnerHudView] HUD UI 뷰 초기화 및 데이터 바인딩 성공.");
+            SetupMobileButtonEvents();
         }
 
         private void UnsubscribeEvents()
@@ -258,6 +274,65 @@ namespace GameArifiction.GradeRunner
         #endregion
 
         #region 내부 헬퍼 메서드 (Private Methods)
+
+        /// <summary>
+        /// [기능]: 가상 이동 버튼에 EventTrigger를 바인딩하여 모바일 수평 터치 홀드 입력을 감지합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void SetupMobileButtonEvents()
+        {
+            if (m_leftMoveButton != null)
+            {
+                BindHoldEvent(m_leftMoveButton, -1f);
+            }
+
+            if (m_rightMoveButton != null)
+            {
+                BindHoldEvent(m_rightMoveButton, 1f);
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 버튼에 EventTrigger를 부착하고 PointerDown 및 PointerUp 상태를 뷰모델의 MobileInputX와 연동시킵니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void BindHoldEvent(Button button, float direction)
+        {
+            EventTrigger trigger = button.gameObject.GetComponent<EventTrigger>();
+            if (trigger == null)
+            {
+                trigger = button.gameObject.AddComponent<EventTrigger>();
+            }
+
+            // 터치 다운 등록
+            EventTrigger.Entry pointerDown = new EventTrigger.Entry();
+            pointerDown.eventID = EventTriggerType.PointerDown;
+            pointerDown.callback.AddListener((data) =>
+            {
+                if (m_viewModel != null)
+                {
+                    m_viewModel.MobileInputX = direction;
+                    Debug.Log($"[GradeRunnerHudView] 가상 이동 버튼 누름: {direction}");
+                }
+            });
+            trigger.triggers.Add(pointerDown);
+
+            // 터치 업 등록
+            EventTrigger.Entry pointerUp = new EventTrigger.Entry();
+            pointerUp.eventID = EventTriggerType.PointerUp;
+            pointerUp.callback.AddListener((data) =>
+            {
+                if (m_viewModel != null)
+                {
+                    if (Mathf.Approximately(m_viewModel.MobileInputX, direction))
+                    {
+                        m_viewModel.MobileInputX = 0f;
+                        Debug.Log("[GradeRunnerHudView] 가상 이동 버튼 뗌");
+                    }
+                }
+            });
+            trigger.triggers.Add(pointerUp);
+        }
 
         /// <summary>
         /// [기능]: 가비지(GC) 억제를 위해 이터레이터 루프를 인덱스 형태로 돌아 풀링에서 휴면 상태인 텍스트 객체를 찾아 반환합니다.

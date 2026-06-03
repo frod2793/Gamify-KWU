@@ -4,6 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using VContainer;
 
 /// <summary>
 /// [기능]: 2D 피하기 미니게임(GradeRunner) 종료 시 최종 학점 알파벳 등급과 학점 수치, 게임 소요시간 등의 결과를 출력하고 재시도 및 로비 복귀 연출을 제어하는 팝업 View 컴포넌트
@@ -61,29 +62,8 @@ namespace GameArifiction.GradeRunner
 
         #region 유니티 생명주기 (Unity Lifecycle)
 
-        private void OnDestroy()
+        private void Start()
         {
-            UnsubscribeEvents();
-        }
-
-        #endregion
-
-        #region 초기화 (Initialization)
-
-        /// <summary>
-        /// [기능]: 뷰모델 데이터를 주입하고 팝업 활성화 감지 이벤트를 연동 및 버튼 클릭 콜백을 초기화합니다.
-        /// [작성자]: 윤승종
-        /// </summary>
-        public void Initialize(GradeRunnerViewModel viewModel)
-        {
-            m_viewModel = viewModel;
-
-            // 결과 송출 이벤트 바인딩
-            if (m_viewModel != null)
-            {
-                m_viewModel.OnGameResult += HandleGameResult;
-            }
-
             // 버튼 리스너 바인딩
             if (m_retryButton != null)
             {
@@ -98,6 +78,29 @@ namespace GameArifiction.GradeRunner
             // 씬 시작 시에는 숨겨진 상태로 대기
             gameObject.SetActive(false);
             Debug.Log("[GradeRunnerResultPopupView] 결과 팝업 뷰 초기화 및 DI 세팅 완료.");
+        }
+
+        private void OnDestroy()
+        {
+            UnsubscribeEvents();
+        }
+
+        #endregion
+
+        #region 초기화 (Initialization)
+
+        /// <summary>
+        /// [기능]: VContainer를 통해 뷰모델 의존성을 주입합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        [Inject]
+        public void Construct(GradeRunnerViewModel viewModel)
+        {
+            m_viewModel = viewModel;
+            if (m_viewModel != null)
+            {
+                m_viewModel.OnGameResult += HandleGameResult;
+            }
         }
 
         private void UnsubscribeEvents()

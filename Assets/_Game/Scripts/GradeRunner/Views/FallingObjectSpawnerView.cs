@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using VContainer;
 
 /// <summary>
 /// [기능]: 2D 피하기 미니게임(GradeRunner)에서 가비지 컬렉션(GC) 최소화를 위한 오브젝트 풀링을 기반으로 하늘에서 떨어지는 코드/족보를 적절히 스폰하는 Spawner View.
@@ -59,6 +60,19 @@ namespace GameArifiction.GradeRunner
 
         #region 유니티 생명주기 (Unity Lifecycle)
 
+        private void Start()
+        {
+            // 명시 지정이 없고 스스로에게 BoxCollider2D가 붙어있다면 자체 자동 할당
+            if (m_spawnAreaCollider == null)
+            {
+                m_spawnAreaCollider = GetComponent<BoxCollider2D>();
+            }
+
+            CalculateSpawnCoordinates();
+
+            Debug.Log("[FallingObjectSpawnerView] 스포너 뷰 초기화 및 의존성 주입 완료.");
+        }
+
         private void OnDestroy()
         {
             UnsubscribeEvents();
@@ -69,29 +83,18 @@ namespace GameArifiction.GradeRunner
         #region 초기화 (Initialization)
 
         /// <summary>
-        /// [기능]: 뷰모델 이벤트를 바인딩하고, 지정된 BoxCollider2D 영역에 맞춰 스폰 가로 경계(X) 및 낙하 시작 높이(Y)를 산출합니다.
+        /// [기능]: VContainer를 통해 뷰모델 의존성을 주입합니다.
         /// [작성자]: 윤승종
         /// </summary>
-        public void Initialize(GradeRunnerViewModel viewModel)
+        [Inject]
+        public void Construct(GradeRunnerViewModel viewModel)
         {
             m_viewModel = viewModel;
-
-            // 명시 지정이 없고 스스로에게 BoxCollider2D가 붙어있다면 자체 자동 할당
-            if (m_spawnAreaCollider == null)
-            {
-                m_spawnAreaCollider = GetComponent<BoxCollider2D>();
-            }
-
-            CalculateSpawnCoordinates();
-
-            // 스폰 신호 이벤트 바인딩
             if (m_viewModel != null)
             {
                 m_viewModel.OnSpawnFallingObject += HandleSpawnFallingObject;
                 m_viewModel.OnClearFallingObjects += HandleClearFallingObjects;
             }
-
-            Debug.Log("[FallingObjectSpawnerView] 스포너 뷰 초기화 및 의존성 주입 완료.");
         }
 
         private void UnsubscribeEvents()
