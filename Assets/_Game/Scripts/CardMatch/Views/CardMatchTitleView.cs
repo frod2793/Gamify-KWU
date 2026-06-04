@@ -130,10 +130,16 @@ namespace GameArifiction.CardMatch
             Debug.Log("[CardMatchTitleView] 게임 방법 버튼 클릭");
             if (m_howToPlayPopup != null)
             {
+                CanvasGroup canvasGroup = m_howToPlayPopup.GetComponent<CanvasGroup>();
+                if (canvasGroup == null)
+                {
+                    canvasGroup = m_howToPlayPopup.AddComponent<CanvasGroup>();
+                }
+
+                canvasGroup.alpha = 0f;
                 m_howToPlayPopup.SetActive(true);
-                m_howToPlayPopup.transform.localScale = Vector3.zero;
-                m_howToPlayPopup.transform.DOScale(Vector3.one, 0.3f)
-                    .SetEase(Ease.OutBack);
+                canvasGroup.DOFade(1f, 0.3f)
+                    .SetEase(Ease.OutQuart);
             }
         }
 
@@ -146,12 +152,16 @@ namespace GameArifiction.CardMatch
             Debug.Log("[CardMatchTitleView] 게임 방법 팝업 닫기 클릭");
             if (m_howToPlayPopup != null)
             {
-                m_howToPlayPopup.transform.DOScale(Vector3.zero, 0.2f)
-                    .SetEase(Ease.InBack)
-                    .OnComplete(() =>
-                    {
-                        m_howToPlayPopup.SetActive(false);
-                    });
+                CanvasGroup canvasGroup = m_howToPlayPopup.GetComponent<CanvasGroup>();
+                if (canvasGroup != null)
+                {
+                    canvasGroup.DOFade(0f, 0.25f)
+                        .SetEase(Ease.InQuart)
+                        .OnComplete(() =>
+                        {
+                            m_howToPlayPopup.SetActive(false);
+                        });
+                }
             }
         }
         #endregion

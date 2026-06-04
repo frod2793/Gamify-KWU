@@ -1,5 +1,7 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
+using DG.Tweening;
 using System.Collections.Generic;
 using GameArifiction.Player;
 
@@ -24,17 +26,44 @@ namespace GameArifiction.CardMatch
 
         [Header("카드 로고 스프라이트 (12종, PairId 순서대로 할당)")]
         [SerializeField] private Sprite[] m_logoSprites;
+
+        [Header("일시정지 및 게임방법 팝업")]
+        [SerializeField] private Button m_pauseButton;
+        [SerializeField] private GameObject m_howToPlayPopup;
+        [SerializeField] private Button m_closePopupButton;
         #endregion
 
         #region Private Fields
         private CardMatchViewModel m_viewModel;
         private List<CardView> m_cardViews;
+        private bool m_isPaused;
         #endregion
 
         #region MonoBehaviour
+        private void Awake()
+        {
+            if (m_pauseButton != null)
+            {
+                m_pauseButton.onClick.AddListener(func_OnPauseButtonClick);
+            }
+            if (m_closePopupButton != null)
+            {
+                m_closePopupButton.onClick.AddListener(func_OnClosePopupButtonClick);
+            }
+        }
+
         private void OnDestroy()
         {
             UnsubscribeEvents();
+
+            if (m_pauseButton != null)
+            {
+                m_pauseButton.onClick.RemoveListener(func_OnPauseButtonClick);
+            }
+            if (m_closePopupButton != null)
+            {
+                m_closePopupButton.onClick.RemoveListener(func_OnClosePopupButtonClick);
+            }
         }
         #endregion
 
@@ -263,6 +292,66 @@ namespace GameArifiction.CardMatch
             if (m_matchedPairsText != null)
             {
                 m_matchedPairsText.text = $"{matchedPairs} / {m_viewModel.TotalPairs}";
+            }
+        }
+        #endregion
+
+        #region UI Event Callbacks
+        /// <summary>
+        /// [기능]: [일시정지] 버튼 클릭 시 호출됩니다. 게임을 일시정지하고 게임방법 팝업을 표시합니다.
+        /// [작성자]: 김지연
+        /// </summary>
+        public void func_OnPauseButtonClick()
+        {
+            Debug.Log("[CardMatchView] 일시정지 버튼 클릭");
+
+            if (m_isPaused)
+            {
+                return;
+            }
+
+            m_isPaused = true;
+            Time.timeScale = 0f;
+
+            if (m_howToPlayPopup != null)
+            {
+                CanvasGroup canvasGroup = m_howToPlayPopup.GetComponent<CanvasGroup>();
+                if (canvasGroup == null)
+                {
+                    canvasGroup = m_howToPlayPopup.AddComponent<CanvasGroup>();
+                }
+
+                canvasGroup.alpha = 0f;
+                m_howToPlayPopup.SetActive(true);
+                canvasGroup.DOFade(1f, 0.5f)
+                    .SetEase(Ease.OutQuart)
+                    .SetUpdate(true);
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 게임방법 팝업의 닫기 버튼 클릭 시 호출됩니다. 팝업을 닫고 게임을 재개합니다.
+        /// [작성자]: 김지연
+        /// </summary>
+        public void func_OnClosePopupButtonClick()
+        {
+            Debug.Log("[CardMatchView] 게임방법 팝업 닫기 클릭");
+
+            if (m_howToPlayPopup != null)
+            {
+                CanvasGroup canvasGroup = m_howToPlayPopup.GetComponent<CanvasGroup>();
+                if (canvasGroup != null)
+                {
+                    canvasGroup.DOFade(0f, 0.4f)
+                        .SetEase(Ease.InQuart)
+                        .SetUpdate(true)
+                        .OnComplete(() =>
+                        {
+                            m_howToPlayPopup.SetActive(false);
+                            Time.timeScale = 1f;
+                            m_isPaused = false;
+                        });
+                }
             }
         }
         #endregion
