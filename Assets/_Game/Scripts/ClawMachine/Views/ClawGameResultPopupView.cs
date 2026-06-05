@@ -24,6 +24,14 @@ namespace GameArifiction.ClawMachine
         [SerializeField]
         [Tooltip("결과 확인(다음 단계 혹은 재수강 진행) 버튼입니다.")]
         private Button m_confirmButton;
+
+        [SerializeField]
+        [Tooltip("정답 시 활성화할 아이콘 이미지 컴포넌트입니다.")]
+        private Image m_correctIconImage;
+
+        [SerializeField]
+        [Tooltip("오답/실패 시 활성화할 아이콘 이미지 컴포넌트입니다.")]
+        private Image m_incorrectIconImage;
         #endregion
 
         #region 내부 필드 (Private Fields)
@@ -115,6 +123,16 @@ namespace GameArifiction.ClawMachine
             if (m_viewModel == null || m_descriptionText == null)
             {
                 return;
+            }
+
+            // 아이콘 이미지 활성화/비활성화 처리 (유니티 Safe Null 체크 준수)
+            if (m_correctIconImage != null)
+            {
+                m_correctIconImage.gameObject.SetActive(isSuccess);
+            }
+            if (m_incorrectIconImage != null)
+            {
+                m_incorrectIconImage.gameObject.SetActive(!isSuccess);
             }
 
             if (isSuccess)
