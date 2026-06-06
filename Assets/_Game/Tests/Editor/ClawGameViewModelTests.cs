@@ -1,14 +1,18 @@
 using NUnit.Framework;
+using System;
 using GameArifiction.ClawMachine;
 using GamifyKWU.CraneGame.Data;
 using GameArifiction.Player;
+using GameArifiction.Core.Audio;
+using Cysharp.Threading.Tasks;
+using UnityEngine;
 
 /// <summary>
 /// [기능]: 인형 뽑기 미니게임 뷰모델(ClawGameViewModel)의 비즈니스 로직 및 상태 제어를 검증하는 에디터 테스트 클래스
 /// [작성자]: 윤승종
-/// [수정 날짜]: 2026-05-27
+/// [수정 날짜]: 2026-06-06
 /// [마지막 수정 작성자]: 윤승종
-/// [수정 내용]: WrongAnswer 테스트 시 불필요했던 OnReTakeRequested 수신 기대를 제거하여 테스트 정합성 수정
+/// [수정 내용]: ClawGameViewModel 생성자에 ISoundService가 요구되므로 더미 사운드 서비스 구현체 주입 적용
 /// </summary>
 namespace GameArifiction.Tests.Editor
 {
@@ -22,7 +26,7 @@ namespace GameArifiction.Tests.Editor
         public void Setup()
         {
             m_model = new ClawMachineModel(5, 120f);
-            m_viewModel = new ClawGameViewModel(m_model, null);
+            m_viewModel = new ClawGameViewModel(m_model, null, new DummySoundService());
         }
 
         [TearDown]
@@ -118,5 +122,35 @@ namespace GameArifiction.Tests.Editor
             Assert.AreEqual(4, m_model.RemainingPlayCount);
             Assert.AreEqual(ClawStateType.Descending, m_viewModel.CurrentState);
         }
+    }
+
+    /// <summary>
+    /// [기능]: 뷰모델 테스트 구동을 위해 ISoundService의 시그니처를 아무 동작 없이 구현한 더미 서비스 클래스
+    /// </summary>
+    public class DummySoundService : ISoundService
+    {
+        public SoundSettingsDTO Settings => new SoundSettingsDTO();
+
+        public event Action<float> OnBgmVolumeChanged { add { } remove { } }
+        public event Action<float> OnSfxVolumeChanged { add { } remove { } }
+        public event Action<AudioClip> OnPlayBGMRequested { add { } remove { } }
+        public event Action<AudioClip> OnPlaySFXRequested { add { } remove { } }
+        public event Action OnStopBGMRequested { add { } remove { } }
+
+        public void SetBgmVolume(float volume) { }
+        public void SetSfxVolume(float volume) { }
+        public void SetMute(bool isMute) { }
+
+        public UniTaskVoid PlayBGM(string clipPath)
+        {
+            return default;
+        }
+
+        public UniTaskVoid PlaySFX(string clipPath)
+        {
+            return default;
+        }
+
+        public void StopBGM() { }
     }
 }

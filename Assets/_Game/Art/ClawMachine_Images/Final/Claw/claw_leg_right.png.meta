@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 3f6a368c52d55924b887f7879aeef0ab
+guid: 6a4a64536e81c43f985c541c19632521
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -119,40 +119,44 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
-  - serializedVersion: 4
-    buildTarget: iOS
-    maxTextureSize: 2048
-    resizeAlgorithm: 0
-    textureFormat: -1
-    textureCompression: 1
-    compressionQuality: 50
-    crunchedCompression: 0
-    allowsAlphaSplitting: 0
-    overridden: 0
-    ignorePlatformSupport: 0
-    androidETC2FallbackOverride: 0
-    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: bg_border_ver1_0
+      name: claw_leg_right_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 1
-        width: 1520
-        height: 1015
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 104, y: 125, z: 101, w: 94}
+        x: 48
+        y: 11
+        width: 194
+        height: 420
+      alignment: 9
+      pivot: {x: 0.1440493, y: 0.92059726}
+      border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
-      physicsShape: []
+      physicsShape:
+      - - {x: 66, y: -135}
+        - {x: 95, y: 21}
+        - {x: 82, y: 69}
+        - {x: 49, y: 133}
+        - {x: -13, y: 199}
+        - {x: -40, y: 209}
+        - {x: -74, y: 209}
+        - {x: -82, y: 144}
+        - {x: -38, y: 127}
+        - {x: -8, y: 89}
+        - {x: 15, y: 27}
+        - {x: -3, y: -71}
+        - {x: -35, y: -82}
+        - {x: -85, y: -137}
+        - {x: -95, y: -202}
+        - {x: -66, y: -208}
+        - {x: -50, y: -205}
       tessellationDetail: 0
       bones: []
-      spriteID: f12c33fe601e64a86a62fbf823be89e9
-      internalID: -638353031
+      spriteID: 882835069a4b9473e99fceb0d3c6f8a5
+      internalID: -1378873974
       vertices: []
       indices: 
       edges: []
@@ -161,7 +165,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: c51fa4717c763624799a7e5292b45e41
+    spriteID: 983303d44e6d74e89b73cda6888ed92d
     internalID: 0
     vertices: []
     indices: 
@@ -173,7 +177,7 @@ TextureImporter:
       - key: SpriteEditor.SliceSettings
         value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
-      bg_border_ver1_0: -638353031
+      claw_leg_right_0: -1378873974
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

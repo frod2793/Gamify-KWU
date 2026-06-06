@@ -2,15 +2,17 @@ using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using System.Collections.Generic;
 using UnityEngine;
+using GameArifiction.Core.Audio;
+using VContainer;
 
 namespace GameArifiction.ClawMachine
 {
     /// <summary>
     /// [기능]: UI Canvas를 벗어나 2D World Space 상에서 집게의 이동과 흔들림을 제어
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-05-31
+    /// [수정 날짜]: 2026-06-06
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 와이어 탑(m_clawRoot) 기준 물리 진자 수식 일원화 및 집게 렌더링 끝점 이탈 방지용 오프셋 회전 교정 완료
+    /// [수정 내용]: 와이어 탑(m_clawRoot) 기준 물리 진자 수식 일원화 및 크레인 주행/동작 루프 사운드 로직 구현
     /// </summary>
     public class ClawView : MonoBehaviour
     {
@@ -119,6 +121,8 @@ namespace GameArifiction.ClawMachine
 
         #region 내부 필드 (Private Fields)
         private ClawGameViewModel m_viewModel;
+        private ISoundService m_soundService;
+        private AudioSource m_loopAudioSource;
         private bool m_isMoving;
         private float m_moveDirection; // -1: Left, 1: Right, 0: Idle
         private float m_moveSpeed = 3.0f;
@@ -135,6 +139,18 @@ namespace GameArifiction.ClawMachine
         private float m_currentAngle;       // 현재 진자 각도 (degree)
         private float m_angularVelocity;   // 각속도
         private float m_prevCartX;         // 가속도 계산용 이전 프레임 좌표
+        #endregion
+
+        #region 의존성 주입 (Dependency Injection)
+        /// <summary>
+        /// [기능]: VContainer를 통해 공통 사운드 서비스를 주입받습니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        [Inject]
+        public void Construct(ISoundService soundService)
+        {
+            m_soundService = soundService;
+        }
         #endregion
 
         #region 유니티 생명주기 (Unity Lifecycle)
@@ -168,6 +184,19 @@ namespace GameArifiction.ClawMachine
 
             // 와이어 객체 동적 생성 (SpriteRenderer 기반)
             InitializeWire();
+
+            // [루프 오디오 설정]: 크레인 기동 및 주행음 루프 재생용 AudioSource 동적 추가
+            m_loopAudioSource = gameObject.AddComponent<AudioSource>();
+            m_loopAudioSource.loop = true;
+            m_loopAudioSource.playOnAwake = false;
+
+            if (m_soundService != null)
+            {
+                m_loopAudioSource.volume = m_soundService.Settings.IsMuted ? 0f : m_soundService.Settings.SfxVolume;
+                m_soundService.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+            }
+
+            LoadLoopClipAsync().Forget();
         }
 
         private void Update()
@@ -231,7 +260,7 @@ namespace GameArifiction.ClawMachine
 
             if (m_clawBody != null)
             {
-                m_clawBody.Initialize(m_viewModel, m_clawRoot);
+                m_clawBody.Initialize(m_viewModel, m_clawRoot, this);
             }
         }
 
@@ -243,6 +272,10 @@ namespace GameArifiction.ClawMachine
                 m_viewModel.OnStopRequested -= HandleStopRequested;
                 m_viewModel.OnStateChanged -= HandleStateChanged;
                 m_viewModel.OnDropRequested -= HandleDropRequested;
+            }
+            if (m_soundService != null)
+            {
+                m_soundService.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
             }
             CancelAnimations();
         }
@@ -527,12 +560,14 @@ namespace GameArifiction.ClawMachine
         {
             m_moveDirection = isRight ? 1 : -1;
             m_isMoving = true;
+            UpdateLoopSoundState();
         }
 
         private void HandleStopRequested()
         {
             m_isMoving = false;
             m_moveDirection = 0;
+            UpdateLoopSoundState();
         }
 
         private void CancelAnimations()
@@ -590,6 +625,8 @@ namespace GameArifiction.ClawMachine
                     CheckResult();
                     break;
             }
+
+            UpdateLoopSoundState();
         }
 
         private void HandleDropRequested()
@@ -597,6 +634,62 @@ namespace GameArifiction.ClawMachine
             if (m_clawBody != null)
             {
                 m_clawBody.ReleaseDoll();
+            }
+        }
+
+        private void HandleSfxVolumeChanged(float volume)
+        {
+            if (m_loopAudioSource != null)
+            {
+                m_loopAudioSource.volume = volume;
+            }
+        }
+
+        private async UniTaskVoid LoadLoopClipAsync()
+        {
+            var request = Resources.LoadAsync<AudioClip>(SoundDefine.Sfx_claw_crane);
+            await request.ToUniTask();
+            
+            if (request.asset != null && m_loopAudioSource != null)
+            {
+                m_loopAudioSource.clip = request.asset as AudioClip;
+                UpdateLoopSoundState();
+            }
+        }
+
+        private void UpdateLoopSoundState()
+        {
+            if (m_loopAudioSource == null || m_loopAudioSource.clip == null)
+            {
+                return;
+            }
+
+            bool shouldPlay = m_isMoving;
+
+            if (m_viewModel != null)
+            {
+                ClawStateType state = m_viewModel.CurrentState;
+                if (state == ClawStateType.Descending || 
+                    state == ClawStateType.Ascending || 
+                    state == ClawStateType.Returning)
+                {
+                    shouldPlay = true;
+                }
+            }
+
+            if (shouldPlay)
+            {
+                if (!m_loopAudioSource.isPlaying)
+                {
+                    m_loopAudioSource.Play();
+                }
+            }
+            else
+            {
+                if (m_loopAudioSource.isPlaying)
+                {
+                    m_loopAudioSource.Stop();
+                }
             }
         }
         #endregion
@@ -689,6 +782,19 @@ namespace GameArifiction.ClawMachine
         private void CheckResult()
         {
             if (m_viewModel != null) m_viewModel.NotifyResultCompleted();
+        }
+
+        /// <summary>
+        /// [기능]: 그랩 성공 즉시 카트와 집게 헤드 간의 실제 거리를 측정해 줄 길이를 동기화함으로써 툭 떨어지는 추가 하강을 방지합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void UpdateRopeLengthToActualDistance()
+        {
+            if (m_clawRoot != null && m_clawBody != null)
+            {
+                float actualDistance = Vector3.Distance(m_clawRoot.position, m_clawBody.transform.position);
+                m_currentRopeLength = Mathf.Clamp(actualDistance, m_minRopeDistance, m_maxRopeDistance);
+            }
         }
         #endregion
     }

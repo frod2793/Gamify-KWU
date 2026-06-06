@@ -4,6 +4,7 @@ using VContainer.Unity;
 using GameArifiction.Player;
 using GamifyKWU.CraneGame.Data;
 using GameArifiction.QuizClassic;
+using GameArifiction.Core.Audio;
 
 namespace GameArifiction.ClawMachine
 {
@@ -85,6 +86,20 @@ namespace GameArifiction.ClawMachine
             // C. [C# EntryPoint 진입점 제어 등록]
             builder.RegisterEntryPoint<ClawGameFlowController>();
             builder.Register<QuizClassicFlowController>(Lifetime.Scoped);
+
+            // D. [공통 사운드 시스템 등록 (단독 실행 환경 지원)]
+            if (Parent == null)
+            {
+                var soundView = FindFirstObjectByType<SoundPlayerView>();
+                if (soundView == null)
+                {
+                    var go = new GameObject("SoundPlayerView");
+                    soundView = go.AddComponent<SoundPlayerView>();
+                }
+                builder.RegisterComponent(soundView);
+                builder.Register<SoundService>(Lifetime.Scoped).AsImplementedInterfaces().AsSelf();
+                builder.RegisterBuildCallback(container => container.Inject(soundView));
+            }
         }
         #endregion
 

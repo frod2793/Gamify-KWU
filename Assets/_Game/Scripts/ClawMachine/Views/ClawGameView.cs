@@ -3,15 +3,17 @@ using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
 using DG.Tweening;
+using GameArifiction.Core.Audio;
+using VContainer;
 
 namespace GameArifiction.ClawMachine
 {
     /// <summary>
-    /// [기능]: 인형뽑기 게임 전체의 UI(버튼 입력, 텍스트 출력)를 담당하는 View
+    /// [기능]: 인형뽑기 게임 전체의 UI(버튼 입력, 텍스트 출력, 튜토리얼 다시보기 버튼 연동)를 담당하는 View
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-05-22
+    /// [수정 날짜]: 2026-06-06
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 스페이스바 연속 입력 시 집게 펴기(Release) 및 드랍 분기 로직 고도화 (IsClawClosed 검증 반영)
+    /// [수정 내용]: ISoundService를 주입받아 조작 버튼 클릭 시 Sfx_claw_touch 터치음 일괄 연동 적용
     /// </summary>
     public class ClawGameView : MonoBehaviour
     {
@@ -45,6 +47,10 @@ namespace GameArifiction.ClawMachine
         private Button m_dropButton;
 
         [SerializeField]
+        [Tooltip("튜토리얼 팝업을 다시 볼 수 있는 버튼입니다.")]
+        private Button m_showTutorialButton;
+
+        [SerializeField]
         [Tooltip("시작 카운트다운 숫자를 표시할 TextMeshProUGUI 컴포넌트입니다.")]
         private TMPro.TextMeshProUGUI m_countdownText;
         #endregion
@@ -52,8 +58,22 @@ namespace GameArifiction.ClawMachine
 
         #region 내부 필드 (Private Fields)
         private ClawGameViewModel m_viewModel;
+        private ClawGameTutorialPopupView m_tutorialPopupView;
+        private ISoundService m_soundService;
         private float m_prevHorizontalInput;
         private bool m_isKeyboardControlling;
+        #endregion
+
+        #region 의존성 주입 (Dependency Injection)
+        /// <summary>
+        /// [기능]: VContainer를 통해 공통 사운드 서비스를 주입받습니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        [Inject]
+        public void Construct(ISoundService soundService)
+        {
+            m_soundService = soundService;
+        }
         #endregion
 
         #region 유니티 생명주기 (Unity Lifecycle)
@@ -64,10 +84,11 @@ namespace GameArifiction.ClawMachine
         #endregion
 
         #region 초기화 (Initialization)
-        public void Initialize(ClawGameViewModel viewModel, ClawGameResultPopupView resultPopup)
+        public void Initialize(ClawGameViewModel viewModel, ClawGameResultPopupView resultPopup, ClawGameTutorialPopupView tutorialPopup)
         {
             m_viewModel = viewModel;
             m_resultPopup = resultPopup;
+            m_tutorialPopupView = tutorialPopup;
             
             // 이벤트 구독
             m_viewModel.OnRemoveDisagreeDollRequested += HandleRemoveDisagreeDoll;
@@ -82,6 +103,10 @@ namespace GameArifiction.ClawMachine
             if (m_dropButton != null)
             {
                 m_dropButton.onClick.AddListener(func_OnDropButtonClick);
+            }
+            if (m_showTutorialButton != null)
+            {
+                m_showTutorialButton.onClick.AddListener(func_OnShowTutorialButtonClick);
             }
 
             // [신규]: UI 좌우 이동 버튼 EventTrigger 기반 PointerDown/Up 동적 바인딩 주입 (타입 세이프 가동 보장)
@@ -110,6 +135,10 @@ namespace GameArifiction.ClawMachine
             if (m_dropButton != null)
             {
                 m_dropButton.onClick.RemoveListener(func_OnDropButtonClick);
+            }
+            if (m_showTutorialButton != null)
+            {
+                m_showTutorialButton.onClick.RemoveListener(func_OnShowTutorialButtonClick);
             }
 
             // EventTrigger 동적 바인딩 해제 (메모리 누수 차단)
@@ -238,6 +267,10 @@ namespace GameArifiction.ClawMachine
                     if (m_viewModel.IsClawClosed)
                     {
                         Debug.Log("[ClawGameView] 키보드 입력 감지: 릴리즈 실행 (스페이스바 놓기)");
+                        if (m_soundService != null)
+                        {
+                            m_soundService.PlaySFX(SoundDefine.Sfx_claw_touch);
+                        }
                         m_viewModel.DropDoll();
                     }
                     else
@@ -249,6 +282,10 @@ namespace GameArifiction.ClawMachine
                             m_isKeyboardControlling = false;
                         }
                         Debug.Log("[ClawGameView] 키보드 입력 감지: 캐치 개시 (스페이스바 하강)");
+                        if (m_soundService != null)
+                        {
+                            m_soundService.PlaySFX(SoundDefine.Sfx_claw_touch);
+                        }
                         m_viewModel.DescendClaw();
                         descendedThisFrame = true;
                     }
@@ -322,6 +359,10 @@ namespace GameArifiction.ClawMachine
         // Event Trigger 컴포넌트의 PointerDown 이벤트에 연결
         public void func_OnLeftButtonDown()
         {
+            if (m_soundService != null)
+            {
+                m_soundService.PlaySFX(SoundDefine.Sfx_claw_touch);
+            }
             if (m_viewModel != null)
             {
                 m_viewModel.StartMoveLeft();
@@ -340,6 +381,10 @@ namespace GameArifiction.ClawMachine
         // Event Trigger 컴포넌트의 PointerDown 이벤트에 연결
         public void func_OnRightButtonDown()
         {
+            if (m_soundService != null)
+            {
+                m_soundService.PlaySFX(SoundDefine.Sfx_claw_touch);
+            }
             if (m_viewModel != null)
             {
                 m_viewModel.StartMoveRight();
@@ -349,6 +394,10 @@ namespace GameArifiction.ClawMachine
         // Button의 OnClick 이벤트에 연결
         public void func_OnDescendButtonClick()
         {
+            if (m_soundService != null)
+            {
+                m_soundService.PlaySFX(SoundDefine.Sfx_claw_touch);
+            }
             if (m_viewModel != null)
             {
                 m_viewModel.DescendClaw();
@@ -358,9 +407,26 @@ namespace GameArifiction.ClawMachine
         // Button의 OnClick 이벤트에 연결 (도중 놓기)
         public void func_OnDropButtonClick()
         {
+            if (m_soundService != null)
+            {
+                m_soundService.PlaySFX(SoundDefine.Sfx_claw_touch);
+            }
             if (m_viewModel != null)
             {
                 m_viewModel.DropDoll();
+            }
+        }
+
+        // Button의 OnClick 이벤트에 연결 (튜토리얼 다시보기)
+        public void func_OnShowTutorialButtonClick()
+        {
+            if (m_soundService != null)
+            {
+                m_soundService.PlaySFX(SoundDefine.Sfx_claw_touch);
+            }
+            if (m_tutorialPopupView != null)
+            {
+                m_tutorialPopupView.func_ShowTutorial();
             }
         }
         #endregion

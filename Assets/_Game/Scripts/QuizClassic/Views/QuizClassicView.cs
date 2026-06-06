@@ -11,6 +11,9 @@ namespace GameArifiction.QuizClassic
     /// <summary>
     /// [기능]: 4지선다 객관식 버튼 조작과 문제 출제 시 시각 피드백 연출을 전담하는 클래식 퀴즈 뷰 컴포넌트
     /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-06-06
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: 타이머 미사용 요구 사항에 따른 타이머 텍스트 비활성화 및 이벤트 바인딩 해제
     /// </summary>
     public class QuizClassicView : MonoBehaviour
     {
@@ -78,7 +81,13 @@ namespace GameArifiction.QuizClassic
             // 1. 뷰모델 데이터 이벤트 바인딩 (타이머 및 스코어 기능 연쇄 업데이트 재활성화)
             m_viewModel.OnNextQuizLoaded += HandleNextQuizLoaded;
             m_viewModel.OnStateChanged += HandleStateChanged;
-            m_viewModel.OnTimeChanged += UpdateTimeUI;
+            // 타이머 미사용에 따라 OnTimeChanged 구독 제거
+
+            // [추가]: 타이머 미사용으로 텍스트 컴포넌트 비활성화
+            if (m_timeText != null)
+            {
+                m_timeText.gameObject.SetActive(false);
+            }
 
             // 2. 피드백 연쇄 시각 효과 연동
             m_viewModel.OnQuizSuccess += HandleQuizSuccess;
@@ -115,7 +124,7 @@ namespace GameArifiction.QuizClassic
             {
                 m_viewModel.OnNextQuizLoaded -= HandleNextQuizLoaded;
                 m_viewModel.OnStateChanged -= HandleStateChanged;
-                m_viewModel.OnTimeChanged -= UpdateTimeUI;
+                // 타이머 미사용에 따라 OnTimeChanged 해제 제거
                 m_viewModel.OnQuizSuccess -= HandleQuizSuccess;
                 m_viewModel.OnQuizFailed -= HandleQuizFailed;
                 m_viewModel.OnWrongAnswerSelected -= HandleWrongAnswerSelected;

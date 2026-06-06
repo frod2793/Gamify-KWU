@@ -5,21 +5,24 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using GamifyKWU.CraneGame.Data;
 using GameArifiction.Player;
+using GameArifiction.Core.Audio;
+using VContainer;
 
 namespace GameArifiction.ClawMachine
 {
     /// <summary>
     /// [기능]: 인형뽑기 게임의 View와 Model을 연결하는 ViewModel
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-05-27
+    /// [수정 날짜]: 2026-06-06
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 오답 제출 후 초기화 없이 타이머를 이어서 진행하도록 하는 ContinueAfterWrongAnswer 구현 추가
+    /// [수정 내용]: ISoundService를 주입받아 크레인 이동, 캐치, 정오답 및 게임 시작 등 핵심 피드백 사운드 연동 구현
     /// </summary>
     public class ClawGameViewModel : IQuizGameViewModel, IDisposable
     {
         #region 내부 필드 (Private Fields)
         private readonly ClawMachineModel m_model;
         private readonly PlayerSO m_playerSO;
+        private readonly ISoundService m_soundService;
         private ClawStateType m_currentState;
         private CancellationTokenSource m_timerCts;
 
@@ -84,10 +87,12 @@ namespace GameArifiction.ClawMachine
         #endregion
 
         #region 초기화 (Initialization)
-        public ClawGameViewModel(ClawMachineModel model, PlayerSO playerSO)
+        [Inject]
+        public ClawGameViewModel(ClawMachineModel model, PlayerSO playerSO, ISoundService soundService)
         {
             m_model = model;
             m_playerSO = playerSO;
+            m_soundService = soundService;
             m_currentState = ClawStateType.Idle;
         }
 
@@ -102,7 +107,7 @@ namespace GameArifiction.ClawMachine
                 m_playerSO.TotalMinigamePlayTime = 0f;
             }
             ChangeState(ClawStateType.Tutorial);
-            Debug.Log("[ClawGameViewModel] 인형뽑기 게임 시작 -> 튜토리얼 팝업 대기 상태 진입.");
+            Debug.Log("[ClawGameViewModel] 인형뽑기 게임 시작 및 사운드 시스템 조립 완료 -> 튜토리얼 팝업 대기 상태 진입.");
         }
         #endregion
 
@@ -149,6 +154,10 @@ namespace GameArifiction.ClawMachine
                 if (isCorrect)
                 {
                     Debug.Log($"[ClawGameViewModel] 정답 골인 감지! 축하합니다. 정답입니다. (DollId: {dollId})");
+                    if (m_soundService != null)
+                    {
+                        m_soundService.PlaySFX(SoundDefine.Sfx_claw_success);
+                    }
                     OnQuizSuccess?.Invoke();
                     
                     // 게임 클리어 상태(Result)로 전이
@@ -157,6 +166,10 @@ namespace GameArifiction.ClawMachine
                 else
                 {
                     Debug.Log($"[ClawGameViewModel] 오답 골인 감지! 오답입니다. (DollId: {dollId})");
+                    if (m_soundService != null)
+                    {
+                        m_soundService.PlaySFX(SoundDefine.Sfx_claw_fail);
+                    }
                     OnQuizFailed?.Invoke();
                     
                     // [버그 수정]: 오답 시 OnReTakeRequested 중복 발사 제거.
@@ -278,6 +291,13 @@ namespace GameArifiction.ClawMachine
             IsHoldingDoll = isGrabbed;
             IsClawClosed = true;
             if (m_currentState == ClawStateType.ReTakeRequest || m_currentState == ClawStateType.Result) return;
+
+            // 인형 획득 성공 시 Catch 효과음 재생
+            if (isGrabbed && m_soundService != null)
+            {
+                m_soundService.PlaySFX(SoundDefine.Sfx_claw_catch);
+            }
+
             ChangeState(ClawStateType.Ascending);
         }
 /// <summary>
@@ -397,6 +417,12 @@ public void NotifyAscendCompleted()
                 OnStateChanged?.Invoke(m_currentState);
                 ResetAndStartTimer();
                 Debug.Log("[ClawGameViewModel] 퀴즈 확인 완료 -> 카운트다운 없이 즉시 게임 개시.");
+
+                // 본격 플레이 상태 진입 시 게임 시작 사운드 재생
+                if (m_soundService != null)
+                {
+                    m_soundService.PlaySFX(SoundDefine.Sfx_claw_start);
+                }
             }
         }
 
