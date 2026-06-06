@@ -5,6 +5,7 @@ using GameArifiction.Player;
 using GamifyKWU.CraneGame.Data;
 using GameArifiction.QuizClassic;
 using GameArifiction.Core.Audio;
+using GameArifiction.UI.Common;
 
 namespace GameArifiction.ClawMachine
 {
@@ -115,7 +116,7 @@ namespace GameArifiction.ClawMachine
 
             // 클래식 퀴즈(QuizClassic) 뷰
             builder.RegisterComponentInHierarchy<QuizClassicView>();
-            builder.RegisterComponentInHierarchy<QuizClassicResultPopupView>();
+            builder.RegisterComponentInHierarchy<CommonResultPopupView>();
         }
         #endregion
     }

@@ -3,8 +3,12 @@ using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using GameArifiction.ClawMachine;
 using GamifyKWU.CraneGame.Data;
+using EasyTransition;
+using GameArifiction.Player;
+using GameArifiction.UI.Common;
 
 namespace GameArifiction.QuizClassic
 {
@@ -35,12 +39,26 @@ namespace GameArifiction.QuizClassic
 
         [Header("결과 연출용 팝업")]
         [SerializeField]
-        [Tooltip("정답 클리어 및 최종 오답 실패 결과를 연출할 결과 패널 뷰입니다.")]
-        private QuizClassicResultPopupView m_resultPopup;
+        [Tooltip("정답 클리어 및 최종 오답 실패 결과를 연출할 공통 결과 팝업 뷰입니다.")]
+        private CommonResultPopupView m_resultPopup;
 
         #endregion
 
         #region 내부 필드 (Private Fields)
+
+        [Header("세션 데이터")]
+        [SerializeField]
+        [Tooltip("씬 간 플레이어 위치 상태 보존을 위한 ScriptableObject 데이터 자산입니다.")]
+        private PlayerSO m_playerSO;
+
+        [Header("이지 트랜지션 설정")]
+        [SerializeField]
+        [Tooltip("로비로 전환 시 화면 전환 연출을 위해 사용할 이지 트랜스 설정 자산입니다.")]
+        private TransitionSettings m_transitionSettings;
+
+        [SerializeField]
+        [Tooltip("트랜스 효과가 진행되기 시작할 딜레이 시간(초)입니다.")]
+        private float m_startDelay = 0f;
 
         private QuizClassicViewModel m_viewModel;
         private Color m_originalQuestionColor;
@@ -111,11 +129,10 @@ namespace GameArifiction.QuizClassic
                 Debug.LogError("[QuizClassicView] m_choiceButtons 크기가 4가 아닙니다! 인스펙터를 확인하세요.");
             }
 
-            // 4. 결과 연계 공유 패널 초기화 (DIP 컨텍스트 인터페이스 주입)
-            if (m_resultPopup != null)
-            {
-                m_resultPopup.Initialize(m_viewModel);
-            }
+            // 4. 결과 연계 공통 패널 이벤트 바인딩
+            m_viewModel.OnQuizSuccess += HandleQuizSuccessEvent;
+            m_viewModel.OnQuizFailed += HandleQuizFailedEvent;
+            m_viewModel.OnReTakeRequested += HandleTimeOverEvent;
         }
 
         private void UnsubscribeEvents()
@@ -128,6 +145,11 @@ namespace GameArifiction.QuizClassic
                 m_viewModel.OnQuizSuccess -= HandleQuizSuccess;
                 m_viewModel.OnQuizFailed -= HandleQuizFailed;
                 m_viewModel.OnWrongAnswerSelected -= HandleWrongAnswerSelected;
+
+                m_viewModel.OnQuizSuccess -= HandleQuizSuccessEvent;
+                m_viewModel.OnQuizFailed -= HandleQuizFailedEvent;
+                m_viewModel.OnReTakeRequested -= HandleTimeOverEvent;
+
                 m_viewModel.Dispose();
             }
 
@@ -275,6 +297,167 @@ namespace GameArifiction.QuizClassic
             {
                 m_timeText.text = $"남은 시간: {Mathf.CeilToInt(timeLeft)}초";
             }
+        }
+
+        #endregion
+
+        #region 결과 팝업 중개 로직 (Private Methods)
+
+        /// <summary>
+        /// [기능]: 퀴즈 성공 이벤트를 받아 DTO를 세팅하고 공통 팝업을 노출합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void HandleQuizSuccessEvent()
+        {
+            if (m_viewModel == null || m_resultPopup == null)
+            {
+                return;
+            }
+
+            Debug.Log("[QuizClassicView] 정답 성공 이벤트 수신 -> 공통 결과 팝업 세팅.");
+
+            string titleText;
+            string descriptionText;
+            string confirmText;
+            System.Action confirmCallback;
+
+            MinigameGrade? targetGrade = null;
+
+            if (m_viewModel.IsLastQuiz)
+            {
+                float totalPlayTime = 0f;
+                MinigameGrade calculatedGrade = MinigameGrade.D;
+
+                if (m_playerSO != null)
+                {
+                    totalPlayTime = m_playerSO.TotalMinigamePlayTime;
+                    
+                    if (totalPlayTime <= 60f)
+                    {
+                        calculatedGrade = MinigameGrade.A;
+                    }
+                    else if (totalPlayTime <= 80f)
+                    {
+                        calculatedGrade = MinigameGrade.B;
+                    }
+                    else if (totalPlayTime <= 100f)
+                    {
+                        calculatedGrade = MinigameGrade.C;
+                    }
+                    else if (totalPlayTime <= 120f)
+                    {
+                        calculatedGrade = MinigameGrade.D;
+                    }
+                    else
+                    {
+                        calculatedGrade = MinigameGrade.F;
+                    }
+
+                    m_playerSO.SetMinigameGrade("ClawMachineQuiz", calculatedGrade);
+                }
+
+                targetGrade = calculatedGrade;
+
+                titleText = "★ 최종 학습 평가 성적표 ★";
+                descriptionText = "축하합니다! 인형뽑기부터 클래식 퀴즈 코스까지 전체 수료하셨습니다.\n\n" +
+                                  $"■ 총 소요 시간: {totalPlayTime:F1}초\n" +
+                                  $"■ 최종 성적 등급: [{calculatedGrade} 등급]\n\n" +
+                                  "배운 개념을 활용하여 실전에 응용해 보십시오!";
+                confirmText = "메인 화면으로";
+                confirmCallback = func_OnExitToLobby;
+            }
+            else
+            {
+                titleText = "★ 정답입니다! ★";
+                descriptionText = "올바른 정답을 선택하셨습니다.\n다음 문제로 이동해 보십시오!";
+                confirmText = "다음 문제로";
+                confirmCallback = () => m_viewModel.ContinueAfterCorrectAnswer();
+            }
+
+            CommonPopupDataDTO popupData = new CommonPopupDataDTO(
+                titleText,
+                descriptionText,
+                targetGrade,
+                confirmText,
+                confirmCallback
+            );
+
+            m_resultPopup.Setup(popupData);
+        }
+
+        /// <summary>
+        /// [기능]: 퀴즈 실패(오답) 이벤트를 받아 DTO를 세팅하고 공통 팝업을 노출합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void HandleQuizFailedEvent()
+        {
+            if (m_viewModel == null || m_resultPopup == null)
+            {
+                return;
+            }
+
+            Debug.Log("[QuizClassicView] 오답 실패 이벤트 수신 -> 공통 결과 팝업 세팅.");
+
+            CommonPopupDataDTO popupData = new CommonPopupDataDTO(
+                "★ 틀린 오답입니다! ★",
+                "아쉽게도 틀렸습니다. 다시 한번 기회를 드릴 테니 올바른 정답을 골라 보세요!",
+                null,
+                "계속하기",
+                () => m_viewModel.ContinueAfterWrongAnswer()
+            );
+
+            m_resultPopup.Setup(popupData);
+        }
+
+        /// <summary>
+        /// [기능]: 퀴즈 시간 초과 이벤트를 받아 DTO를 세팅하고 공통 팝업을 노출합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void HandleTimeOverEvent()
+        {
+            if (m_viewModel == null || m_resultPopup == null)
+            {
+                return;
+            }
+
+            Debug.Log("[QuizClassicView] 시간 초과 이벤트 수신 -> 공통 결과 팝업 세팅.");
+
+            CommonPopupDataDTO popupData = new CommonPopupDataDTO(
+                "★ 제한 시간이 초과되었습니다! ★",
+                "제한 시간이 모두 경과하여 퀴즈에 실패하셨습니다.\n재수강(리플레이)을 진행하여 다시 도전해 보십시오!",
+                null,
+                "재수강 진행",
+                () => m_viewModel.AcceptReTake()
+            );
+
+            m_resultPopup.Setup(popupData);
+        }
+
+        /// <summary>
+        /// [기능]: 마지막 문제를 맞추고 메인 화면으로 돌아가는 버튼 콜백입니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void func_OnExitToLobby()
+        {
+            Debug.Log("[QuizClassicView] 플레이어가 클래식 퀴즈 최종 완료 성적표를 확인하고 메인(Lobby)으로 이동합니다.");
+            
+            if (m_playerSO != null)
+            {
+                m_playerSO.HasSavedPosition = true;
+                Debug.Log($"[QuizClassicView] 로비로 돌아갈 때 마지막 복귀 위치 복원을 위해 HasSavedPosition 플래그를 true로 활성화했습니다. 위치: {m_playerSO.LastPosition}");
+            }
+
+            if (m_transitionSettings != null)
+            {
+                TransitionManager manager = FindFirstObjectByType<TransitionManager>();
+                if (manager != null)
+                {
+                    TransitionManager.Instance().Transition("Lobby", m_transitionSettings, m_startDelay);
+                    return;
+                }
+            }
+
+            SceneManager.LoadScene("Lobby");
         }
 
         #endregion

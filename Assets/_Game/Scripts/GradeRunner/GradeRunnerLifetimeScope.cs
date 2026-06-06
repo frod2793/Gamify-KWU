@@ -3,6 +3,7 @@ using VContainer;
 using VContainer.Unity;
 using GameArifiction.Player;
 using GameArifiction.GradeRunner;
+using GameArifiction.UI.Common;
 
 /// <summary>
 /// [기능]: 2D 피하기 미니게임(GradeRunner)의 VContainer 의존성 설정 스코프 클래스입니다.
@@ -84,8 +85,22 @@ public class GradeRunnerLifetimeScope : LifetimeScope
         builder.RegisterComponentInHierarchy<GradeRunnerHudView>();
         builder.RegisterComponentInHierarchy<GradeRunnerPlayerView>();
         builder.RegisterComponentInHierarchy<FallingObjectSpawnerView>();
-        builder.RegisterComponentInHierarchy<GradeRunnerResultPopupView>();
         builder.RegisterComponentInHierarchy<ProfessorView>();
+
+        // 공통 결과 팝업 뷰가 씬에 처음 활성화되어 있을 때 이를 찾아 컨테이너에 등록(캐싱)한 후 즉시 비활성화 처리
+        var commonPopup = UnityEngine.Object.FindAnyObjectByType<CommonResultPopupView>();
+        if (commonPopup != null)
+        {
+            builder.RegisterComponent(commonPopup);
+            commonPopup.gameObject.SetActive(false);
+            Debug.Log("[GradeRunnerLifetimeScope] 공통 결과 팝업 뷰 컨테이너 등록 완료 및 씬 비활성화 처리.");
+        }
+        else
+        {
+            builder.RegisterComponentInHierarchy<CommonResultPopupView>();
+        }
+
+        builder.RegisterComponentInHierarchy<GradeRunnerResultPresenter>();
     }
     #endregion
 }
