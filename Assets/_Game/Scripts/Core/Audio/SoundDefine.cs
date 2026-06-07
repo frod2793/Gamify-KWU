@@ -12,6 +12,10 @@ namespace GameArifiction.Core.Audio
     public static class SoundDefine
     {
         public const string Bgm_claw = "Sounds/BGM/bgm_claw";
+        public const string Bgm_graderunner_phase1 = "Sounds/GradeRunner/bgm_graderunner_phase1";
+        public const string Bgm_graderunner_phase2 = "Sounds/GradeRunner/bgm_graderunner_phase2";
+        public const string Sfx_graderunner_cheatsheet = "Sounds/GradeRunner/sfx_graderunner_cheatsheet";
+        public const string Sfx_graderunner_hit = "Sounds/GradeRunner/sfx_graderunner_hit";
         public const string Dummy_click = "Sounds/SFX/dummy_click";
         public const string Sfx_claw_catch = "Sounds/SFX/sfx_claw_catch";
         public const string Sfx_claw_clear = "Sounds/SFX/sfx_claw_clear";

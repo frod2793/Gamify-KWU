@@ -136,10 +136,13 @@ namespace GameArifiction.Tests.Editor
         public event Action<AudioClip> OnPlayBGMRequested { add { } remove { } }
         public event Action<AudioClip> OnPlaySFXRequested { add { } remove { } }
         public event Action OnStopBGMRequested { add { } remove { } }
+        public event Action OnPauseBGMRequested { add { } remove { } }
+        public event Action OnResumeBGMRequested { add { } remove { } }
 
         public void SetBgmVolume(float volume) { }
         public void SetSfxVolume(float volume) { }
-        public void SetMute(bool isMute) { }
+        public void SetBgmMute(bool isMute) { }
+        public void SetSfxMute(bool isMute) { }
 
         public UniTaskVoid PlayBGM(string clipPath)
         {
@@ -152,5 +155,7 @@ namespace GameArifiction.Tests.Editor
         }
 
         public void StopBGM() { }
+        public void PauseBGM() { }
+        public void ResumeBGM() { }
     }
 }

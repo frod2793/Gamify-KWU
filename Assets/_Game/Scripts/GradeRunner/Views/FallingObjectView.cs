@@ -177,6 +177,22 @@ namespace GameArifiction.GradeRunner
             gameObject.SetActive(false);
         }
 
+        /// <summary>
+        /// [기능]: 일시정지 상태에 따라 현재 진행 중인 DOTween 하강 및 크기 연출을 멈추거나 재개합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void SetPauseState(bool isPaused)
+        {
+            if (isPaused)
+            {
+                transform.DOPause();
+            }
+            else
+            {
+                transform.DOPlay();
+            }
+        }
+
         #endregion
     }
 }

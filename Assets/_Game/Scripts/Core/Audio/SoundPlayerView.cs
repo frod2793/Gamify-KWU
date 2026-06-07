@@ -25,6 +25,8 @@ namespace GameArifiction.Core.Audio
                 m_soundService.OnPlayBGMRequested -= HandlePlayBGM;
                 m_soundService.OnPlaySFXRequested -= HandlePlaySFX;
                 m_soundService.OnStopBGMRequested -= HandleStopBGM;
+                m_soundService.OnPauseBGMRequested -= HandlePauseBGM;
+                m_soundService.OnResumeBGMRequested -= HandleResumeBGM;
             }
 
             m_soundService = soundService;
@@ -35,9 +37,11 @@ namespace GameArifiction.Core.Audio
             m_soundService.OnPlayBGMRequested += HandlePlayBGM;
             m_soundService.OnPlaySFXRequested += HandlePlaySFX;
             m_soundService.OnStopBGMRequested += HandleStopBGM;
+            m_soundService.OnPauseBGMRequested += HandlePauseBGM;
+            m_soundService.OnResumeBGMRequested += HandleResumeBGM;
 
             // 초기 볼륨 세팅
-            HandleBgmVolumeChanged(m_soundService.Settings.IsMuted ? 0f : m_soundService.Settings.BgmVolume);
+            HandleBgmVolumeChanged(m_soundService.Settings.IsBgmMuted ? 0f : m_soundService.Settings.BgmVolume);
         }
 
         private void Awake()
@@ -59,6 +63,8 @@ namespace GameArifiction.Core.Audio
                 m_soundService.OnPlayBGMRequested -= HandlePlayBGM;
                 m_soundService.OnPlaySFXRequested -= HandlePlaySFX;
                 m_soundService.OnStopBGMRequested -= HandleStopBGM;
+                m_soundService.OnPauseBGMRequested -= HandlePauseBGM;
+                m_soundService.OnResumeBGMRequested -= HandleResumeBGM;
             }
         }
 
@@ -87,14 +93,33 @@ namespace GameArifiction.Core.Audio
 
         private void HandleStopBGM()
         {
-            m_bgmSource.Stop();
+            if (m_bgmSource != null)
+            {
+                m_bgmSource.Stop();
+            }
+        }
+
+        private void HandlePauseBGM()
+        {
+            if (m_bgmSource != null)
+            {
+                m_bgmSource.Pause();
+            }
+        }
+
+        private void HandleResumeBGM()
+        {
+            if (m_bgmSource != null)
+            {
+                m_bgmSource.UnPause();
+            }
         }
 
         private void HandlePlaySFX(AudioClip clip)
         {
             AudioSource source = GetAvailableSfxSource();
             source.clip = clip;
-            source.volume = m_soundService.Settings.IsMuted ? 0f : m_soundService.Settings.SfxVolume;
+            source.volume = m_soundService.Settings.IsSfxMuted ? 0f : m_soundService.Settings.SfxVolume;
             source.Play();
         }
 

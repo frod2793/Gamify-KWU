@@ -5,11 +5,15 @@ using GameArifiction.Player;
 using GameArifiction.GradeRunner;
 using GameArifiction.UI.Common;
 using EasyTransition;
+using GameArifiction.Core.Audio;
 
 /// <summary>
 /// [기능]: 2D 피하기 미니게임(GradeRunner)의 VContainer 의존성 설정 스코프 클래스입니다.
 ///         싱글톤을 제거하고 LifetimeScope을 사용하여 Model, ViewModel, View 컴포넌트를 구성 및 바인딩합니다.
 /// [작성자]: 윤승종
+/// [수정 날짜]: 2026-06-08
+/// [마지막 수정 작성자]: 윤승종
+/// [수정 내용]: 불필요한 단순 확인용 디버그 로그(Debug.Log) 제거/주석화 및 마감 처리
 /// </summary>
 public class GradeRunnerLifetimeScope : LifetimeScope
 {
@@ -89,12 +93,32 @@ public class GradeRunnerLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<GradeRunnerViewModel>(Lifetime.Scoped)
             .AsSelf();
 
+        // 공용 설정 뷰모델 등록
+        builder.Register<CommonSettingsViewModel>(Lifetime.Scoped);
+
         // 4. Presenter 등록 (POCO EntryPoint)
         builder.RegisterEntryPoint<GradeRunnerResultPresenter>(Lifetime.Scoped)
             .AsSelf();
 
+        builder.RegisterEntryPoint<GradeRunnerAudioPresenter>(Lifetime.Scoped)
+            .AsSelf();
+
         // 5. View 레이어 자동 탐색 및 바인딩 (규칙 10 - RegisterComponentInHierarchy 활용)
         ConfigureViews(builder);
+
+        // 6. 공통 사운드 시스템 등록 (단독 실행 환경 지원)
+        if (Parent == null)
+        {
+            var soundView = FindFirstObjectByType<SoundPlayerView>();
+            if (soundView == null)
+            {
+                var go = new GameObject("SoundPlayerView");
+                soundView = go.AddComponent<SoundPlayerView>();
+            }
+            builder.RegisterComponent(soundView);
+            builder.Register<SoundService>(Lifetime.Scoped).AsImplementedInterfaces().AsSelf();
+            builder.RegisterBuildCallback(container => container.Inject(soundView));
+        }
     }
     #endregion
 
@@ -105,14 +129,16 @@ public class GradeRunnerLifetimeScope : LifetimeScope
         builder.RegisterComponentInHierarchy<GradeRunnerPlayerView>();
         builder.RegisterComponentInHierarchy<FallingObjectSpawnerView>();
         builder.RegisterComponentInHierarchy<ProfessorView>();
+        builder.RegisterComponentInHierarchy<GradeRunnerTutorialPopupView>();
+        builder.RegisterComponentInHierarchy<CommonSettingsPopupView>();
+        builder.RegisterComponentInHierarchy<CommonPausePopupView>();
 
-        // 공통 결과 팝업 뷰가 씬에 존재할 경우 찾아 컨테이너에 등록(캐싱)한 후 즉시 비활성화 처리
+        // 공통 결과 팝업 뷰가 씬에 존재할 경우 찾아 컨테이너에 등록(캐싱) (비활성화 처리는 Presenter Start에서 수행)
         var commonPopup = FindAnyObjectByType<CommonResultPopupView>();
         if (commonPopup != null)
         {
             builder.RegisterComponent(commonPopup);
-            commonPopup.gameObject.SetActive(false);
-            Debug.Log("[GradeRunnerLifetimeScope] 공통 결과 팝업 뷰 컨테이너 등록 완료 및 씬 비활성화 처리.");
+            // Debug.Log("[GradeRunnerLifetimeScope] 공통 결과 팝업 뷰 컨테이너 등록 완료.");
         }
         else
         {

@@ -18,13 +18,18 @@ namespace GameArifiction.Core.Audio
         event Action<AudioClip> OnPlayBGMRequested;
         event Action<AudioClip> OnPlaySFXRequested;
         event Action OnStopBGMRequested;
+        event Action OnPauseBGMRequested;
+        event Action OnResumeBGMRequested;
 
         void SetBgmVolume(float volume);
         void SetSfxVolume(float volume);
-        void SetMute(bool isMute);
+        void SetBgmMute(bool isMute);
+        void SetSfxMute(bool isMute);
 
         UniTaskVoid PlayBGM(string clipPath);
         UniTaskVoid PlaySFX(string clipPath);
         void StopBGM();
+        void PauseBGM();
+        void ResumeBGM();
     }
 }

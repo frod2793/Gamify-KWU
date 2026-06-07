@@ -93,7 +93,6 @@ namespace GameArifiction.ClawMachine
             // 이벤트 구독
             m_viewModel.OnRemoveDisagreeDollRequested += HandleRemoveDisagreeDoll;
             m_viewModel.OnStateChanged += UpdateButtonInteractions;
-            m_viewModel.OnCountdownChanged += HandleCountdownChanged;
 
             // [신규]: UI 버튼 클릭 이벤트 코드 바인딩 주입
             if (m_descendButton != null)
@@ -149,7 +148,6 @@ namespace GameArifiction.ClawMachine
             {
                 m_viewModel.OnRemoveDisagreeDollRequested -= HandleRemoveDisagreeDoll;
                 m_viewModel.OnStateChanged -= UpdateButtonInteractions;
-                m_viewModel.OnCountdownChanged -= HandleCountdownChanged;
                 m_viewModel.Dispose();
             }
 
@@ -479,48 +477,7 @@ namespace GameArifiction.ClawMachine
             }
         }
 
-        /// <summary>
-        /// [기능]: 뷰모델로부터 카운트다운 신호를 수신해 화면 중앙에 DOTween 스케일/페이드 애니메이션과 함께 숫자를 띄웁니다.
-        /// [작성자]: 윤승종
-        /// </summary>
-        private void HandleCountdownChanged(string countdownValue)
-        {
-            if (m_countdownText == null)
-            {
-                return;
-            }
 
-            if (string.IsNullOrEmpty(countdownValue))
-            {
-                m_countdownText.gameObject.SetActive(false);
-                return;
-            }
-
-            m_countdownText.gameObject.SetActive(true);
-            m_countdownText.text = countdownValue;
-
-            // DOTween 팝 스케일 및 알파 연출
-            m_countdownText.transform.localScale = Vector3.one * 0.3f;
-            m_countdownText.alpha = 0f;
-
-            DOTween.Kill(m_countdownText.transform);
-            DOTween.Kill(m_countdownText);
-
-            if (countdownValue == "START!")
-            {
-                m_countdownText.color = new Color(1f, 0.85f, 0.2f, 1f); // 럭셔리 골드
-                m_countdownText.transform.DOScale(1.5f, 0.6f).SetEase(Ease.OutBack);
-                m_countdownText.DOFade(1f, 0.1f);
-                m_countdownText.DOFade(0f, 0.4f).SetDelay(0.4f);
-            }
-            else
-            {
-                m_countdownText.color = Color.white;
-                m_countdownText.transform.DOScale(1.2f, 0.4f).SetEase(Ease.OutBack);
-                m_countdownText.DOFade(1f, 0.1f);
-                m_countdownText.DOFade(0f, 0.3f).SetDelay(0.7f);
-            }
-        }
         #endregion
     }
 }

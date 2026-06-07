@@ -62,7 +62,6 @@ namespace GameArifiction.ClawMachine
         private IQuizGameViewModel m_viewModel;
         private TextMeshProUGUI m_confirmButtonText;
         private bool m_isSuccessState;
-        private bool m_isTimeOverState;
         #endregion
 
         #region 초기화 (Initialization)
@@ -225,14 +224,12 @@ namespace GameArifiction.ClawMachine
         private void HandleQuizFailed()
         {
             Debug.Log("[ClawGameResultPopupView] 오답 실패 이벤트 수신 -> 결과 패널 실패 모드 오픈.");
-            m_isTimeOverState = false;
             func_ShowPopup(false);
         }
 
         private void HandleTimeOver()
         {
             Debug.Log("[ClawGameResultPopupView] 시간 초과 이벤트 수신 -> 결과 패널 실패(타임아웃) 모드 오픈.");
-            m_isTimeOverState = true;
             func_ShowPopup(false);
         }
 

@@ -8,6 +8,7 @@ namespace GameArifiction.Core.Audio
     {
         public float BgmVolume { get; set; } = 1f;
         public float SfxVolume { get; set; } = 1f;
-        public bool IsMuted { get; set; } = false;
+        public bool IsBgmMuted { get; set; } = false;
+        public bool IsSfxMuted { get; set; } = false;
     }
 }

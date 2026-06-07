@@ -94,6 +94,7 @@ namespace GameArifiction.GradeRunner
             {
                 m_viewModel.OnSpawnFallingObject += HandleSpawnFallingObject;
                 m_viewModel.OnClearFallingObjects += HandleClearFallingObjects;
+                m_viewModel.OnPauseStateChanged += HandlePauseStateChanged;
             }
         }
 
@@ -103,6 +104,7 @@ namespace GameArifiction.GradeRunner
             {
                 m_viewModel.OnSpawnFallingObject -= HandleSpawnFallingObject;
                 m_viewModel.OnClearFallingObjects -= HandleClearFallingObjects;
+                m_viewModel.OnPauseStateChanged -= HandlePauseStateChanged;
             }
         }
 
@@ -282,6 +284,33 @@ namespace GameArifiction.GradeRunner
             }
 
             Debug.Log("[FallingObjectSpawnerView] 씬 탐색 없이 활성화 상태였던 모든 낙하 오브젝트 풀 회수 완료.");
+        }
+
+        /// <summary>
+        /// [기능]: 일시정지 상태 변경 이벤트를 수신하여 화면 상의 모든 낙하 오브젝트 트윈을 일시정지/재개합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void HandlePauseStateChanged(bool isPaused)
+        {
+            int codeCount = m_codePool.Count;
+            for (int i = 0; i < codeCount; i++)
+            {
+                if (m_codePool[i] != null && m_codePool[i].gameObject.activeSelf)
+                {
+                    m_codePool[i].SetPauseState(isPaused);
+                }
+            }
+
+            int cheatSheetCount = m_cheatSheetPool.Count;
+            for (int i = 0; i < cheatSheetCount; i++)
+            {
+                if (m_cheatSheetPool[i] != null && m_cheatSheetPool[i].gameObject.activeSelf)
+                {
+                    m_cheatSheetPool[i].SetPauseState(isPaused);
+                }
+            }
+
+            Debug.Log($"[FallingObjectSpawnerView] 낙하 오브젝트 일시정지 상태 동기화 완료: {isPaused}");
         }
 
         #endregion

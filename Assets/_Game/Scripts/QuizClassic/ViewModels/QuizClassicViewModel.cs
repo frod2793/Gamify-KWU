@@ -36,14 +36,12 @@ namespace GameArifiction.QuizClassic
 
         public event Action<QuizStateType> OnStateChanged;
         public event Action<QuizData, List<string>> OnNextQuizLoaded; // 퀴즈 및 셔플된 4지선다 목록
-        public event Action<float> OnTimeChanged;
         public event Action<int> OnScoreChanged;
 
         public event Action OnQuizSuccess;
         public event Action OnQuizFailed;
         public event Action<int> OnWrongAnswerSelected; // [신규]: 잘못 선택된 선택지 인덱스 브로드캐스트
-        public event Action OnTimeOver;
-        public event Action OnReTakeRequested; // IQuizGameViewModel 상속 호환용
+        public event Action OnReTakeRequested = delegate { }; // IQuizGameViewModel 상속 호환용
 
         #endregion
 

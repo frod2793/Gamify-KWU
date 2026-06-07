@@ -33,14 +33,8 @@ namespace GameArifiction.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Timer_WhenExpired_TransitionsToReTakeRequest()
+        public IEnumerator Timer_WhenExpired_MaintainsPlayingState()
         {
-            bool timeOverFired = false;
-            bool reTakeRequestedFired = false;
-
-            m_viewModel.OnTimeOver += () => timeOverFired = true;
-            m_viewModel.OnReTakeRequested += () => reTakeRequestedFired = true;
-
             // 게임 시작 (타이머 시작됨)
             m_viewModel.StartGame();
 
@@ -49,10 +43,8 @@ namespace GameArifiction.Tests.PlayMode
             // 2초(제한 시간) + 약간의 딜레이(마진) 대기
             yield return new WaitForSeconds(2.5f);
 
-            // 제한 시간이 초과되어 상태가 ReTakeRequest로 전이되어야 함
-            Assert.IsTrue(timeOverFired, "OnTimeOver 이벤트가 발생하지 않았습니다.");
-            Assert.IsTrue(reTakeRequestedFired, "OnReTakeRequested 이벤트가 발생하지 않았습니다.");
-            Assert.AreEqual(QuizStateType.ReTakeRequest, m_viewModel.CurrentState, "상태가 ReTakeRequest로 전이되지 않았습니다.");
+            // [기획 변경 반영]: 제한 시간이 초과되어도 실패 전이 없이 순수 소요 시간만 누적하므로 상태는 여전히 Playing이어야 함
+            Assert.AreEqual(QuizStateType.Playing, m_viewModel.CurrentState, "상태가 여전히 Playing으로 유지되어야 합니다.");
         }
     }
 }

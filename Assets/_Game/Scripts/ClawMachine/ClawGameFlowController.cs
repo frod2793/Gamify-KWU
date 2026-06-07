@@ -31,6 +31,9 @@ namespace GameArifiction.ClawMachine
         // 씬 참조 캐싱 및 기본 상수 제어
         private const float SPAWN_MIN_DISTANCE = 0.6f;
         private const int MAX_SPAWN_ATTEMPTS = 30;
+
+        // [최적화]: 캡슐 재사용을 위한 Object Pool
+        private List<GameObject> m_dollPool = new List<GameObject>();
         #endregion
 
         #region 생성자 의존성 주입 (Constructor DI)
@@ -228,15 +231,44 @@ namespace GameArifiction.ClawMachine
 
             List<Vector2> spawnedPositions = new List<Vector2>(choices.Count);
 
+            // [최적화]: 기존 풀 비활성화 및 상태 초기화
+            for (int i = 0; i < m_dollPool.Count; i++)
+            {
+                if (m_dollPool[i] != null)
+                {
+                    m_dollPool[i].SetActive(false);
+                }
+            }
+
             for (int i = 0; i < choices.Count; i++)
             {
-                GameObject dollGo = UnityEngine.Object.Instantiate(templateCapsule, m_sceneReferences.DollsContainer);
+                GameObject dollGo;
+                if (i < m_dollPool.Count && m_dollPool[i] != null)
+                {
+                    dollGo = m_dollPool[i];
+                }
+                else
+                {
+                    dollGo = UnityEngine.Object.Instantiate(templateCapsule, m_sceneReferences.DollsContainer);
+                    m_dollPool.Add(dollGo);
+                }
+
                 if (dollGo != null)
                 {
                     string answerText = choices[i];
                     bool isCorrect = (answerText == quiz.CorrectAnswer);
                     
                     dollGo.name = $"Capsule_Answer_{i}";
+
+                    // 물리 상태 리셋 (Zero Allocation)
+                    Rigidbody2D rb = dollGo.GetComponent<Rigidbody2D>();
+                    if (rb != null)
+                    {
+                        rb.linearVelocity = Vector2.zero;
+                        rb.angularVelocity = 0f;
+                        dollGo.transform.rotation = Quaternion.identity;
+                    }
+
                     dollGo.SetActive(true);
 
                     // BoxCollider2D 영역 내부에서 겹치지 않는 무작위 위치 획득
@@ -268,7 +300,7 @@ namespace GameArifiction.ClawMachine
                 }
             }
 
-            Debug.Log($"[ClawGameFlowController] 퀴즈 캡슐 {choices.Count}개 동적 스폰 완료.");
+            Debug.Log($"[ClawGameFlowController] 퀴즈 캡슐 {choices.Count}개 Object Pool 재활용 배치 완료.");
         }
 
         /// <summary>

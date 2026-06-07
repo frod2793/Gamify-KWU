@@ -43,15 +43,12 @@ namespace GameArifiction.ClawMachine
         public event Action OnDropRequested; // 도중 강제 놓기 이벤트
 
         // [신규]: 재수강 시스템 관련 이벤트 정의
-        public event Action OnReTakeRequested;
+        public event Action OnReTakeRequested = delegate { };
         public event Action OnRemoveDisagreeDollRequested;
 
         // [신규]: 퀴즈 성공 및 실패 브로드캐스트 이벤트
         public event Action OnQuizSuccess;
         public event Action OnQuizFailed;
-
-        // [신규]: 시작 카운트다운 문자열 전파 이벤트
-        public event Action<string> OnCountdownChanged;
         #endregion
 
         #region 속성 (Properties)

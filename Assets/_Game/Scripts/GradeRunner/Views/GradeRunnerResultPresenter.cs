@@ -13,6 +13,9 @@ namespace GameArifiction.GradeRunner
     /// [기능]: GradeRunner 게임 결과를 수신하여 공통 결과 팝업(CommonResultPopupView)에 전달하고 씬 전이를 처리하는 순수 C# 중개 프레젠터 클래스입니다.
     ///         씬 하이어라키 배치가 필요 없도록 VContainer EntryPoint(IStartable) 모델로 설계되었습니다.
     /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-06-08
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: 불필요한 단순 확인용 디버그 로그(Debug.Log) 제거/주석화 및 마감 처리
     /// </summary>
     public class GradeRunnerResultPresenter : IStartable, IDisposable
     {
@@ -49,15 +52,20 @@ namespace GameArifiction.GradeRunner
         }
 
         /// <summary>
-        /// [기능]: VContainer EntryPoint 진입 시점에 뷰모델의 결과 이벤트를 구독 바인딩합니다.
+        /// [기능]: VContainer EntryPoint 진입 시점에 결과 팝업을 비활성화하고 뷰모델의 결과 이벤트를 구독 바인딩합니다.
         /// [작성자]: 윤승종
         /// </summary>
         public void Start()
         {
+            if (m_commonResultPopup != null)
+            {
+                m_commonResultPopup.gameObject.SetActive(false);
+            }
+
             if (m_viewModel != null)
             {
                 m_viewModel.OnGameResult += HandleGameResult;
-                Debug.Log("[GradeRunnerResultPresenter] 게임 결과 이벤트 구독 처리를 완료했습니다 (POCO 기동).");
+                // Debug.Log("[GradeRunnerResultPresenter] 게임 결과 이벤트 구독 처리를 완료했습니다 (POCO 기동).");
             }
         }
 
@@ -70,7 +78,7 @@ namespace GameArifiction.GradeRunner
             if (m_viewModel != null)
             {
                 m_viewModel.OnGameResult -= HandleGameResult;
-                Debug.Log("[GradeRunnerResultPresenter] 게임 결과 이벤트 구독 해제를 완료했습니다.");
+                // Debug.Log("[GradeRunnerResultPresenter] 게임 결과 이벤트 구독 해제를 완료했습니다.");
             }
         }
 
@@ -113,7 +121,7 @@ namespace GameArifiction.GradeRunner
         /// </summary>
         private void func_OnExitConfirm()
         {
-            Debug.Log("[GradeRunnerResultPresenter] 플레이어가 로비 복귀 나가기 버튼을 선택했습니다.");
+            // Debug.Log("[GradeRunnerResultPresenter] 플레이어가 로비 복귀 나가기 버튼을 선택했습니다.");
 
             // 로비 씬 복원 활성화 플래그 주입
             if (m_playerSO != null)

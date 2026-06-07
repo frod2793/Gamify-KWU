@@ -102,7 +102,7 @@ namespace GameArifiction.ClawMachine
         [Tooltip("카트 정지 시 밧줄이 다시 수직 일직선으로 신속하게 복원되는 강도입니다.")]
         private float m_ropeRestoration = 12.0f;
 
-        private List<Vector3> m_segmentWorldPositions = new List<Vector3>();
+        private Vector3[] m_segmentWorldPositions;
 
         [Header("애니메이션 (Animation)")]
         [SerializeField] private float m_descendDuration = 0.8f;
@@ -130,7 +130,7 @@ namespace GameArifiction.ClawMachine
         private Vector3 m_initialPosition;
         private Transform m_wireContainer;
         private List<GameObject> m_wireSegments = new List<GameObject>();
-        private List<Vector3> m_segmentPositions = new List<Vector3>();
+        private Vector3[] m_segmentPositions;
         private System.Threading.CancellationTokenSource m_animCts;
         private bool m_isInAnimSequence; // 하강~상승 애니메이션 시퀀스 진행 중 플래그 (레이스 컨디션 방지)
 
@@ -192,7 +192,7 @@ namespace GameArifiction.ClawMachine
 
             if (m_soundService != null)
             {
-                m_loopAudioSource.volume = m_soundService.Settings.IsMuted ? 0f : m_soundService.Settings.SfxVolume;
+                m_loopAudioSource.volume = m_soundService.Settings.IsSfxMuted ? 0f : m_soundService.Settings.SfxVolume;
                 m_soundService.OnSfxVolumeChanged += HandleSfxVolumeChanged;
             }
 
@@ -320,6 +320,11 @@ namespace GameArifiction.ClawMachine
                 m_wireSegments.Add(segmentObj);
             }
 
+            // [추가]: Vector3 배열 캐싱 초기화 (Zero Allocation)
+            int maxPoints = requiredCount + 1;
+            m_segmentWorldPositions = new Vector3[maxPoints];
+            m_segmentPositions = new Vector3[maxPoints];
+
             Debug.Log($"[ClawView] 와이어 다관절 풀 초기화 완료: {requiredCount}개 마디 생성됨.");
         }
         #endregion
@@ -420,53 +425,26 @@ namespace GameArifiction.ClawMachine
 
             int poolCount = m_wireSegments.Count;
 
-            // 동적 풀 팽창 안전 보증
+            // 동적 풀 팽창 제거: 최대 개수 초과 방지 클램핑
             if (neededSegments > poolCount)
             {
-                int addCount = neededSegments - poolCount + 5;
-                for (int i = 0; i < addCount; i++)
-                {
-                    GameObject segmentObj = new GameObject($"Wire_Segment_Dynamic_{poolCount + i}", typeof(SpriteRenderer));
-                    segmentObj.transform.SetParent(m_wireContainer, false);
-                    segmentObj.transform.localScale = m_segmentScale;
-
-                    SpriteRenderer sr = segmentObj.GetComponent<SpriteRenderer>();
-                    if (sr != null)
-                    {
-                        if (m_wireSegmentSprite != null)
-                        {
-                            sr.sprite = m_wireSegmentSprite;
-                        }
-                        sr.color = m_wireColor;
-                        sr.sortingLayerName = m_sortingLayerName;
-                        sr.sortingOrder = m_sortingOrder;
-                    }
-
-                    segmentObj.SetActive(false);
-                    m_wireSegments.Add(segmentObj);
-                }
-                poolCount = m_wireSegments.Count;
+                neededSegments = poolCount;
             }
 
             // 마디(Sprite)들을 고정점과 끝점에 완전 연결하기 위해 N+1개의 정점을 생성
             int pointCount = neededSegments + 1;
-
-            // 2. 가상 마디 점 버퍼 크기 맞추기 및 동기화 (Zero-Alloc)
-            while (m_segmentWorldPositions.Count < pointCount)
+            if (pointCount > m_segmentWorldPositions.Length)
             {
-                m_segmentWorldPositions.Add(startPos);
-            }
-            if (m_segmentWorldPositions.Count > pointCount)
-            {
-                m_segmentWorldPositions.RemoveRange(pointCount, m_segmentWorldPositions.Count - pointCount);
+                pointCount = m_segmentWorldPositions.Length;
             }
 
             // 3. 다관절 지연 체인 (Lag-Chain Physics) 월드 궤적 연산
             float currentElasticity = m_isMoving ? m_ropeLagElasticity : m_ropeRestoration;
             
-            m_segmentPositions.Clear();
             Vector3 prevLeader = startPos;
             Vector3 normal = Vector3.Cross(direction.normalized, Vector3.forward).normalized;
+            float dt = Time.deltaTime;
+            float tTime = Time.time;
 
             for (int i = 0; i < pointCount; i++)
             {
@@ -489,7 +467,7 @@ namespace GameArifiction.ClawMachine
                 }
                 else
                 {
-                    Vector3 lagTarget = Vector3.Lerp(oldPos, prevLeader, Time.deltaTime * currentElasticity);
+                    Vector3 lagTarget = Vector3.Lerp(oldPos, prevLeader, dt * currentElasticity);
                     float dampWeight = m_isMoving ? Mathf.Lerp(0.85f, 0.0f, t) : Mathf.Lerp(0.95f, 0.0f, t);
                     finalSegmentPos = Vector3.Lerp(lagTarget, idealBasePos, 1.0f - dampWeight);
                 }
@@ -497,7 +475,7 @@ namespace GameArifiction.ClawMachine
                 // 처짐 및 흔들림 파동 2차 결합
                 float sagAmount = 4.0f * t * (1.0f - t);
                 Vector3 sagOffset = Vector3.down * (m_wireSagIntensity * 0.5f * sagAmount);
-                float waveValue = Mathf.Sin(Time.time * m_waveSpeed - t * m_waveFrequency) * (m_waveAmplitude * 0.375f) * sagAmount * Mathf.Clamp(m_angularVelocity, -2.5f, 2.5f);
+                float waveValue = Mathf.Sin(tTime * m_waveSpeed - t * m_waveFrequency) * (m_waveAmplitude * 0.375f) * sagAmount * Mathf.Clamp(m_angularVelocity, -2.5f, 2.5f);
                 Vector3 waveOffset = normal * waveValue;
 
                 Vector3 renderedPos = finalSegmentPos + sagOffset + waveOffset;
@@ -509,7 +487,7 @@ namespace GameArifiction.ClawMachine
                 renderedPos.z = m_wireZDepth;
 
                 m_segmentWorldPositions[i] = finalSegmentPos;
-                m_segmentPositions.Add(renderedPos);
+                m_segmentPositions[i] = renderedPos;
                 
                 prevLeader = finalSegmentPos;
             }

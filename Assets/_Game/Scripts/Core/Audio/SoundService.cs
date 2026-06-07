@@ -19,6 +19,8 @@ namespace GameArifiction.Core.Audio
         public event Action<AudioClip> OnPlayBGMRequested;
         public event Action<AudioClip> OnPlaySFXRequested;
         public event Action OnStopBGMRequested;
+        public event Action OnPauseBGMRequested;
+        public event Action OnResumeBGMRequested;
 
         private Dictionary<string, AudioClip> m_clipCache = new Dictionary<string, AudioClip>();
 
@@ -32,14 +34,16 @@ namespace GameArifiction.Core.Audio
         {
             Settings.BgmVolume = PlayerPrefs.GetFloat("BgmVolume", 1f);
             Settings.SfxVolume = PlayerPrefs.GetFloat("SfxVolume", 1f);
-            Settings.IsMuted = PlayerPrefs.GetInt("IsMuted", 0) == 1;
+            Settings.IsBgmMuted = PlayerPrefs.GetInt("IsBgmMuted", 0) == 1;
+            Settings.IsSfxMuted = PlayerPrefs.GetInt("IsSfxMuted", 0) == 1;
         }
 
         private void SaveSettings()
         {
             PlayerPrefs.SetFloat("BgmVolume", Settings.BgmVolume);
             PlayerPrefs.SetFloat("SfxVolume", Settings.SfxVolume);
-            PlayerPrefs.SetInt("IsMuted", Settings.IsMuted ? 1 : 0);
+            PlayerPrefs.SetInt("IsBgmMuted", Settings.IsBgmMuted ? 1 : 0);
+            PlayerPrefs.SetInt("IsSfxMuted", Settings.IsSfxMuted ? 1 : 0);
             PlayerPrefs.Save();
         }
 
@@ -47,21 +51,27 @@ namespace GameArifiction.Core.Audio
         {
             Settings.BgmVolume = Mathf.Clamp01(volume);
             SaveSettings();
-            OnBgmVolumeChanged?.Invoke(Settings.IsMuted ? 0f : Settings.BgmVolume);
+            OnBgmVolumeChanged?.Invoke(Settings.IsBgmMuted ? 0f : Settings.BgmVolume);
         }
 
         public void SetSfxVolume(float volume)
         {
             Settings.SfxVolume = Mathf.Clamp01(volume);
             SaveSettings();
-            OnSfxVolumeChanged?.Invoke(Settings.IsMuted ? 0f : Settings.SfxVolume);
+            OnSfxVolumeChanged?.Invoke(Settings.IsSfxMuted ? 0f : Settings.SfxVolume);
         }
 
-        public void SetMute(bool isMute)
+        public void SetBgmMute(bool isMute)
         {
-            Settings.IsMuted = isMute;
+            Settings.IsBgmMuted = isMute;
             SaveSettings();
             OnBgmVolumeChanged?.Invoke(isMute ? 0f : Settings.BgmVolume);
+        }
+
+        public void SetSfxMute(bool isMute)
+        {
+            Settings.IsSfxMuted = isMute;
+            SaveSettings();
             OnSfxVolumeChanged?.Invoke(isMute ? 0f : Settings.SfxVolume);
         }
 
@@ -86,6 +96,24 @@ namespace GameArifiction.Core.Audio
         public void StopBGM()
         {
             OnStopBGMRequested?.Invoke();
+        }
+
+        /// <summary>
+        /// [기능]: BGM 일시정지를 요청합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void PauseBGM()
+        {
+            OnPauseBGMRequested?.Invoke();
+        }
+
+        /// <summary>
+        /// [기능]: 일시정지된 BGM 재개를 요청합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void ResumeBGM()
+        {
+            OnResumeBGMRequested?.Invoke();
         }
 
         private async UniTask<AudioClip> LoadClipAsync(string path)

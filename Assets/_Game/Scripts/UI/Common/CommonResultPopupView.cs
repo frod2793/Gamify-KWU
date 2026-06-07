@@ -10,6 +10,9 @@ namespace GameArifiction.UI.Common
     /// <summary>
     /// [기능]: 여러 미니게임의 결과를 공통 DTO 데이터를 기반으로 화면에 출력하고 후속 처리를 위임하는 범용 결과 팝업 View 컴포넌트입니다.
     /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-06-08
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: 불필요한 단순 확인용 디버그 로그(Debug.Log) 제거/주석화 및 마감 처리
     /// </summary>
     public class CommonResultPopupView : MonoBehaviour
     {
@@ -77,7 +80,7 @@ namespace GameArifiction.UI.Common
                 m_confirmButton.onClick.AddListener(func_OnConfirmButtonClick);
             }
 
-            Debug.Log("[CommonResultPopupView] 공통 결과 팝업 뷰 초기화 완료.");
+            // Debug.Log("[CommonResultPopupView] 공통 결과 팝업 뷰 초기화 완료.");
         }
 
         private void OnDestroy()
@@ -127,7 +130,7 @@ namespace GameArifiction.UI.Common
             {
                 if (!string.IsNullOrEmpty(data.LectureName))
                 {
-                    m_lectureNameText.text = $"강의명: {data.LectureName}";
+                    m_lectureNameText.text = $"강의명[{data.LectureName}]";
                     m_lectureNameText.gameObject.SetActive(true);
                 }
                 else
@@ -173,7 +176,7 @@ namespace GameArifiction.UI.Common
             transform.localScale = Vector3.zero;
             transform.DOScale(Vector3.one, 0.45f).SetEase(Ease.OutBack);
 
-            Debug.Log("[CommonResultPopupView] 결과 팝업이 활성화되었으며 데이터를 바인딩했습니다.");
+            // Debug.Log("[CommonResultPopupView] 결과 팝업이 활성화되었으며 데이터를 바인딩했습니다.");
         }
 
         /// <summary>
@@ -191,7 +194,7 @@ namespace GameArifiction.UI.Common
         /// </summary>
         public void func_OnConfirmButtonClick()
         {
-            Debug.Log("[CommonResultPopupView] 플레이어가 확인 버튼을 선택했습니다.");
+            // Debug.Log("[CommonResultPopupView] 플레이어가 확인 버튼을 선택했습니다.");
             
             Action callback = m_onConfirmAction;
             func_HidePopup();
