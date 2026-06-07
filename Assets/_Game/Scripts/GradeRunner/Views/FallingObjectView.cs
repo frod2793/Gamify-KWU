@@ -15,13 +15,15 @@ namespace GameArifiction.GradeRunner
 
         private FallingObjectType m_objectType;
         private CodeColorType m_codeColor;
-        private float m_fallSpeed = 0f;
+        private float m_targetY = 0f;
+        private float m_fallDuration = 0f;
 
         private SpriteRenderer m_spriteRenderer;
         private TextMeshPro m_textMeshPro;
 
         // 스포너로부터 할당받은 낙하용 단어
         private string m_assignedWord;
+        private TweenCallback m_deactivateCallback;
 
         #endregion
 
@@ -38,12 +40,7 @@ namespace GameArifiction.GradeRunner
         {
             m_spriteRenderer = GetComponent<SpriteRenderer>();
             m_textMeshPro = GetComponent<TextMeshPro>();
-        }
-
-        private void Update()
-        {
-            // 아래로 일정 속도로 하강
-            transform.Translate(Vector3.down * m_fallSpeed * Time.deltaTime, Space.World);
+            m_deactivateCallback = func_Deactivate;
         }
 
         private void OnDisable()
@@ -68,11 +65,12 @@ namespace GameArifiction.GradeRunner
         /// [기능]: 오브젝트의 성격, 색상 카테고리, 낙하 속도 및 텍스트 단어를 설정하고 연출을 가동합니다.
         /// [작성자]: 윤승종
         /// </summary>
-        public void Initialize(FallingObjectType type, CodeColorType colorType, float speed, string word = "")
+        public void Initialize(FallingObjectType type, CodeColorType colorType, float targetY, float duration, string word = "")
         {
             m_objectType = type;
             m_codeColor = colorType;
-            m_fallSpeed = speed;
+            m_targetY = targetY;
+            m_fallDuration = duration;
             m_assignedWord = word;
 
             if (m_spriteRenderer == null)
@@ -85,6 +83,11 @@ namespace GameArifiction.GradeRunner
             }
 
             ApplyVisuals();
+
+            // DOTween을 사용하여 개별 Update 호출 없이 하강 구현
+            transform.DOMoveY(m_targetY, m_fallDuration)
+                .SetEase(Ease.Linear)
+                .OnComplete(m_deactivateCallback);
         }
 
         #endregion

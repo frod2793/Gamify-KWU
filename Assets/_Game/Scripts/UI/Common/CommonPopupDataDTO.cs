@@ -18,9 +18,14 @@ namespace GameArifiction.UI.Common
         public string Title { get; set; }
 
         /// <summary>
-        /// 결과 설명 및 상세 정보 본문 텍스트입니다.
+        /// 결과 설명 및 상세 정보 본문 텍스트입니다. (일반 안내 모드 폴백용)
         /// </summary>
         public string Description { get; set; }
+
+        /// <summary>
+        /// 미니게임 강의명 텍스트입니다. (예: UX/UI개론, 게임엔진S/W)
+        /// </summary>
+        public string LectureName { get; set; }
 
         /// <summary>
         /// 결과 학점 등급 정보입니다. (없을 경우 null)
@@ -45,10 +50,17 @@ namespace GameArifiction.UI.Common
         /// [기능]: CommonPopupDataDTO 생성자
         /// [작성자]: 윤승종
         /// </summary>
-        public CommonPopupDataDTO(string title, string description, MinigameGrade? grade, string confirmButtonText, Action onConfirm)
+        public CommonPopupDataDTO(
+            string title,
+            string description,
+            string lectureName,
+            MinigameGrade? grade,
+            string confirmButtonText,
+            Action onConfirm)
         {
             Title = title;
             Description = description;
+            LectureName = lectureName;
             Grade = grade;
             ConfirmButtonText = confirmButtonText;
             OnConfirm = onConfirm;

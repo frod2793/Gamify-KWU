@@ -237,8 +237,6 @@ namespace GameArifiction.GradeRunner
 
             NotifyGradeChanged();
             OnScoreFeedback?.Invoke(-penalty, hitPosition);
-
-            Debug.Log($"[GradeRunnerViewModel] 코드에 닿았습니다! 학점 감점: -{penalty}. 현재 학점: {m_model.CurrentGradePoint}");
         }
 
         /// <summary>
@@ -256,7 +254,6 @@ namespace GameArifiction.GradeRunner
             {
                 // 이미 Full(5점) 상태이면 더 이상 채워지지 않음
                 OnScoreFeedback?.Invoke(0f, hitPosition);
-                Debug.Log("[GradeRunnerViewModel] 학점이 이미 최대치(5.0)이므로 족보를 먹어도 가산되지 않습니다.");
                 return;
             }
 
@@ -265,8 +262,6 @@ namespace GameArifiction.GradeRunner
 
             NotifyGradeChanged();
             OnScoreFeedback?.Invoke(bonus, hitPosition);
-
-            Debug.Log($"[GradeRunnerViewModel] 족보를 획득했습니다! 학점 가점: +{bonus}. 현재 학점: {m_model.CurrentGradePoint}");
         }
 
         /// <summary>
@@ -406,7 +401,6 @@ namespace GameArifiction.GradeRunner
         {
             float fallDuration = UnityEngine.Random.Range(m_config.FallDurationMin, m_config.FallDurationMax);
             OnSpawnFallingObject?.Invoke(FallingObjectType.CheatSheet, CodeColorType.Red, fallDuration);
-            Debug.Log($"[GradeRunnerViewModel] 기획 지 지정 초에 맞춰 족보 스폰이 트리거되었습니다. 남은시간: {m_model.RemainingTime:F2}초");
         }
 
         /// <summary>

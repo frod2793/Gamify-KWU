@@ -317,7 +317,7 @@ namespace GameArifiction.QuizClassic
             Debug.Log("[QuizClassicView] 정답 성공 이벤트 수신 -> 공통 결과 팝업 세팅.");
 
             string titleText;
-            string descriptionText;
+            string descriptionText = null;
             string confirmText;
             System.Action confirmCallback;
 
@@ -358,13 +358,20 @@ namespace GameArifiction.QuizClassic
 
                 targetGrade = calculatedGrade;
 
-                titleText = "★ 최종 학습 평가 성적표 ★";
-                descriptionText = "축하합니다! 인형뽑기부터 클래식 퀴즈 코스까지 전체 수료하셨습니다.\n\n" +
-                                  $"■ 총 소요 시간: {totalPlayTime:F1}초\n" +
-                                  $"■ 최종 성적 등급: [{calculatedGrade} 등급]\n\n" +
-                                  "배운 개념을 활용하여 실전에 응용해 보십시오!";
-                confirmText = "메인 화면으로";
+                titleText = "게임 결과";
+                confirmText = "로비로 이동";
                 confirmCallback = func_OnExitToLobby;
+
+                CommonPopupDataDTO popupData = new CommonPopupDataDTO(
+                    titleText,
+                    "남은 시간",
+                    "UX/UI개론",
+                    targetGrade,
+                    confirmText,
+                    confirmCallback
+                );
+
+                m_resultPopup.Setup(popupData);
             }
             else
             {
@@ -372,17 +379,18 @@ namespace GameArifiction.QuizClassic
                 descriptionText = "올바른 정답을 선택하셨습니다.\n다음 문제로 이동해 보십시오!";
                 confirmText = "다음 문제로";
                 confirmCallback = () => m_viewModel.ContinueAfterCorrectAnswer();
+
+                CommonPopupDataDTO popupData = new CommonPopupDataDTO(
+                    titleText,
+                    descriptionText,
+                    null,
+                    targetGrade,
+                    confirmText,
+                    confirmCallback
+                );
+
+                m_resultPopup.Setup(popupData);
             }
-
-            CommonPopupDataDTO popupData = new CommonPopupDataDTO(
-                titleText,
-                descriptionText,
-                targetGrade,
-                confirmText,
-                confirmCallback
-            );
-
-            m_resultPopup.Setup(popupData);
         }
 
         /// <summary>
@@ -401,6 +409,7 @@ namespace GameArifiction.QuizClassic
             CommonPopupDataDTO popupData = new CommonPopupDataDTO(
                 "★ 틀린 오답입니다! ★",
                 "아쉽게도 틀렸습니다. 다시 한번 기회를 드릴 테니 올바른 정답을 골라 보세요!",
+                null,
                 null,
                 "계속하기",
                 () => m_viewModel.ContinueAfterWrongAnswer()
@@ -425,6 +434,7 @@ namespace GameArifiction.QuizClassic
             CommonPopupDataDTO popupData = new CommonPopupDataDTO(
                 "★ 제한 시간이 초과되었습니다! ★",
                 "제한 시간이 모두 경과하여 퀴즈에 실패하셨습니다.\n재수강(리플레이)을 진행하여 다시 도전해 보십시오!",
+                null,
                 null,
                 "재수강 진행",
                 () => m_viewModel.AcceptReTake()

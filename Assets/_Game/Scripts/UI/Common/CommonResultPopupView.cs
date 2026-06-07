@@ -24,6 +24,10 @@ namespace GameArifiction.UI.Common
         [Tooltip("결과 설명 및 상세 내용을 표시할 텍스트 컴포넌트입니다.")]
         private TextMeshProUGUI m_descriptionText;
 
+        [SerializeField]
+        [Tooltip("강의명을 표시할 텍스트 컴포넌트입니다.")]
+        private TextMeshProUGUI m_lectureNameText;
+
         [Header("등급 이미지 설정")]
         [SerializeField]
         [Tooltip("학점 등급 이미지를 표시할 Image 컴포넌트입니다.")]
@@ -107,7 +111,29 @@ namespace GameArifiction.UI.Common
 
             if (m_descriptionText != null)
             {
-                m_descriptionText.text = data.Description;
+                if (!string.IsNullOrEmpty(data.Description))
+                {
+                    m_descriptionText.text = data.Description;
+                    m_descriptionText.gameObject.SetActive(true);
+                }
+                else
+                {
+                    m_descriptionText.gameObject.SetActive(false);
+                }
+            }
+
+            // 2. 기획서 기반 세부 필드 설정
+            if (m_lectureNameText != null)
+            {
+                if (!string.IsNullOrEmpty(data.LectureName))
+                {
+                    m_lectureNameText.text = $"강의명: {data.LectureName}";
+                    m_lectureNameText.gameObject.SetActive(true);
+                }
+                else
+                {
+                    m_lectureNameText.gameObject.SetActive(false);
+                }
             }
 
             // 2. 등급 이미지 설정

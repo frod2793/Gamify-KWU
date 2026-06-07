@@ -200,14 +200,6 @@ namespace GameArifiction.GradeRunner
                 m_professorView.func_MoveTo(randomX);
             }
 
-            // 속도 = 낙하 총거리(Y 차이) / 소요 희망시간(초)
-            float totalDistance = m_spawnY - m_groundY;
-            if (totalDistance <= 0f)
-            {
-                totalDistance = 10f; // 안전 수치
-            }
-            float speed = totalDistance / fallDuration;
-
             // 오브젝트 가동 및 상태 초기화 시 무작위 C# 단어 추출 및 전달
             string selectedWord = "";
             if (type == FallingObjectType.Code)
@@ -223,7 +215,7 @@ namespace GameArifiction.GradeRunner
             }
 
             objInstance.gameObject.SetActive(true);
-            objInstance.Initialize(type, codeColor, speed, selectedWord);
+            objInstance.Initialize(type, codeColor, m_groundY, fallDuration, selectedWord);
         }
 
         /// <summary>

@@ -4,6 +4,7 @@ using VContainer.Unity;
 using GameArifiction.Player;
 using GameArifiction.GradeRunner;
 using GameArifiction.UI.Common;
+using EasyTransition;
 
 /// <summary>
 /// [기능]: 2D 피하기 미니게임(GradeRunner)의 VContainer 의존성 설정 스코프 클래스입니다.
@@ -26,6 +27,11 @@ public class GradeRunnerLifetimeScope : LifetimeScope
     [SerializeField]
     [Tooltip("씬 간 복귀 좌표 및 영구 누적 성적 기록을 보관할 ScriptableObject 에셋입니다.")]
     private PlayerSO m_playerSO;
+
+    [Header("이지 트랜지션 설정")]
+    [SerializeField]
+    [Tooltip("로비 복귀 시 화면 전환을 위한 이지 트랜지션 설정 자산입니다.")]
+    private TransitionSettings m_transitionSettings;
     #endregion
 
     #region 의존성 설정 (VContainer Configure)
@@ -59,6 +65,15 @@ public class GradeRunnerLifetimeScope : LifetimeScope
             Debug.LogError("[GradeRunnerLifetimeScope] PlayerSO가 누락되었습니다.");
         }
 
+        if (m_transitionSettings != null)
+        {
+            builder.RegisterInstance(m_transitionSettings);
+        }
+        else
+        {
+            Debug.LogWarning("[GradeRunnerLifetimeScope] TransitionSettings가 누락되었습니다.");
+        }
+
         // 2. Model 등록 (Factory)
         builder.Register(container =>
         {
@@ -74,7 +89,11 @@ public class GradeRunnerLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<GradeRunnerViewModel>(Lifetime.Scoped)
             .AsSelf();
 
-        // 4. View 레이어 자동 탐색 및 바인딩 (규칙 10 - RegisterComponentInHierarchy 활용)
+        // 4. Presenter 등록 (POCO EntryPoint)
+        builder.RegisterEntryPoint<GradeRunnerResultPresenter>(Lifetime.Scoped)
+            .AsSelf();
+
+        // 5. View 레이어 자동 탐색 및 바인딩 (규칙 10 - RegisterComponentInHierarchy 활용)
         ConfigureViews(builder);
     }
     #endregion
@@ -87,8 +106,8 @@ public class GradeRunnerLifetimeScope : LifetimeScope
         builder.RegisterComponentInHierarchy<FallingObjectSpawnerView>();
         builder.RegisterComponentInHierarchy<ProfessorView>();
 
-        // 공통 결과 팝업 뷰가 씬에 처음 활성화되어 있을 때 이를 찾아 컨테이너에 등록(캐싱)한 후 즉시 비활성화 처리
-        var commonPopup = UnityEngine.Object.FindAnyObjectByType<CommonResultPopupView>();
+        // 공통 결과 팝업 뷰가 씬에 존재할 경우 찾아 컨테이너에 등록(캐싱)한 후 즉시 비활성화 처리
+        var commonPopup = FindAnyObjectByType<CommonResultPopupView>();
         if (commonPopup != null)
         {
             builder.RegisterComponent(commonPopup);
@@ -97,10 +116,9 @@ public class GradeRunnerLifetimeScope : LifetimeScope
         }
         else
         {
-            builder.RegisterComponentInHierarchy<CommonResultPopupView>();
+            Debug.LogWarning("[GradeRunnerLifetimeScope] CommonResultPopupView가 씬에 존재하지 않습니다! 수동 배치가 필요합니다.");
         }
 
-        builder.RegisterComponentInHierarchy<GradeRunnerResultPresenter>();
     }
     #endregion
 }

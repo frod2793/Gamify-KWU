@@ -40,6 +40,22 @@ namespace GameArifiction.GradeRunner
         private SPUM_Prefabs m_spumPrefab;
         private PlayerState m_currentAnimState = PlayerState.IDLE;
         private float m_currentInputX = 0f;
+        private float m_damageAnimTimer = 0f;
+        #endregion
+
+        #region 의존성 주입 (Dependency Injection)
+
+        /// <summary>
+        /// [기능]: VContainer를 통해 뷰모델 의존성을 주입받습니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        [Inject]
+        public void Construct(GradeRunnerViewModel viewModel)
+        {
+            m_viewModel = viewModel;
+            Debug.Log("[GradeRunnerPlayerView] VContainer를 통해 뷰모델 의존성 주입이 완료되었습니다.");
+        }
+
         #endregion
 
         #region 유니티 생명주기 (Unity Lifecycle)
@@ -62,28 +78,14 @@ namespace GameArifiction.GradeRunner
 
         private void Update()
         {
-            if (!m_isInitialized)
+            if (!m_isInitialized || m_viewModel == null)
             {
                 return;
             }
 
-            if (m_viewModel == null)
+            if (m_damageAnimTimer > 0f)
             {
-                Debug.LogWarning("[GradeRunnerPlayerView] VContainer 주입 누락 감지! m_viewModel이 Null입니다. 수동 탐색을 시도합니다.");
-                GradeRunnerLifetimeScope scope = Object.FindAnyObjectByType<GradeRunnerLifetimeScope>();
-                if (scope != null && scope.Container != null)
-                {
-                    m_viewModel = scope.Container.Resolve<GradeRunnerViewModel>();
-                    if (m_viewModel != null)
-                    {
-                        Debug.Log("[GradeRunnerPlayerView] 수동 탐색을 통해 뷰모델 주입 성공!");
-                    }
-                }
-                
-                if (m_viewModel == null)
-                {
-                    return;
-                }
+                m_damageAnimTimer -= Time.deltaTime;
             }
 
             if (!m_viewModel.IsPlayable)
@@ -107,19 +109,7 @@ namespace GameArifiction.GradeRunner
 
         #endregion
 
-        #region 초기화 (Initialization)
 
-        /// <summary>
-        /// [기능]: VContainer를 통해 뷰모델 의존성을 주입합니다.
-        /// [작성자]: 윤승종
-        /// </summary>
-        [Inject]
-        public void Construct(GradeRunnerViewModel viewModel)
-        {
-            m_viewModel = viewModel;
-        }
-
-        #endregion
 
         #region 내부 메서드 (Private Methods)
 
@@ -327,12 +317,14 @@ namespace GameArifiction.GradeRunner
 
             m_currentInputX = inputX;
 
-            if (!Mathf.Approximately(m_currentInputX, 0f))
-            {
-                Debug.Log($"[GradeRunnerPlayerView-Input] 조작 입력 감지됨! InputX: {m_currentInputX}");
-            }
+
 
             // 애니메이션 상태 및 플립 갱신
+            if (m_damageAnimTimer > 0f)
+            {
+                return;
+            }
+
             if (!Mathf.Approximately(m_currentInputX, 0f))
             {
                 UpdateAnimation(PlayerState.MOVE);
@@ -350,7 +342,15 @@ namespace GameArifiction.GradeRunner
         /// </summary>
         private void ApplyMovement()
         {
-            if (Mathf.Approximately(m_currentInputX, 0f) || m_rigidbody == null)
+            if (m_rigidbody == null)
+            {
+                Debug.LogError("[GradeRunnerPlayerView-Debug] m_rigidbody가 누락되었습니다!");
+                return;
+            }
+
+
+
+            if (Mathf.Approximately(m_currentInputX, 0f))
             {
                 return;
             }
@@ -373,8 +373,6 @@ namespace GameArifiction.GradeRunner
             
             // 물리 엔진을 통한 위치 갱신
             m_rigidbody.MovePosition(nextPosition);
-
-            Debug.Log($"[GradeRunnerPlayerView-Physics] 이동 연산. Speed: {speed:F2}, Time.fixedDeltaTime: {Time.fixedDeltaTime}, 기존X: {beforePos.x:F3} -> 목표X: {nextPosition.x:F3}");
         }
 
         /// <summary>
@@ -396,6 +394,19 @@ namespace GameArifiction.GradeRunner
                 if (objView.ObjectType == FallingObjectType.Code)
                 {
                     m_viewModel.ApplyCodeHit(contactPos);
+
+                    // 스펌 피격(DAMAGED) 애니메이션 재생 및 타이머 설정
+                    if (m_isSpumInitialized && m_spumPrefab != null)
+                    {
+                        m_damageAnimTimer = 0.35f;
+                        m_currentAnimState = PlayerState.DAMAGED;
+                        
+                        m_spumPrefab.PlayAnimation(PlayerState.DAMAGED, 0);
+                        if (m_spumPrefab._anim != null)
+                        {
+                            m_spumPrefab._anim.Play(PlayerState.DAMAGED.ToString(), 0, 0f);
+                        }
+                    }
                 }
                 else if (objView.ObjectType == FallingObjectType.CheatSheet)
                 {

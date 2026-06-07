@@ -116,7 +116,17 @@ namespace GameArifiction.ClawMachine
 
             // 클래식 퀴즈(QuizClassic) 뷰
             builder.RegisterComponentInHierarchy<QuizClassicView>();
-            builder.RegisterComponentInHierarchy<CommonResultPopupView>();
+
+            var commonPopup = FindAnyObjectByType<CommonResultPopupView>();
+            if (commonPopup != null)
+            {
+                builder.RegisterComponent(commonPopup);
+                Debug.Log("[ClawGameLifetimeScope] CommonResultPopupView 컨테이너 등록 완료.");
+            }
+            else
+            {
+                Debug.LogWarning("[ClawGameLifetimeScope] CommonResultPopupView가 씬에 존재하지 않습니다! 수동 배치가 필요합니다.");
+            }
         }
         #endregion
     }

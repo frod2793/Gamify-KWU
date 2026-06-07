@@ -72,6 +72,9 @@ namespace GameArifiction.GradeRunner
         // 캐싱된 메인 카메라
         private UnityEngine.Camera m_mainCamera;
 
+        // GC 할당이 없는 실시간 타이머용 char 배열 버퍼
+        private readonly char[] m_timerBuffer = new char[] { '0', '0', ':', '0', '0' };
+
         #endregion
 
         #region 유니티 생명주기 (Unity Lifecycle)
@@ -151,8 +154,32 @@ namespace GameArifiction.GradeRunner
                 int seconds = Mathf.FloorToInt(timeLeft);
                 int centiseconds = Mathf.FloorToInt((timeLeft - seconds) * 100f);
 
+                // 값 범위 가드 (배열 인덱스 및 자릿수 오버플로우 방지)
+                if (seconds < 0)
+                {
+                    seconds = 0;
+                }
+                else if (seconds > 99)
+                {
+                    seconds = 99;
+                }
+
+                if (centiseconds < 0)
+                {
+                    centiseconds = 0;
+                }
+                else if (centiseconds > 99)
+                {
+                    centiseconds = 99;
+                }
+
+                m_timerBuffer[0] = (char)('0' + seconds / 10);
+                m_timerBuffer[1] = (char)('0' + seconds % 10);
+                m_timerBuffer[3] = (char)('0' + centiseconds / 10);
+                m_timerBuffer[4] = (char)('0' + centiseconds % 10);
+
                 // ss:SS (ms 2자리 제한) 출력
-                m_timeText.text = string.Format("{0:D2}:{1:D2}", seconds, centiseconds);
+                m_timeText.SetCharArray(m_timerBuffer, 0, 5);
 
                 // [기획 표 기믹 연동]: 10초 이하 시 Bold 폰트스타일 및 빨간색 교체
                 if (timeLeft <= 10f)
@@ -312,7 +339,6 @@ namespace GameArifiction.GradeRunner
                 if (m_viewModel != null)
                 {
                     m_viewModel.MobileInputX = direction;
-                    Debug.Log($"[GradeRunnerHudView] 가상 이동 버튼 누름: {direction}");
                 }
             });
             trigger.triggers.Add(pointerDown);
@@ -327,7 +353,6 @@ namespace GameArifiction.GradeRunner
                     if (Mathf.Approximately(m_viewModel.MobileInputX, direction))
                     {
                         m_viewModel.MobileInputX = 0f;
-                        Debug.Log("[GradeRunnerHudView] 가상 이동 버튼 뗌");
                     }
                 }
             });
