@@ -5,13 +5,19 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using VContainer;
+using GameArifiction.UI.Common;
 
 /// <summary>
 /// [기능]: 2D 피하기 미니게임(GradeRunner)의 실시간 HUD 요소(ss:SS 타이머바, 성적 프로그래스바 및 등급 텍스트, 플레이어 위치 비례 스코어 피드백)를 렌더링하고 연출하는 UI View
 /// [작성자]: 윤승종
+/// [수정 날짜]: 2026-06-08
+/// [마지막 수정 작성자]: 윤승종
+/// [수정 내용]: 불필요한 단순 확인용 디버그 로그(Debug.Log) 제거/주석화 및 마감 처리
 /// </summary>
 namespace GameArifiction.GradeRunner
 {
+    using Camera = UnityEngine.Camera;
+
     public class GradeRunnerHudView : MonoBehaviour
     {
         #region UI 참조 (Inspector)
@@ -20,6 +26,10 @@ namespace GameArifiction.GradeRunner
         [SerializeField]
         [Tooltip("남은 시간을 시각적으로 채우는 슬라이더 컴포넌트입니다.")]
         private Slider m_timeSlider;
+
+        [SerializeField]
+        [Tooltip("시간 슬라이더의 채우기(Fill) 이미지 컴포넌트입니다 (시간 임계값 도달 시 색상 변경 목적).")]
+        private Image m_timeFillImage;
 
         [SerializeField]
         [Tooltip("남은 시간을 ss:SS 형식으로 출력할 텍스트 메쉬 프로입니다.")]
@@ -56,11 +66,23 @@ namespace GameArifiction.GradeRunner
         [Tooltip("모바일 가상 패드 우측 이동 UGUI 버튼입니다.")]
         private Button m_rightMoveButton;
 
+        [Header("설정 및 일시정지 UI")]
+        [SerializeField]
+        [Tooltip("설정 팝업을 여는 버튼입니다.")]
+        private Button m_settingsButton;
+
+        [SerializeField]
+        [Tooltip("게임을 일시정지하고 패널을 여는 버튼입니다.")]
+        private Button m_pauseButton;
+
         #endregion
 
         #region 내부 필드 (Private Fields)
 
         private GradeRunnerViewModel m_viewModel;
+        private CommonSettingsPopupView m_settingsPopupView;
+        private CommonPausePopupView m_pausePopupView;
+        private GradeRunnerTutorialPopupView m_tutorialPopupView;
         
         // 피드백 텍스트 풀링
         private readonly List<TextMeshProUGUI> m_feedbackTextPool = new List<TextMeshProUGUI>(8);
@@ -68,9 +90,13 @@ namespace GameArifiction.GradeRunner
         // 타이머 원본 색상 및 폰트 스타일 보존 필드
         private Color m_originalTimeColor;
         private FontStyles m_originalTimeStyle;
+        private Color m_originalTimeFillColor;
         
         // 캐싱된 메인 카메라
-        private UnityEngine.Camera m_mainCamera;
+        private Camera m_mainCamera;
+
+        // GC 할당이 없는 실시간 타이머용 char 배열 버퍼
+        private readonly char[] m_timerBuffer = new char[] { 'T', 'I', 'M', 'E', ' ', '0', '0', ':', '0', '0' };
 
         #endregion
 
@@ -78,17 +104,22 @@ namespace GameArifiction.GradeRunner
 
         private void Awake()
         {
-            m_mainCamera = UnityEngine.Camera.main;
+            m_mainCamera = Camera.main;
             if (m_timeText != null)
             {
                 m_originalTimeColor = m_timeText.color;
                 m_originalTimeStyle = m_timeText.fontStyle;
             }
+
+            if (m_timeFillImage != null)
+            {
+                m_originalTimeFillColor = m_timeFillImage.color;
+            }
         }
 
         private void Start()
         {
-            Debug.Log("[GradeRunnerHudView] HUD UI 뷰 초기화 및 데이터 바인딩 성공.");
+            // Debug.Log("[GradeRunnerHudView] HUD UI 뷰 초기화 및 데이터 바인딩 성공.");
         }
 
         private void OnDestroy()
@@ -101,19 +132,42 @@ namespace GameArifiction.GradeRunner
         #region 초기화 (Initialization)
 
         /// <summary>
-        /// [기능]: VContainer를 통해 뷰모델 의존성을 주입합니다.
+        /// [기능]: VContainer를 통해 뷰모델 및 관련 팝업 뷰 의존성을 주입합니다.
         /// [작성자]: 윤승종
         /// </summary>
         [Inject]
-        public void Construct(GradeRunnerViewModel viewModel)
+        public void Construct(
+            GradeRunnerViewModel viewModel,
+            CommonSettingsPopupView settingsPopupView,
+            CommonPausePopupView pausePopupView,
+            GradeRunnerTutorialPopupView tutorialPopupView)
         {
             m_viewModel = viewModel;
+            m_settingsPopupView = settingsPopupView;
+            m_pausePopupView = pausePopupView;
+            m_tutorialPopupView = tutorialPopupView;
+
             if (m_viewModel != null)
             {
                 m_viewModel.OnTimeChanged += UpdateTimerUI;
                 m_viewModel.OnGradePointChanged += UpdateGradePointUI;
                 m_viewModel.OnGradeLetterChanged += UpdateGradeLetterUI;
                 m_viewModel.OnScoreFeedback += HandleScoreFeedback;
+            }
+
+            if (m_settingsButton != null)
+            {
+                m_settingsButton.onClick.AddListener(func_OnSettingsButtonClick);
+            }
+
+            if (m_pauseButton != null)
+            {
+                m_pauseButton.onClick.AddListener(func_OnPauseButtonClick);
+            }
+
+            if (m_settingsPopupView != null)
+            {
+                m_settingsPopupView.OnClosePopup += func_OnSettingsClose;
             }
 
             SetupMobileButtonEvents();
@@ -127,6 +181,21 @@ namespace GameArifiction.GradeRunner
                 m_viewModel.OnGradePointChanged -= UpdateGradePointUI;
                 m_viewModel.OnGradeLetterChanged -= UpdateGradeLetterUI;
                 m_viewModel.OnScoreFeedback -= HandleScoreFeedback;
+            }
+
+            if (m_settingsButton != null)
+            {
+                m_settingsButton.onClick.RemoveListener(func_OnSettingsButtonClick);
+            }
+
+            if (m_pauseButton != null)
+            {
+                m_pauseButton.onClick.RemoveListener(func_OnPauseButtonClick);
+            }
+
+            if (m_settingsPopupView != null)
+            {
+                m_settingsPopupView.OnClosePopup -= func_OnSettingsClose;
             }
         }
 
@@ -151,19 +220,53 @@ namespace GameArifiction.GradeRunner
                 int seconds = Mathf.FloorToInt(timeLeft);
                 int centiseconds = Mathf.FloorToInt((timeLeft - seconds) * 100f);
 
-                // ss:SS (ms 2자리 제한) 출력
-                m_timeText.text = string.Format("{0:D2}:{1:D2}", seconds, centiseconds);
+                // 값 범위 가드 (배열 인덱스 및 자릿수 오버플로우 방지)
+                if (seconds < 0)
+                {
+                    seconds = 0;
+                }
+                else if (seconds > 99)
+                {
+                    seconds = 99;
+                }
+
+                if (centiseconds < 0)
+                {
+                    centiseconds = 0;
+                }
+                else if (centiseconds > 99)
+                {
+                    centiseconds = 99;
+                }
+
+                m_timerBuffer[5] = (char)('0' + seconds / 10);
+                m_timerBuffer[6] = (char)('0' + seconds % 10);
+                m_timerBuffer[8] = (char)('0' + centiseconds / 10);
+                m_timerBuffer[9] = (char)('0' + centiseconds % 10);
+
+                // TIME ss:SS (ms 2자리 제한) 출력
+                m_timeText.SetCharArray(m_timerBuffer, 0, 10);
 
                 // [기획 표 기믹 연동]: 10초 이하 시 Bold 폰트스타일 및 빨간색 교체
                 if (timeLeft <= 10f)
                 {
                     m_timeText.color = Color.red;
                     m_timeText.fontStyle = FontStyles.Bold;
+
+                    if (m_timeFillImage != null)
+                    {
+                        m_timeFillImage.color = Color.red;
+                    }
                 }
                 else
                 {
                     m_timeText.color = m_originalTimeColor;
                     m_timeText.fontStyle = m_originalTimeStyle;
+
+                    if (m_timeFillImage != null)
+                    {
+                        m_timeFillImage.color = m_originalTimeFillColor;
+                    }
                 }
             }
         }
@@ -207,14 +310,14 @@ namespace GameArifiction.GradeRunner
         }
 
         /// <summary>
-        /// [기능]: 뷰모델로부터 등급 문자를 전달받아 스크린 화면에 갱신 출력합니다.
+        /// [기능]: 뷰모델로부터 등급 문자를 전달받아 스크린 화면에 SCORE : [등급] 포맷으로 갱신 출력합니다.
         /// [작성자]: 윤승종
         /// </summary>
         private void UpdateGradeLetterUI(string gradeLetter)
         {
             if (m_gradeLetterText != null)
             {
-                m_gradeLetterText.text = gradeLetter;
+                m_gradeLetterText.text = $"SCORE : {gradeLetter}";
             }
         }
 
@@ -312,7 +415,6 @@ namespace GameArifiction.GradeRunner
                 if (m_viewModel != null)
                 {
                     m_viewModel.MobileInputX = direction;
-                    Debug.Log($"[GradeRunnerHudView] 가상 이동 버튼 누름: {direction}");
                 }
             });
             trigger.triggers.Add(pointerDown);
@@ -327,7 +429,6 @@ namespace GameArifiction.GradeRunner
                     if (Mathf.Approximately(m_viewModel.MobileInputX, direction))
                     {
                         m_viewModel.MobileInputX = 0f;
-                        Debug.Log("[GradeRunnerHudView] 가상 이동 버튼 뗌");
                     }
                 }
             });
@@ -367,6 +468,78 @@ namespace GameArifiction.GradeRunner
             }
 
             return null;
+        }
+
+        #endregion
+
+        #region UI 이벤트 핸들러 (설정 및 일시정지)
+
+        /// <summary>
+        /// [기능]: 설정 버튼 클릭 시 호출되는 이벤트 핸들러입니다. BGM/SFX 설정 팝업을 노출하고 게임을 일시정지합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void func_OnSettingsButtonClick()
+        {
+            // Debug.Log("[GradeRunnerHudView] 설정 버튼 클릭됨. 설정 팝업을 노출합니다.");
+            if (m_viewModel != null)
+            {
+                m_viewModel.PauseGame();
+            }
+            if (m_settingsPopupView != null)
+            {
+                m_settingsPopupView.ShowPopup();
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 설정 팝업이 닫힐 때 호출되는 이벤트 핸들러입니다. 게임 일시정지를 해제합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void func_OnSettingsClose()
+        {
+            // Debug.Log("[GradeRunnerHudView] 설정 팝업이 닫혔습니다. 게임을 재개합니다.");
+            if (m_viewModel != null)
+            {
+                m_viewModel.ResumeGame();
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 일시정지 버튼 클릭 시 호출되는 이벤트 핸들러입니다. 게임을 일시정지하고 공통 일시정지 팝업을 노출합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void func_OnPauseButtonClick()
+        {
+            // Debug.Log("[GradeRunnerHudView] 일시정지 버튼 클릭됨. 일시정지 팝업을 노출합니다.");
+            if (m_viewModel != null)
+            {
+                m_viewModel.PauseGame();
+            }
+
+            if (m_pausePopupView != null)
+            {
+                var pauseData = new CommonPausePopupDataDTO
+                {
+                    OnResume = () =>
+                    {
+                        if (m_viewModel != null)
+                        {
+                            m_viewModel.ResumeGame();
+                        }
+                    },
+                    OnReplayTutorial = () =>
+                    {
+                        if (m_tutorialPopupView != null)
+                        {
+                            m_tutorialPopupView.func_ShowTutorial();
+                        }
+                    },
+                    OnReplayQuiz = null // GradeRunner는 퀴즈가 없으므로 null
+                };
+
+                m_pausePopupView.Setup(pauseData);
+                m_pausePopupView.ShowPopup();
+            }
         }
 
         #endregion

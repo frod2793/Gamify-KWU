@@ -12,6 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bfbde03c2418f5641ac31ebef70a545e, type: 3}
   m_Name: GradeRunnerConfigSO
   m_EditorClassIdentifier: GamifyKWU.Runtime::GameArifiction.GradeRunner.GradeRunnerConfigSO
+  m_spriteA: {fileID: 21300000, guid: 7eeff75252ef9415cb71cd78e7c3d6c3, type: 3}
+  m_spriteB: {fileID: 21300000, guid: aa67765126c9a40dfabe4e3e6e8deec9, type: 3}
+  m_spriteC: {fileID: 21300000, guid: d2c6c095c151945db8fc6a3aed7776a2, type: 3}
+  m_spriteD: {fileID: 21300000, guid: 5bf09f7303451462cbcce28a3d2ad687, type: 3}
+  m_spriteF: {fileID: 21300000, guid: 10d725d38fc0b416ebcd2ef04fc159c5, type: 3}
   m_gameDuration: 30
   m_phase2TransitionTime: 10
   m_maxGradePoint: 5
@@ -27,8 +32,3 @@ MonoBehaviour:
   m_playerTraverseDurationMin: 4
   m_playerTraverseDurationMax: 5
   m_feedbackDisplayDuration: 1
-  m_introDialogue: "\uC790, \uC9C0\uAE08\uBD80\uD130 \uCF54\uB529 \uD14C\uC2A4\uD2B8\uB97C
-    \uC2DC\uC791\uD558\uACA0\uB2E4!"
-  m_phase2Dialogue: "\uD087\uD558\uD558\uD570!!!\n\uC544\uC9C1 \uB05D\uB098\uC9C0
-    \uC54A\uC558\uB2E4! \n\uBA54\uBAA8\uC7A5 \uCF54\uB529 \uD14C\uC2A4\uD2B8\uB97C
-    \uC2DC\uC791\uD558\uC9C0!"

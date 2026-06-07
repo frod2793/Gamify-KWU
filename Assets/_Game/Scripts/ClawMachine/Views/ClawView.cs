@@ -2,15 +2,17 @@ using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using System.Collections.Generic;
 using UnityEngine;
+using GameArifiction.Core.Audio;
+using VContainer;
 
 namespace GameArifiction.ClawMachine
 {
     /// <summary>
     /// [기능]: UI Canvas를 벗어나 2D World Space 상에서 집게의 이동과 흔들림을 제어
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-05-31
+    /// [수정 날짜]: 2026-06-06
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 와이어 탑(m_clawRoot) 기준 물리 진자 수식 일원화 및 집게 렌더링 끝점 이탈 방지용 오프셋 회전 교정 완료
+    /// [수정 내용]: 와이어 탑(m_clawRoot) 기준 물리 진자 수식 일원화 및 크레인 주행/동작 루프 사운드 로직 구현
     /// </summary>
     public class ClawView : MonoBehaviour
     {
@@ -100,7 +102,7 @@ namespace GameArifiction.ClawMachine
         [Tooltip("카트 정지 시 밧줄이 다시 수직 일직선으로 신속하게 복원되는 강도입니다.")]
         private float m_ropeRestoration = 12.0f;
 
-        private List<Vector3> m_segmentWorldPositions = new List<Vector3>();
+        private Vector3[] m_segmentWorldPositions;
 
         [Header("애니메이션 (Animation)")]
         [SerializeField] private float m_descendDuration = 0.8f;
@@ -119,6 +121,8 @@ namespace GameArifiction.ClawMachine
 
         #region 내부 필드 (Private Fields)
         private ClawGameViewModel m_viewModel;
+        private ISoundService m_soundService;
+        private AudioSource m_loopAudioSource;
         private bool m_isMoving;
         private float m_moveDirection; // -1: Left, 1: Right, 0: Idle
         private float m_moveSpeed = 3.0f;
@@ -126,7 +130,7 @@ namespace GameArifiction.ClawMachine
         private Vector3 m_initialPosition;
         private Transform m_wireContainer;
         private List<GameObject> m_wireSegments = new List<GameObject>();
-        private List<Vector3> m_segmentPositions = new List<Vector3>();
+        private Vector3[] m_segmentPositions;
         private System.Threading.CancellationTokenSource m_animCts;
         private bool m_isInAnimSequence; // 하강~상승 애니메이션 시퀀스 진행 중 플래그 (레이스 컨디션 방지)
 
@@ -135,6 +139,18 @@ namespace GameArifiction.ClawMachine
         private float m_currentAngle;       // 현재 진자 각도 (degree)
         private float m_angularVelocity;   // 각속도
         private float m_prevCartX;         // 가속도 계산용 이전 프레임 좌표
+        #endregion
+
+        #region 의존성 주입 (Dependency Injection)
+        /// <summary>
+        /// [기능]: VContainer를 통해 공통 사운드 서비스를 주입받습니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        [Inject]
+        public void Construct(ISoundService soundService)
+        {
+            m_soundService = soundService;
+        }
         #endregion
 
         #region 유니티 생명주기 (Unity Lifecycle)
@@ -168,6 +184,19 @@ namespace GameArifiction.ClawMachine
 
             // 와이어 객체 동적 생성 (SpriteRenderer 기반)
             InitializeWire();
+
+            // [루프 오디오 설정]: 크레인 기동 및 주행음 루프 재생용 AudioSource 동적 추가
+            m_loopAudioSource = gameObject.AddComponent<AudioSource>();
+            m_loopAudioSource.loop = true;
+            m_loopAudioSource.playOnAwake = false;
+
+            if (m_soundService != null)
+            {
+                m_loopAudioSource.volume = m_soundService.Settings.IsSfxMuted ? 0f : m_soundService.Settings.SfxVolume;
+                m_soundService.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+            }
+
+            LoadLoopClipAsync().Forget();
         }
 
         private void Update()
@@ -231,7 +260,7 @@ namespace GameArifiction.ClawMachine
 
             if (m_clawBody != null)
             {
-                m_clawBody.Initialize(m_viewModel, m_clawRoot);
+                m_clawBody.Initialize(m_viewModel, m_clawRoot, this);
             }
         }
 
@@ -243,6 +272,10 @@ namespace GameArifiction.ClawMachine
                 m_viewModel.OnStopRequested -= HandleStopRequested;
                 m_viewModel.OnStateChanged -= HandleStateChanged;
                 m_viewModel.OnDropRequested -= HandleDropRequested;
+            }
+            if (m_soundService != null)
+            {
+                m_soundService.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
             }
             CancelAnimations();
         }
@@ -286,6 +319,11 @@ namespace GameArifiction.ClawMachine
                 segmentObj.SetActive(false);
                 m_wireSegments.Add(segmentObj);
             }
+
+            // [추가]: Vector3 배열 캐싱 초기화 (Zero Allocation)
+            int maxPoints = requiredCount + 1;
+            m_segmentWorldPositions = new Vector3[maxPoints];
+            m_segmentPositions = new Vector3[maxPoints];
 
             Debug.Log($"[ClawView] 와이어 다관절 풀 초기화 완료: {requiredCount}개 마디 생성됨.");
         }
@@ -387,53 +425,26 @@ namespace GameArifiction.ClawMachine
 
             int poolCount = m_wireSegments.Count;
 
-            // 동적 풀 팽창 안전 보증
+            // 동적 풀 팽창 제거: 최대 개수 초과 방지 클램핑
             if (neededSegments > poolCount)
             {
-                int addCount = neededSegments - poolCount + 5;
-                for (int i = 0; i < addCount; i++)
-                {
-                    GameObject segmentObj = new GameObject($"Wire_Segment_Dynamic_{poolCount + i}", typeof(SpriteRenderer));
-                    segmentObj.transform.SetParent(m_wireContainer, false);
-                    segmentObj.transform.localScale = m_segmentScale;
-
-                    SpriteRenderer sr = segmentObj.GetComponent<SpriteRenderer>();
-                    if (sr != null)
-                    {
-                        if (m_wireSegmentSprite != null)
-                        {
-                            sr.sprite = m_wireSegmentSprite;
-                        }
-                        sr.color = m_wireColor;
-                        sr.sortingLayerName = m_sortingLayerName;
-                        sr.sortingOrder = m_sortingOrder;
-                    }
-
-                    segmentObj.SetActive(false);
-                    m_wireSegments.Add(segmentObj);
-                }
-                poolCount = m_wireSegments.Count;
+                neededSegments = poolCount;
             }
 
             // 마디(Sprite)들을 고정점과 끝점에 완전 연결하기 위해 N+1개의 정점을 생성
             int pointCount = neededSegments + 1;
-
-            // 2. 가상 마디 점 버퍼 크기 맞추기 및 동기화 (Zero-Alloc)
-            while (m_segmentWorldPositions.Count < pointCount)
+            if (pointCount > m_segmentWorldPositions.Length)
             {
-                m_segmentWorldPositions.Add(startPos);
-            }
-            if (m_segmentWorldPositions.Count > pointCount)
-            {
-                m_segmentWorldPositions.RemoveRange(pointCount, m_segmentWorldPositions.Count - pointCount);
+                pointCount = m_segmentWorldPositions.Length;
             }
 
             // 3. 다관절 지연 체인 (Lag-Chain Physics) 월드 궤적 연산
             float currentElasticity = m_isMoving ? m_ropeLagElasticity : m_ropeRestoration;
             
-            m_segmentPositions.Clear();
             Vector3 prevLeader = startPos;
             Vector3 normal = Vector3.Cross(direction.normalized, Vector3.forward).normalized;
+            float dt = Time.deltaTime;
+            float tTime = Time.time;
 
             for (int i = 0; i < pointCount; i++)
             {
@@ -456,7 +467,7 @@ namespace GameArifiction.ClawMachine
                 }
                 else
                 {
-                    Vector3 lagTarget = Vector3.Lerp(oldPos, prevLeader, Time.deltaTime * currentElasticity);
+                    Vector3 lagTarget = Vector3.Lerp(oldPos, prevLeader, dt * currentElasticity);
                     float dampWeight = m_isMoving ? Mathf.Lerp(0.85f, 0.0f, t) : Mathf.Lerp(0.95f, 0.0f, t);
                     finalSegmentPos = Vector3.Lerp(lagTarget, idealBasePos, 1.0f - dampWeight);
                 }
@@ -464,7 +475,7 @@ namespace GameArifiction.ClawMachine
                 // 처짐 및 흔들림 파동 2차 결합
                 float sagAmount = 4.0f * t * (1.0f - t);
                 Vector3 sagOffset = Vector3.down * (m_wireSagIntensity * 0.5f * sagAmount);
-                float waveValue = Mathf.Sin(Time.time * m_waveSpeed - t * m_waveFrequency) * (m_waveAmplitude * 0.375f) * sagAmount * Mathf.Clamp(m_angularVelocity, -2.5f, 2.5f);
+                float waveValue = Mathf.Sin(tTime * m_waveSpeed - t * m_waveFrequency) * (m_waveAmplitude * 0.375f) * sagAmount * Mathf.Clamp(m_angularVelocity, -2.5f, 2.5f);
                 Vector3 waveOffset = normal * waveValue;
 
                 Vector3 renderedPos = finalSegmentPos + sagOffset + waveOffset;
@@ -476,7 +487,7 @@ namespace GameArifiction.ClawMachine
                 renderedPos.z = m_wireZDepth;
 
                 m_segmentWorldPositions[i] = finalSegmentPos;
-                m_segmentPositions.Add(renderedPos);
+                m_segmentPositions[i] = renderedPos;
                 
                 prevLeader = finalSegmentPos;
             }
@@ -527,12 +538,14 @@ namespace GameArifiction.ClawMachine
         {
             m_moveDirection = isRight ? 1 : -1;
             m_isMoving = true;
+            UpdateLoopSoundState();
         }
 
         private void HandleStopRequested()
         {
             m_isMoving = false;
             m_moveDirection = 0;
+            UpdateLoopSoundState();
         }
 
         private void CancelAnimations()
@@ -590,6 +603,8 @@ namespace GameArifiction.ClawMachine
                     CheckResult();
                     break;
             }
+
+            UpdateLoopSoundState();
         }
 
         private void HandleDropRequested()
@@ -597,6 +612,62 @@ namespace GameArifiction.ClawMachine
             if (m_clawBody != null)
             {
                 m_clawBody.ReleaseDoll();
+            }
+        }
+
+        private void HandleSfxVolumeChanged(float volume)
+        {
+            if (m_loopAudioSource != null)
+            {
+                m_loopAudioSource.volume = volume;
+            }
+        }
+
+        private async UniTaskVoid LoadLoopClipAsync()
+        {
+            var request = Resources.LoadAsync<AudioClip>(SoundDefine.Sfx_claw_crane);
+            await request.ToUniTask();
+            
+            if (request.asset != null && m_loopAudioSource != null)
+            {
+                m_loopAudioSource.clip = request.asset as AudioClip;
+                UpdateLoopSoundState();
+            }
+        }
+
+        private void UpdateLoopSoundState()
+        {
+            if (m_loopAudioSource == null || m_loopAudioSource.clip == null)
+            {
+                return;
+            }
+
+            bool shouldPlay = m_isMoving;
+
+            if (m_viewModel != null)
+            {
+                ClawStateType state = m_viewModel.CurrentState;
+                if (state == ClawStateType.Descending || 
+                    state == ClawStateType.Ascending || 
+                    state == ClawStateType.Returning)
+                {
+                    shouldPlay = true;
+                }
+            }
+
+            if (shouldPlay)
+            {
+                if (!m_loopAudioSource.isPlaying)
+                {
+                    m_loopAudioSource.Play();
+                }
+            }
+            else
+            {
+                if (m_loopAudioSource.isPlaying)
+                {
+                    m_loopAudioSource.Stop();
+                }
             }
         }
         #endregion
@@ -689,6 +760,19 @@ namespace GameArifiction.ClawMachine
         private void CheckResult()
         {
             if (m_viewModel != null) m_viewModel.NotifyResultCompleted();
+        }
+
+        /// <summary>
+        /// [기능]: 그랩 성공 즉시 카트와 집게 헤드 간의 실제 거리를 측정해 줄 길이를 동기화함으로써 툭 떨어지는 추가 하강을 방지합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void UpdateRopeLengthToActualDistance()
+        {
+            if (m_clawRoot != null && m_clawBody != null)
+            {
+                float actualDistance = Vector3.Distance(m_clawRoot.position, m_clawBody.transform.position);
+                m_currentRopeLength = Mathf.Clamp(actualDistance, m_minRopeDistance, m_maxRopeDistance);
+            }
         }
         #endregion
     }

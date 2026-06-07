@@ -4,14 +4,18 @@ using VContainer;
 using VContainer.Unity;
 using GamifyKWU.CraneGame.Data;
 using GameArifiction.Player;
+using GameArifiction.Core.Audio;
 
 namespace GameArifiction.ClawMachine
 {
     /// <summary>
     /// [기능]: 인형뽑기(ClawMachine) 씬의 초기화 및 흐름을 제어하는 순수 C# EntryPoint 클래스입니다.
     /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-06-06
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: ISoundService 주입을 통한 BGM 재생 및 해제 시 BGM 정지(IDisposable 구현) 추가
     /// </summary>
-    public class ClawGameFlowController : IStartable
+    public class ClawGameFlowController : IStartable, System.IDisposable
     {
         #region 내부 의존성 필드 (Private Fields)
         private readonly ClawGameViewModel m_viewModel;
@@ -22,10 +26,14 @@ namespace GameArifiction.ClawMachine
         private readonly QuizDatabaseSO m_quizDatabase;
         private readonly ClawSceneReferencesDTO m_sceneReferences;
         private readonly ClawGameTutorialPopupView m_tutorialPopupView;
+        private readonly ISoundService m_soundService;
 
         // 씬 참조 캐싱 및 기본 상수 제어
         private const float SPAWN_MIN_DISTANCE = 0.6f;
         private const int MAX_SPAWN_ATTEMPTS = 30;
+
+        // [최적화]: 캡슐 재사용을 위한 Object Pool
+        private List<GameObject> m_dollPool = new List<GameObject>();
         #endregion
 
         #region 생성자 의존성 주입 (Constructor DI)
@@ -42,7 +50,8 @@ namespace GameArifiction.ClawMachine
             ClawGameView gameView,
             QuizDatabaseSO quizDatabase,
             ClawSceneReferencesDTO sceneReferences,
-            ClawGameTutorialPopupView tutorialPopupView)
+            ClawGameTutorialPopupView tutorialPopupView,
+            ISoundService soundService)
         {
             m_viewModel = viewModel;
             m_quizUIView = quizUIView;
@@ -52,10 +61,11 @@ namespace GameArifiction.ClawMachine
             m_quizDatabase = quizDatabase;
             m_sceneReferences = sceneReferences;
             m_tutorialPopupView = tutorialPopupView;
+            m_soundService = soundService;
         }
         #endregion
 
-        #region 진입점 인터페이스 구현 (IStartable)
+        #region 진입점 인터페이스 구현 (IStartable, IDisposable)
         /// <summary>
         /// [기능]: VContainer 컨테이너 빌드가 완료된 직후 실행되는 인형뽑기 씬의 진입점 메서드
         /// [작성자]: 윤승종
@@ -63,6 +73,13 @@ namespace GameArifiction.ClawMachine
         public void Start()
         {
             Debug.Log("[ClawGameFlowController] 인형뽑기 게임 흐름 제어를 개시합니다.");
+
+            // [사운드 설정]: 씬 시작 시 배경음악 재생
+            if (m_soundService != null)
+            {
+                m_soundService.PlayBGM(SoundDefine.Bgm_claw);
+                Debug.Log("[ClawGameFlowController] 배경음악(Bgm_claw) 재생을 개시했습니다.");
+            }
 
             // [성능 최적화]: DTO를 통해 전달받은 참조를 바로 사용합니다. (GameObject.Find 완전 배제)
             if (m_sceneReferences == null)
@@ -121,7 +138,7 @@ namespace GameArifiction.ClawMachine
             // 5. 최상위 UI 게임 뷰 초기화
             if (m_gameView != null)
             {
-                m_gameView.Initialize(m_viewModel, m_resultPopupView);
+                m_gameView.Initialize(m_viewModel, m_resultPopupView, m_tutorialPopupView);
                 Debug.Log("[ClawGameFlowController] ClawGameView 초기화 및 팝업 연결 완료.");
             }
 
@@ -144,6 +161,19 @@ namespace GameArifiction.ClawMachine
             m_viewModel.StartGame();
             
             Debug.Log("[ClawGameFlowController] 퀴즈 기반 인형뽑기 씬 초기화 및 의존성 조립 성공.");
+        }
+
+        /// <summary>
+        /// [기능]: FlowController가 제거되거나 씬 전환으로 스코프가 해제될 때 리소스를 정리하고 사운드를 정지합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void Dispose()
+        {
+            if (m_soundService != null)
+            {
+                m_soundService.StopBGM();
+                Debug.Log("[ClawGameFlowController] 씬 퇴출로 인한 배경음악 정지 완료.");
+            }
         }
         #endregion
 
@@ -201,15 +231,44 @@ namespace GameArifiction.ClawMachine
 
             List<Vector2> spawnedPositions = new List<Vector2>(choices.Count);
 
+            // [최적화]: 기존 풀 비활성화 및 상태 초기화
+            for (int i = 0; i < m_dollPool.Count; i++)
+            {
+                if (m_dollPool[i] != null)
+                {
+                    m_dollPool[i].SetActive(false);
+                }
+            }
+
             for (int i = 0; i < choices.Count; i++)
             {
-                GameObject dollGo = UnityEngine.Object.Instantiate(templateCapsule, m_sceneReferences.DollsContainer);
+                GameObject dollGo;
+                if (i < m_dollPool.Count && m_dollPool[i] != null)
+                {
+                    dollGo = m_dollPool[i];
+                }
+                else
+                {
+                    dollGo = UnityEngine.Object.Instantiate(templateCapsule, m_sceneReferences.DollsContainer);
+                    m_dollPool.Add(dollGo);
+                }
+
                 if (dollGo != null)
                 {
                     string answerText = choices[i];
                     bool isCorrect = (answerText == quiz.CorrectAnswer);
                     
                     dollGo.name = $"Capsule_Answer_{i}";
+
+                    // 물리 상태 리셋 (Zero Allocation)
+                    Rigidbody2D rb = dollGo.GetComponent<Rigidbody2D>();
+                    if (rb != null)
+                    {
+                        rb.linearVelocity = Vector2.zero;
+                        rb.angularVelocity = 0f;
+                        dollGo.transform.rotation = Quaternion.identity;
+                    }
+
                     dollGo.SetActive(true);
 
                     // BoxCollider2D 영역 내부에서 겹치지 않는 무작위 위치 획득
@@ -241,7 +300,7 @@ namespace GameArifiction.ClawMachine
                 }
             }
 
-            Debug.Log($"[ClawGameFlowController] 퀴즈 캡슐 {choices.Count}개 동적 스폰 완료.");
+            Debug.Log($"[ClawGameFlowController] 퀴즈 캡슐 {choices.Count}개 Object Pool 재활용 배치 완료.");
         }
 
         /// <summary>

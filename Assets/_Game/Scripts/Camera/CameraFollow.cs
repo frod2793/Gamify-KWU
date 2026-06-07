@@ -6,6 +6,9 @@ namespace GameArifiction.Camera
     /// <summary>
     /// [기능]: 메인 카메라가 지정된 대상을 부드럽게 추적하고, Z축 깊이 제어를 통해 줌인/줌아웃 연출을 제어하는 클래스
     /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-06-06
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: Perspective/Orthographic 투영 방식별 가시 범위 연산 다각화로 맵 밖 상하좌우 클램핑 완벽 대응
     /// </summary>
     public class CameraFollow : MonoBehaviour
     {
@@ -98,8 +101,19 @@ namespace GameArifiction.Camera
                 {
                     Bounds bounds = m_boundarySprite.bounds;
 
-                    // 카메라의 수직 절반 크기
-                    float camHeight = m_camera.orthographicSize;
+                    float camHeight;
+                    if (m_camera.orthographic)
+                    {
+                        // 직교 투영(Orthographic) 카메라의 수직 절반 크기
+                        camHeight = m_camera.orthographicSize;
+                    }
+                    else
+                    {
+                        // 원근 투영(Perspective) 카메라의 수직 절반 크기 연산 (FOV와 Z축 거리에 비례)
+                        float distance = Mathf.Abs(transform.position.z - bounds.center.z);
+                        camHeight = distance * Mathf.Tan(m_camera.fieldOfView * 0.5f * Mathf.Deg2Rad);
+                    }
+
                     // 해상도 비율(Aspect)을 반영한 수평 절반 크기
                     float camWidth = camHeight * m_camera.aspect;
 

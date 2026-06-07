@@ -4,15 +4,16 @@ using UnityEngine.UI;
 using VContainer;
 using GameArifiction.QuizClassic;
 using GameArifiction.Player;
+using GameArifiction.Core.Audio;
 
 namespace GameArifiction.ClawMachine
 {
     /// <summary>
     /// [기능]: 인형뽑기 게임의 최종 정답 성공 또는 오답/시간 초과 실패 결과를 출력하는 결과 패널 UI View
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-05-27
+    /// [수정 날짜]: 2026-06-06
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 로비 복귀 시 이지 트랜지션 연출 효과 연동 로직 추가
+    /// [수정 내용]: ISoundService를 주입받아 게임 성공 시 Sfx_claw_clear 재생 및 버튼 클릭 시 터치음 일괄 연동 적용
     /// </summary>
     public class ClawGameResultPopupView : MonoBehaviour
     {
@@ -24,6 +25,19 @@ namespace GameArifiction.ClawMachine
         [SerializeField]
         [Tooltip("결과 확인(다음 단계 혹은 재수강 진행) 버튼입니다.")]
         private Button m_confirmButton;
+
+        [Header("결과 상태 아이콘 연출 (스프라이트 교체 방식)")]
+        [SerializeField]
+        [Tooltip("정/오답 상태 아이콘을 표시할 단일 Image 컴포넌트입니다.")]
+        private Image m_statusIconImage;
+
+        [SerializeField]
+        [Tooltip("정답(성공) 판정 시 표시할 스프라이트 에셋입니다.")]
+        private Sprite m_correctSprite;
+
+        [SerializeField]
+        [Tooltip("오답/실패 판정 시 표시할 스프라이트 에셋입니다.")]
+        private Sprite m_incorrectSprite;
         #endregion
 
         #region 내부 필드 (Private Fields)
@@ -42,10 +56,12 @@ namespace GameArifiction.ClawMachine
         [Inject]
         public ClawSceneReferencesDTO SceneReferences { get; set; }
 
+        [Inject]
+        public ISoundService SoundService { get; set; }
+
         private IQuizGameViewModel m_viewModel;
         private TextMeshProUGUI m_confirmButtonText;
         private bool m_isSuccessState;
-        private bool m_isTimeOverState;
         #endregion
 
         #region 초기화 (Initialization)
@@ -106,15 +122,30 @@ namespace GameArifiction.ClawMachine
         /// <summary>
         /// [기능]: 성공과 실패 상태 분기에 부합하는 안내문 출력 및 버튼 컴포넌트의 가시성/워딩 동적 세팅을 수행합니다.
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-06-02
+        /// [수정 날짜]: 2026-06-06
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 클래식 퀴즈 분기를 제거하고 인형뽑기 결과 전용으로 정돈
+        /// [수정 내용]: 정오답 결과를 단일 Image의 Sprite 교체 방식으로 연출하도록 수정
         /// </summary>
         private void UpdatePanelContent(bool isSuccess)
         {
             if (m_viewModel == null || m_descriptionText == null)
             {
                 return;
+            }
+
+            // 단일 Image 컴포넌트의 Sprite 교체 방식 적용 (Canvas Rebuild 오버헤드 원천 차단)
+            if (m_statusIconImage != null)
+            {
+                Sprite targetSprite = isSuccess ? m_correctSprite : m_incorrectSprite;
+                if (targetSprite != null)
+                {
+                    m_statusIconImage.sprite = targetSprite;
+                    m_statusIconImage.gameObject.SetActive(true);
+                }
+                else
+                {
+                    m_statusIconImage.gameObject.SetActive(false);
+                }
             }
 
             if (isSuccess)
@@ -183,25 +214,32 @@ namespace GameArifiction.ClawMachine
         private void HandleQuizSuccess()
         {
             Debug.Log("[ClawGameResultPopupView] 정답 성공 이벤트 수신 -> 결과 패널 성공 모드 오픈.");
+            if (SoundService != null)
+            {
+                SoundService.PlaySFX(SoundDefine.Sfx_claw_clear);
+            }
             func_ShowPopup(true);
         }
 
         private void HandleQuizFailed()
         {
             Debug.Log("[ClawGameResultPopupView] 오답 실패 이벤트 수신 -> 결과 패널 실패 모드 오픈.");
-            m_isTimeOverState = false;
             func_ShowPopup(false);
         }
 
         private void HandleTimeOver()
         {
             Debug.Log("[ClawGameResultPopupView] 시간 초과 이벤트 수신 -> 결과 패널 실패(타임아웃) 모드 오픈.");
-            m_isTimeOverState = true;
             func_ShowPopup(false);
         }
 
         private void func_OnConfirmButtonClick()
         {
+            if (SoundService != null)
+            {
+                SoundService.PlaySFX(SoundDefine.Sfx_claw_touch);
+            }
+
             if (m_viewModel != null)
             {
                 if (m_isSuccessState)

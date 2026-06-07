@@ -50,6 +50,19 @@ public class LobbyLifetimeScope : LifetimeScope
 
         // 4. 로비 씬 중앙 진입점 (LobbyFlowController) 엔트리포인트 등록
         builder.RegisterEntryPoint<GamifyKWU.Lobby.LobbyFlowController>(Lifetime.Scoped);
+
+        // 5. 공통 사운드 시스템 등록 (전역 유지)
+        var soundView = FindFirstObjectByType<GameArifiction.Core.Audio.SoundPlayerView>();
+        if (soundView == null)
+        {
+            var go = new GameObject("SoundPlayerView");
+            soundView = go.AddComponent<GameArifiction.Core.Audio.SoundPlayerView>();
+        }
+        builder.RegisterComponent(soundView);
+        builder.Register<GameArifiction.Core.Audio.SoundService>(Lifetime.Scoped).AsImplementedInterfaces().AsSelf();
+        
+        // 씬 생성/전환 시 SoundPlayerView에 의존성을 수동 주입하여 구독 갱신
+        builder.RegisterBuildCallback(container => container.Inject(soundView));
     }
 
     #endregion

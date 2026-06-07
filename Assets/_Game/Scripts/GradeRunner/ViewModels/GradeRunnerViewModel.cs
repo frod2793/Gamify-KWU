@@ -14,6 +14,7 @@ namespace GameArifiction.GradeRunner
     public enum GradeRunnerState
     {
         Idle,
+        Tutorial,       // [신규]: 튜토리얼 팝업 대기 상태
         IntroCutscene,
         Playing,
         Phase2Cutscene,
@@ -70,6 +71,7 @@ namespace GameArifiction.GradeRunner
 
         public event Action OnIntroCutsceneStarted; // 도입부 교수님 등장 대사 이벤트
         public event Action OnPhase2CutsceneStarted; // 2페이즈 돌입 교수님 분노 대사 이벤트
+        public event Action<bool> OnPauseStateChanged; // 일시정지 상태 변경 알림 이벤트
 
         #endregion
 
@@ -167,9 +169,8 @@ namespace GameArifiction.GradeRunner
             NotifyGradeChanged();
             OnPhaseChanged?.Invoke(m_currentPhase);
 
-            // 도입부 컷씬 상태로 진입하고 이벤트 송출
-            ChangeState(GradeRunnerState.IntroCutscene);
-            OnIntroCutsceneStarted?.Invoke();
+            // 도입부 튜토리얼 대기 상태로 진입
+            ChangeState(GradeRunnerState.Tutorial);
 
             Debug.Log("[GradeRunnerViewModel] 피하기 미니게임이 기동되어 등장 컷씬이 시작되었습니다.");
         }
@@ -206,6 +207,7 @@ namespace GameArifiction.GradeRunner
             }
 
             m_isPaused = false;
+            OnPauseStateChanged?.Invoke(false);
             ChangeState(GradeRunnerState.Playing);
 
             Debug.Log("[GradeRunnerViewModel] 2페이즈 전환 컷씬 완료. 게임플레이 재개.");
@@ -237,8 +239,6 @@ namespace GameArifiction.GradeRunner
 
             NotifyGradeChanged();
             OnScoreFeedback?.Invoke(-penalty, hitPosition);
-
-            Debug.Log($"[GradeRunnerViewModel] 코드에 닿았습니다! 학점 감점: -{penalty}. 현재 학점: {m_model.CurrentGradePoint}");
         }
 
         /// <summary>
@@ -256,7 +256,6 @@ namespace GameArifiction.GradeRunner
             {
                 // 이미 Full(5점) 상태이면 더 이상 채워지지 않음
                 OnScoreFeedback?.Invoke(0f, hitPosition);
-                Debug.Log("[GradeRunnerViewModel] 학점이 이미 최대치(5.0)이므로 족보를 먹어도 가산되지 않습니다.");
                 return;
             }
 
@@ -265,8 +264,47 @@ namespace GameArifiction.GradeRunner
 
             NotifyGradeChanged();
             OnScoreFeedback?.Invoke(bonus, hitPosition);
+        }
 
-            Debug.Log($"[GradeRunnerViewModel] 족보를 획득했습니다! 학점 가점: +{bonus}. 현재 학점: {m_model.CurrentGradePoint}");
+        /// <summary>
+        /// [기능]: 플레이어가 튜토리얼을 종료했을 때 호출되며, 도입부 컷씬 상태로 전환하거나 일시정지를 해제합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void func_CompleteTutorial()
+        {
+            if (m_currentState == GradeRunnerState.Tutorial)
+            {
+                ChangeState(GradeRunnerState.IntroCutscene);
+                OnIntroCutsceneStarted?.Invoke();
+                Debug.Log("[GradeRunnerViewModel] 튜토리얼이 완료되어 등장 컷씬이 시작되었습니다.");
+            }
+            else
+            {
+                ResumeGame();
+                Debug.Log("[GradeRunnerViewModel] 인게임 중 튜토리얼 다시보기 완료로 일시정지를 해제합니다.");
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 게임을 일시정지 상태로 변경합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void PauseGame()
+        {
+            m_isPaused = true;
+            OnPauseStateChanged?.Invoke(true);
+            Debug.Log("[GradeRunnerViewModel] 게임이 일시정지되었습니다.");
+        }
+
+        /// <summary>
+        /// [기능]: 일시정지된 게임을 다시 진행 상태로 재개합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void ResumeGame()
+        {
+            m_isPaused = false;
+            OnPauseStateChanged?.Invoke(false);
+            Debug.Log("[GradeRunnerViewModel] 게임이 재개되었습니다.");
         }
 
         /// <summary>
@@ -346,6 +384,7 @@ namespace GameArifiction.GradeRunner
 
                     // 2페이즈 돌입 시 전환 컷씬 상태로 설정하고 타이머 일시정지
                     m_isPaused = true;
+                    OnPauseStateChanged?.Invoke(true);
                     ChangeState(GradeRunnerState.Phase2Cutscene);
                     OnPhase2CutsceneStarted?.Invoke();
 
@@ -406,7 +445,6 @@ namespace GameArifiction.GradeRunner
         {
             float fallDuration = UnityEngine.Random.Range(m_config.FallDurationMin, m_config.FallDurationMax);
             OnSpawnFallingObject?.Invoke(FallingObjectType.CheatSheet, CodeColorType.Red, fallDuration);
-            Debug.Log($"[GradeRunnerViewModel] 기획 지 지정 초에 맞춰 족보 스폰이 트리거되었습니다. 남은시간: {m_model.RemainingTime:F2}초");
         }
 
         /// <summary>
@@ -415,6 +453,13 @@ namespace GameArifiction.GradeRunner
         /// </summary>
         private void FinishGame()
         {
+            // [추가]: 결과 화면 진입 전 일시정지 상태가 적용되어 있다면 확실하게 해제하여 씬 이동 및 물리 복구를 보장합니다.
+            if (m_isPaused)
+            {
+                m_isPaused = false;
+                OnPauseStateChanged?.Invoke(false);
+            }
+
             StopGameTasks();
 
             float finalPoint = m_model.CurrentGradePoint;

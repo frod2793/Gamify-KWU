@@ -4,6 +4,8 @@ using VContainer.Unity;
 using GameArifiction.Player;
 using GamifyKWU.CraneGame.Data;
 using GameArifiction.QuizClassic;
+using GameArifiction.Core.Audio;
+using GameArifiction.UI.Common;
 
 namespace GameArifiction.ClawMachine
 {
@@ -85,6 +87,20 @@ namespace GameArifiction.ClawMachine
             // C. [C# EntryPoint 진입점 제어 등록]
             builder.RegisterEntryPoint<ClawGameFlowController>();
             builder.Register<QuizClassicFlowController>(Lifetime.Scoped);
+
+            // D. [공통 사운드 시스템 등록 (단독 실행 환경 지원)]
+            if (Parent == null)
+            {
+                var soundView = FindFirstObjectByType<SoundPlayerView>();
+                if (soundView == null)
+                {
+                    var go = new GameObject("SoundPlayerView");
+                    soundView = go.AddComponent<SoundPlayerView>();
+                }
+                builder.RegisterComponent(soundView);
+                builder.Register<SoundService>(Lifetime.Scoped).AsImplementedInterfaces().AsSelf();
+                builder.RegisterBuildCallback(container => container.Inject(soundView));
+            }
         }
         #endregion
 
@@ -100,7 +116,17 @@ namespace GameArifiction.ClawMachine
 
             // 클래식 퀴즈(QuizClassic) 뷰
             builder.RegisterComponentInHierarchy<QuizClassicView>();
-            builder.RegisterComponentInHierarchy<QuizClassicResultPopupView>();
+
+            var commonPopup = FindAnyObjectByType<CommonResultPopupView>();
+            if (commonPopup != null)
+            {
+                builder.RegisterComponent(commonPopup);
+                Debug.Log("[ClawGameLifetimeScope] CommonResultPopupView 컨테이너 등록 완료.");
+            }
+            else
+            {
+                Debug.LogWarning("[ClawGameLifetimeScope] CommonResultPopupView가 씬에 존재하지 않습니다! 수동 배치가 필요합니다.");
+            }
         }
         #endregion
     }

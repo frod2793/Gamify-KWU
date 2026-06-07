@@ -8,9 +8,9 @@ namespace GameArifiction.ClawMachine
     /// <summary>
     /// [기능]: 절차적 애니메이션 수식에 의해 위치와 회전이 제어되는 집게 헤드 객체 (World Space 2D)
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-05-25
+    /// [수정 날짜]: 2026-06-06
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 양쪽 집게발 충돌 감지 오므리기 중단 룰의 GC Alloc을 완전히 제거하기 위한 고성능 Non-Alloc 캐싱 리팩토링 완료
+    /// [수정 내용]: 오므리는 도중 캡슐 그랩 포착 시 즉시 자식 페어런팅 및 물리 비활성화 처리로 튕김 방지 구현
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     public class ClawBodyView : MonoBehaviour
@@ -70,6 +70,7 @@ namespace GameArifiction.ClawMachine
         
         private Transform m_cartTransform;
         private float m_currentRopeLength;
+        private ClawView m_clawView;
 
         // [Non-Alloc 캐싱용 가비지 제로 버퍼]
         private ContactFilter2D m_dollContactFilter;
@@ -249,10 +250,11 @@ namespace GameArifiction.ClawMachine
         #endregion
 
         #region 초기화 (Initialization)
-        public void Initialize(ClawGameViewModel viewModel, Transform cartTransform)
+        public void Initialize(ClawGameViewModel viewModel, Transform cartTransform, ClawView clawView)
         {
             m_viewModel = viewModel;
             m_cartTransform = cartTransform;
+            m_clawView = clawView;
         }
         #endregion
 
@@ -402,8 +404,6 @@ namespace GameArifiction.ClawMachine
             float leftTargetAngle = 0f;
             float rightTargetAngle = 0f;
 
-            bool isGrabStopped = false;
-
             while (elapsed < m_closeDuration)
             {
                 elapsed += Time.deltaTime;
@@ -433,66 +433,62 @@ namespace GameArifiction.ClawMachine
                 // 매 물리 프레임마다 변경된 트랜스폼 각도를 물리 엔진 시뮬레이터에 강제 동기화
                 Physics2D.SyncTransforms();
 
-                // [신규 피처 연동 - 양쪽 동시 물림 시 오므리기 중단 룰]:
-                // 양쪽 집게발에 동시에 접촉한 '동일한' 캡슐 오브젝트가 물리적으로 감지되면, 
-                // 그 이상 집게를 오므리지 않고 그 움켜쥔 물리적 각도 상태 그대로 고정 유지합니다!
-                // Zero Allocation 구현을 위해 매 프레임 틱 리스트 재사용 비우기 처리
-                m_leftTouchingList.Clear();
-                m_rightTouchingList.Clear();
-
-                GetTouchingDollsNonAlloc(m_leftColliders, m_leftTouchingList);
-                GetTouchingDollsNonAlloc(m_rightColliders, m_rightTouchingList);
-
-                bool hasCommonDoll = false;
-                if (m_leftTouchingList.Count > 0 && m_rightTouchingList.Count > 0)
+                // 오므리는 도중 아직 인형을 잡지 않은 상태일 때만 그랩 감지 수행
+                if (m_grabbedDoll == null)
                 {
-                    for (int i = 0; i < m_leftTouchingList.Count; i++)
+                    m_leftTouchingList.Clear();
+                    m_rightTouchingList.Clear();
+
+                    GetTouchingDollsNonAlloc(m_leftColliders, m_leftTouchingList);
+                    GetTouchingDollsNonAlloc(m_rightColliders, m_rightTouchingList);
+
+                    ClawMachineDollView targetDoll = null;
+                    if (m_leftTouchingList.Count > 0 && m_rightTouchingList.Count > 0)
                     {
-                        ClawMachineDollView doll = m_leftTouchingList[i];
-                        if (doll != null && m_rightTouchingList.Contains(doll))
+                        for (int i = 0; i < m_leftTouchingList.Count; i++)
                         {
-                            // [수정]: 허공 캡슐에 의한 Air Grab을 방지하기 위해 집게 품 안 기하 조건(Y, X, 거리)에 유효하게 들어온 경우에만 멈춤 인정
-                            Transform dollTransform = doll.transform;
-                            if (dollTransform != null && m_grabPoint != null)
+                            ClawMachineDollView doll = m_leftTouchingList[i];
+                            if (doll != null && m_rightTouchingList.Contains(doll))
                             {
-                                Vector3 localPosFromGrabPoint = m_grabPoint.InverseTransformPoint(dollTransform.position);
-                                float currentDistance = Vector2.Distance(m_grabPoint.position, dollTransform.position);
-                                
-                                if (currentDistance <= GRAB_CHECK_MAX_DISTANCE &&
-                                    localPosFromGrabPoint.y >= GRAB_CHECK_LOCAL_Y_MIN &&
-                                    localPosFromGrabPoint.y <= GRAB_CHECK_LOCAL_Y_MAX &&
-                                    Mathf.Abs(localPosFromGrabPoint.x) <= GRAB_CHECK_LOCAL_X_LIMIT)
+                                Transform dollTransform = doll.transform;
+                                if (dollTransform != null && m_grabPoint != null)
                                 {
-                                    hasCommonDoll = true;
-                                    break;
+                                    Vector3 localPosFromGrabPoint = m_grabPoint.InverseTransformPoint(dollTransform.position);
+                                    float currentDistance = Vector2.Distance(m_grabPoint.position, dollTransform.position);
+                                    
+                                    if (currentDistance <= GRAB_CHECK_MAX_DISTANCE &&
+                                        localPosFromGrabPoint.y >= GRAB_CHECK_LOCAL_Y_MIN &&
+                                        localPosFromGrabPoint.y <= GRAB_CHECK_LOCAL_Y_MAX &&
+                                        Mathf.Abs(localPosFromGrabPoint.x) <= GRAB_CHECK_LOCAL_X_LIMIT)
+                                    {
+                                        targetDoll = doll;
+                                        break;
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                if (hasCommonDoll)
-                {
-                    isGrabStopped = true;
-                    break;
+                    if (targetDoll != null)
+                    {
+                        // [즉시 그랩 처리]: 캡슐이 그랩 포인트 영역에 도달하는 즉시 자식으로 편입시키고 물리/콜라이더를 비활성화하여 튕김 현상 원천 박멸
+                        m_grabbedDoll = targetDoll;
+                        m_grabbedDoll.SetGrabbed(true, m_grabPoint);
+                        
+                        // 집게 자체의 콜라이더도 즉각 비활성화하여 주변 캡슐들과의 추가적인 물리적 튕김 및 밀침 방지
+                        SetClawCollidersEnabled(false);
+
+                        // [추가 하강 방지]: 그랩 성공 즉시 실제 거리를 기준으로 밧줄 길이를 동기화하여 툭 떨어지는 추가 하강을 원천 방지
+                        if (m_clawView != null)
+                        {
+                            m_clawView.UpdateRopeLengthToActualDistance();
+                        }
+                        
+                        Debug.Log($"[ClawBodyView] 오므리는 과정 중 적격 캡슐({m_grabbedDoll.DollId}) 조기 포착 -> 즉시 페어런팅 및 물리 비활성화 완료. 오므리기는 끝까지 계속 진행합니다.");
+                    }
                 }
 
                 await UniTask.Yield(PlayerLoopTiming.FixedUpdate, token);
-            }
-
-            // [각도 보존형 물리 동기화]:
-            // 캡슐을 움켜잡아 조기 중단(isGrabStopped)된 경우에는 강제로 0도로 덮어씌우지 않고, 
-            // 현재 물체를 껴안아 고정된 물리적 회전 각도를 100% 그대로 보존하여 매끄러운 움켜쥐기 외형을 살립니다.
-            if (!isGrabStopped)
-            {
-                if (m_leftClaw != null)
-                {
-                    m_leftClaw.localRotation = Quaternion.Euler(m_leftClosedAngles + new Vector3(0, 0, leftTargetAngle));
-                }
-                if (m_rightClaw != null)
-                {
-                    m_rightClaw.localRotation = Quaternion.Euler(m_rightClosedAngles + new Vector3(0, 0, rightTargetAngle));
-                }
             }
 
             Physics2D.SyncTransforms();
@@ -508,6 +504,11 @@ namespace GameArifiction.ClawMachine
         /// </summary>
         private void TryGrabDoll()
         {
+            if (m_grabbedDoll != null)
+            {
+                return;
+            }
+
             if (m_grabPoint == null)
             {
                 return;

@@ -6,6 +6,9 @@ using VContainer;
 /// [기능]: 2D 피하기 미니게임(GradeRunner)의 플레이어 이동 제어, 화면 이탈 방지 경계 제한 및 낙하물 충돌 처리를 전담하는 View 컴포넌트.
 ///         플레이어의 가로 이동 한계를 화면 전체 대신 지정된 땅(Ground) 오브젝트의 좌우 실제 너비 영역으로 제한합니다.
 /// [작성자]: 윤승종
+/// [수정 날짜]: 2026-06-08
+/// [마지막 수정 작성자]: 윤승종
+/// [수정 내용]: 불필요한 단순 확인용 디버그 로그(Debug.Log) 제거/주석화 및 마감 처리
 /// </summary>
 namespace GameArifiction.GradeRunner
 {
@@ -19,14 +22,57 @@ namespace GameArifiction.GradeRunner
         [Tooltip("플레이어의 가로 이동 한계 좌우 영역을 제한할 땅(Ground) 오브젝트의 Collider2D입니다.")]
         private Collider2D m_groundCollider;
 
+        [Header("이펙트 설정")]
+        [SerializeField]
+        [Tooltip("오답/장애물 피격 시 발생할 이펙트 프리팹입니다.")]
+        private GameObject m_hitEffectPrefab;
+
+        [SerializeField]
+        [Tooltip("수동으로 지정할 피격 이펙트 발생 위치(Transform)입니다.")]
+        private Transform m_hitEffectSpawnPoint;
+
+        [SerializeField]
+        [Tooltip("족보/점수 획득 시 발생할 이펙트 프리팹입니다.")]
+        private GameObject m_addEffectPrefab;
+
+        [SerializeField]
+        [Tooltip("수동으로 지정할 획득 이펙트 발생 위치(Transform)입니다.")]
+        private Transform m_addEffectSpawnPoint;
+
+        [Header("SPUM 애니메이션 설정")]
+        [SerializeField]
+        [Tooltip("SPUM 프리팹 초기화 실패 시의 런타임 폴백용 기본 컨트롤러 에셋입니다.")]
+        private RuntimeAnimatorController m_defaultSpumController;
         #endregion
 
         #region 내부 필드 (Private Fields)
 
         private GradeRunnerViewModel m_viewModel;
+        private Rigidbody2D m_rigidbody;
         private float m_minX;
         private float m_maxX;
         private bool m_isInitialized = false;
+        private bool m_isSpumInitialized = false;
+
+        private SPUM_Prefabs m_spumPrefab;
+        private PlayerState m_currentAnimState = PlayerState.IDLE;
+        private float m_currentInputX = 0f;
+        private float m_damageAnimTimer = 0f;
+        private GameArifiction.Camera.CameraShaker m_cameraShaker;
+        #endregion
+
+        #region 의존성 주입 (Dependency Injection)
+
+        /// <summary>
+        /// [기능]: VContainer를 통해 뷰모델 의존성을 주입받습니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        [Inject]
+        public void Construct(GradeRunnerViewModel viewModel)
+        {
+            m_viewModel = viewModel;
+            // Debug.Log("[GradeRunnerPlayerView] VContainer를 통해 뷰모델 의존성 주입이 완료되었습니다.");
+        }
 
         #endregion
 
@@ -34,46 +80,56 @@ namespace GameArifiction.GradeRunner
 
         private void Start()
         {
+            m_cameraShaker = FindFirstObjectByType<GameArifiction.Camera.CameraShaker>();
+            
+            m_rigidbody = GetComponent<Rigidbody2D>();
+            if (m_rigidbody != null)
+            {
+                // 충돌 감지(Trigger) 및 스크립트 기반 MovePosition 이동을 위해 Kinematic 타입 강제 할당
+                m_rigidbody.bodyType = RigidbodyType2D.Kinematic;
+                m_rigidbody.useFullKinematicContacts = true;
+            }
+            
             CalculateMovementBounds();
+            InitializeSPUM();
             m_isInitialized = true;
-            Debug.Log($"[GradeRunnerPlayerView] 플레이어 뷰 초기화 완료. 최종 이동 제한 경계(땅 기준): [{m_minX:F2} ~ {m_maxX:F2}]");
+            // Debug.Log($"[GradeRunnerPlayerView] 플레이어 뷰 초기화 완료. 최종 이동 제한 경계(땅 기준): [{m_minX:F2} ~ {m_maxX:F2}]");
         }
 
         private void Update()
         {
-            if (!m_isInitialized)
+            if (!m_isInitialized || m_viewModel == null)
             {
                 return;
             }
 
-            if (m_viewModel == null)
+            if (m_damageAnimTimer > 0f)
             {
-                return;
+                m_damageAnimTimer -= Time.deltaTime;
             }
 
             if (!m_viewModel.IsPlayable)
             {
+                m_currentInputX = 0f;
                 return;
             }
 
-            HandleMovement();
+            HandleInputAndAnimation();
         }
 
-        #endregion
-
-        #region 초기화 (Initialization)
-
-        /// <summary>
-        /// [기능]: VContainer를 통해 뷰모델 의존성을 주입합니다.
-        /// [작성자]: 윤승종
-        /// </summary>
-        [Inject]
-        public void Construct(GradeRunnerViewModel viewModel)
+        private void FixedUpdate()
         {
-            m_viewModel = viewModel;
+            if (!m_isInitialized || m_viewModel == null || !m_viewModel.IsPlayable)
+            {
+                return;
+            }
+
+            ApplyMovement();
         }
 
         #endregion
+
+
 
         #region 내부 메서드 (Private Methods)
 
@@ -159,10 +215,103 @@ namespace GameArifiction.GradeRunner
         }
 
         /// <summary>
-        /// [기능]: 새 Input System 패키지를 통해 좌우(A/D, 화살표) 입력을 감지하고 정밀 속도 비례 가로 이동 및 화면 영역 클램프를 수행합니다.
+        /// [기능]: 자식 오브젝트로부터 SPUM_Prefabs 컴포넌트를 탐색하고 애니메이터 컨트롤러 및 리스트를 초기화합니다.
         /// [작성자]: 윤승종
         /// </summary>
-        private void HandleMovement()
+        private void InitializeSPUM()
+        {
+            m_spumPrefab = GetComponentInChildren<SPUM_Prefabs>();
+            if (m_spumPrefab != null)
+            {
+                if (m_spumPrefab._anim == null)
+                {
+                    m_spumPrefab._anim = m_spumPrefab.GetComponentInChildren<Animator>();
+                }
+
+                if (m_spumPrefab._anim != null && m_spumPrefab._anim.runtimeAnimatorController == null && m_defaultSpumController != null)
+                {
+                    m_spumPrefab._anim.runtimeAnimatorController = m_defaultSpumController;
+                    // Debug.Log("[GradeRunnerPlayerView] SPUM 애니메이터에 컨트롤러가 할당되어 있지 않아 기본 컨트롤러를 자동으로 주입했습니다.");
+                }
+
+                if (m_spumPrefab._anim != null && m_spumPrefab._anim.runtimeAnimatorController != null)
+                {
+                    if (!m_spumPrefab.allListsHaveItemsExist())
+                    {
+                        m_spumPrefab.PopulateAnimationLists();
+                    }
+                    m_spumPrefab.OverrideControllerInit();
+                    m_isSpumInitialized = true;
+                    UpdateAnimation(PlayerState.IDLE);
+                    UpdateFlip(false);
+                }
+                else
+                {
+                    Debug.LogError("[GradeRunnerPlayerView] SPUM 프리팹 초기화에 실패했습니다. 인스펙터의 기본 SPUM 컨트롤러 필드에 에셋이 올바르게 할당되었는지 확인하십시오.");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[GradeRunnerPlayerView] 자식 오브젝트에서 SPUM_Prefabs를 찾을 수 없습니다. 일반 2D 캐릭터로 동작하거나 애니메이션이 재생되지 않습니다.");
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 플레이어의 현재 애니메이션 상태(대기/이동)를 갱신하고 재생합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void UpdateAnimation(PlayerState newState)
+        {
+            if (!m_isSpumInitialized)
+            {
+                return;
+            }
+
+            if (m_currentAnimState == newState)
+            {
+                return;
+            }
+
+            m_currentAnimState = newState;
+
+            if (m_spumPrefab != null && m_spumPrefab._anim != null)
+            {
+                try
+                {
+                    m_spumPrefab.PlayAnimation(newState, 0);
+                    m_spumPrefab._anim.Play(newState.ToString(), 0, 0f);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"[GradeRunnerPlayerView] 캐릭터 애니메이션 재생 중 오류가 발생했습니다 ({newState}): {e.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 입력 방향에 맞춰 플레이어의 좌우 스프라이트 렌더링 방향을 반전시킵니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void UpdateFlip(bool isFlipped)
+        {
+            if (!m_isSpumInitialized)
+            {
+                return;
+            }
+
+            if (m_spumPrefab != null)
+            {
+                // 로컬 스케일을 임의로 덮어쓰지 않고, Y축 180도 회전을 적용하여 좌우 반전 처리
+                float yRotation = isFlipped ? 0f : 180f;
+                m_spumPrefab.transform.localRotation = Quaternion.Euler(0f, yRotation, 0f);
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 새 Input System 패키지를 통해 좌우(A/D, 화살표) 입력 및 모바일 입력을 감지하고 애니메이션을 제어합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void HandleInputAndAnimation()
         {
             float inputX = 0f;
 
@@ -186,7 +335,42 @@ namespace GameArifiction.GradeRunner
                 inputX = m_viewModel.MobileInputX;
             }
 
-            if (Mathf.Approximately(inputX, 0f))
+            m_currentInputX = inputX;
+
+
+
+            // 애니메이션 상태 및 플립 갱신
+            if (m_damageAnimTimer > 0f)
+            {
+                return;
+            }
+
+            if (!Mathf.Approximately(m_currentInputX, 0f))
+            {
+                UpdateAnimation(PlayerState.MOVE);
+                UpdateFlip(m_currentInputX < -0.1f);
+            }
+            else
+            {
+                UpdateAnimation(PlayerState.IDLE);
+            }
+        }
+
+        /// <summary>
+        /// [기능]: FixedUpdate에서 Rigidbody2D를 사용하여 물리적 충돌 없이 안전하게 이동을 처리합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void ApplyMovement()
+        {
+            if (m_rigidbody == null)
+            {
+                Debug.LogError("[GradeRunnerPlayerView-Debug] m_rigidbody가 누락되었습니다!");
+                return;
+            }
+
+
+
+            if (Mathf.Approximately(m_currentInputX, 0f))
             {
                 return;
             }
@@ -201,12 +385,14 @@ namespace GameArifiction.GradeRunner
             // 뷰모델을 통해 현재 프레임당 스피드 취득
             float speed = m_viewModel.GetPlayerMoveSpeed(screenWidth);
 
-            // 이동 반영 및 위치 제한
-            Vector3 pos = transform.position;
-            pos.x += inputX * speed * Time.deltaTime;
-            pos.x = Mathf.Clamp(pos.x, m_minX, m_maxX);
+            // 현재 위치에서 이동량 적용 후 클램핑
+            Vector2 beforePos = m_rigidbody.position;
+            Vector2 nextPosition = beforePos;
+            nextPosition.x += m_currentInputX * speed * Time.fixedDeltaTime;
+            nextPosition.x = Mathf.Clamp(nextPosition.x, m_minX, m_maxX);
             
-            transform.position = pos;
+            // 물리 엔진을 통한 위치 갱신
+            m_rigidbody.MovePosition(nextPosition);
         }
 
         /// <summary>
@@ -227,11 +413,44 @@ namespace GameArifiction.GradeRunner
 
                 if (objView.ObjectType == FallingObjectType.Code)
                 {
+                    Debug.Log($"[GradeRunnerPlayerView] 플레이어가 코드(장애물)와 충돌했습니다! (위치: {contactPos})");
                     m_viewModel.ApplyCodeHit(contactPos);
+
+                    if (m_cameraShaker != null)
+                    {
+                        m_cameraShaker.Shake(0.5f, 0.3f);
+                    }
+
+                    if (m_hitEffectPrefab != null)
+                    {
+                        Vector3 spawnPos = m_hitEffectSpawnPoint != null ? m_hitEffectSpawnPoint.position : contactPos;
+                        GameObject effect = Instantiate(m_hitEffectPrefab, spawnPos, Quaternion.identity);
+                        Destroy(effect, 0.35f);
+                    }
+
+                    if (m_isSpumInitialized && m_spumPrefab != null)
+                    {
+                        m_damageAnimTimer = 0.35f;
+                        m_currentAnimState = PlayerState.DAMAGED;
+                        
+                        m_spumPrefab.PlayAnimation(PlayerState.DAMAGED, 0);
+                        if (m_spumPrefab._anim != null)
+                        {
+                            m_spumPrefab._anim.Play(PlayerState.DAMAGED.ToString(), 0, 0f);
+                        }
+                    }
                 }
                 else if (objView.ObjectType == FallingObjectType.CheatSheet)
                 {
+                    Debug.Log($"[GradeRunnerPlayerView] 플레이어가 족보(점수)를 획득했습니다! (위치: {contactPos})");
                     m_viewModel.ApplyCheatSheetPickup(contactPos);
+
+                    if (m_addEffectPrefab != null)
+                    {
+                        Vector3 spawnPos = m_addEffectSpawnPoint != null ? m_addEffectSpawnPoint.position : contactPos;
+                        GameObject effect = Instantiate(m_addEffectPrefab, spawnPos, Quaternion.identity);
+                        Destroy(effect, 0.85f);
+                    }
                 }
 
                 // 충돌된 낙하 오브젝트는 풀로 회수 처리

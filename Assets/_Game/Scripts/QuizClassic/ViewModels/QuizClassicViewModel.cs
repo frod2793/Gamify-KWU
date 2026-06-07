@@ -11,9 +11,9 @@ namespace GameArifiction.QuizClassic
     /// <summary>
     /// 클래식 4지선다 퀴즈 게임의 비즈니스 논리적 흐름과 타이머 루프를 통제하는 뷰모델 클래스 (POCO)
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-05-27
+    /// [수정 날짜]: 2026-06-06
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 오답 제출 후 이어서 정답을 계속 고를 수 있는 ContinueAfterWrongAnswer 메서드 구현 추가
+    /// [수정 내용]: 타이머 미사용 요구 사항에 맞추어 시간 초과에 따른 실패 분기를 제거하고 단순 경과 누적으로 변경함
     /// </summary>
     public class QuizClassicViewModel : GameArifiction.ClawMachine.IQuizGameViewModel, IDisposable
     {
@@ -36,14 +36,12 @@ namespace GameArifiction.QuizClassic
 
         public event Action<QuizStateType> OnStateChanged;
         public event Action<QuizData, List<string>> OnNextQuizLoaded; // 퀴즈 및 셔플된 4지선다 목록
-        public event Action<float> OnTimeChanged;
         public event Action<int> OnScoreChanged;
 
         public event Action OnQuizSuccess;
         public event Action OnQuizFailed;
         public event Action<int> OnWrongAnswerSelected; // [신규]: 잘못 선택된 선택지 인덱스 브로드캐스트
-        public event Action OnTimeOver;
-        public event Action OnReTakeRequested; // IQuizGameViewModel 상속 호환용
+        public event Action OnReTakeRequested = delegate { }; // IQuizGameViewModel 상속 호환용
 
         #endregion
 
@@ -339,14 +337,16 @@ namespace GameArifiction.QuizClassic
             StartTimerAsync(m_timerCts.Token).Forget();
         }
 
+        /// <summary>
+        /// [기능]: 제한 시간 초과에 따른 실패 판정 없이, 플레이어가 문제를 푸는 동안 실시간으로 소요 시간만 누적하는 비동기 루프입니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-06
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 제한 시간 초과 실패 전이 로직 제거 및 순수 소요 시간 누적으로 전환 (타이머 미사용 적용)
+        /// </summary>
         private async UniTaskVoid StartTimerAsync(CancellationToken token)
         {
-            float limit = m_model.TimeLimitPerQuestion;
-            float remainingSeconds = limit;
-
-            OnTimeChanged?.Invoke(remainingSeconds);
-
-            while (remainingSeconds > 0f)
+            while (true)
             {
                 bool isCanceled = await UniTask.Yield(PlayerLoopTiming.Update, token).SuppressCancellationThrow();
                 if (isCanceled || token.IsCancellationRequested)
@@ -355,32 +355,12 @@ namespace GameArifiction.QuizClassic
                 }
 
                 float dt = Time.deltaTime;
-                remainingSeconds -= dt;
 
-                // [시간 누적]: 클래식 퀴즈 풀이 중에도 흘러간 시간을 PlayerSO에 실시간 누적합니다.
+                // [시간 누적]: 클래식 퀴즈 풀이 중 흘러간 시간을 PlayerSO에 실시간 누적합니다.
                 if (m_playerSO != null)
                 {
                     m_playerSO.TotalMinigamePlayTime += dt;
                 }
-
-                float timeLeft = Mathf.Max(0f, remainingSeconds);
-                m_model.RemainingTime = timeLeft;
-                OnTimeChanged?.Invoke(timeLeft);
-            }
-
-            // [추가 가드]: 루프 완료 시점에 이미 취소된 좀비 토큰 세션이라면 즉시 기각 차단
-            if (token.IsCancellationRequested)
-            {
-                return;
-            }
-
-            // 제한 시간 만료 시 실패(ReTakeRequest) 상태 전이
-            if (m_currentState == QuizStateType.Playing)
-            {
-                Debug.Log("[QuizClassicViewModel] 제한 시간이 초과되어 퀴즈 최종 실패 판정 및 재수강 요청을 트리거합니다.");
-                OnTimeOver?.Invoke();
-                OnReTakeRequested?.Invoke(); // [연동 추가]: 결과 패널 성공/실패 감지 트리거
-                ChangeState(QuizStateType.ReTakeRequest);
             }
         }
 
