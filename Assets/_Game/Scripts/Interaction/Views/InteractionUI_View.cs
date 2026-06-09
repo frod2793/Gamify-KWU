@@ -2,6 +2,7 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using GameArifiction.Player;
+using VContainer;
 
 namespace GameArifiction.Interaction
 {
@@ -26,10 +27,18 @@ namespace GameArifiction.Interaction
         private InteractionUI_ViewModel m_viewModel;
         #endregion
 
+        #region 의존성 주입
+        [Inject]
+        public void Construct(InteractionUI_ViewModel viewModel)
+        {
+            m_viewModel = viewModel;
+        }
+        #endregion
+
         #region 유니티 생명주기
         private void Awake()
         {
-            InitializeMVVM();
+            // VContainer를 통해 m_viewModel이 주입됨
         }
 
         private void Start()
@@ -41,7 +50,10 @@ namespace GameArifiction.Interaction
                 player.OnInteractableTargetDetected += HandleTargetDetected;
                 player.OnInteractableTargetLost += HandleTargetLost;
 
-                m_viewModel.OnInteractionExecuted += player.RequestInteraction;
+                if (m_viewModel != null)
+                {
+                    m_viewModel.OnInteractionExecuted += player.RequestInteraction;
+                }
             }
 
             // [자동 이벤트 등록]: 상호작용 버튼 클릭
@@ -50,6 +62,12 @@ namespace GameArifiction.Interaction
                 m_interactionButton.onClick.AddListener(func_OnInteractButtonClicked);
             }
             
+            // 자동 주입 후 상태 변화 이벤트 구독
+            if (m_viewModel != null)
+            {
+                m_viewModel.OnStateChanged += UpdateUI;
+            }
+
             // 최초 실행 시 비활성화 상태 보증
             UpdateUI(false, string.Empty);
         }
@@ -61,14 +79,6 @@ namespace GameArifiction.Interaction
         #endregion
 
         #region 초기화
-        private void InitializeMVVM()
-        {
-            var model = new InteractionUI_Model();
-            m_viewModel = new InteractionUI_ViewModel(model);
-
-            m_viewModel.OnStateChanged += UpdateUI;
-        }
-
         private void UnsubscribeEvents()
         {
             if (m_viewModel != null)

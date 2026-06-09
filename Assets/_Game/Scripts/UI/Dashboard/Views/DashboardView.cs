@@ -4,6 +4,7 @@ using TMPro;
 using GamifyKWU.UI.Dashboard.DTO;
 using GamifyKWU.UI.Dashboard.ViewModels;
 using GamifyKWU.UI.Dashboard.Models;
+using VContainer;
 
 namespace GamifyKWU.UI.Dashboard.Views
 {
@@ -33,23 +34,21 @@ namespace GamifyKWU.UI.Dashboard.Views
         private DashboardViewModel m_viewModel;
         #endregion
 
+        #region 의존성 주입 (Dependency Injection)
+        [Inject]
+        public void Construct(DashboardViewModel viewModel)
+        {
+            m_viewModel = viewModel;
+        }
+        #endregion
+
         #region 유니티 생명주기 (Unity Lifecycle)
         /// <summary>
-        /// [기능]: 에셋 리소스 로드 및 의존성 주입 초기화 수행
-        /// [작성자]: 윤승종
+        /// 초기화 시점 처리가 필요하다면 추가 (현재는 VContainer에서 모두 처리)
         /// </summary>
         private void Awake()
         {
-            TextAsset jsonAsset = Resources.Load<TextAsset>("Localization/zh_CN");
-            if (jsonAsset != null)
-            {
-                DashboardModel model = new DashboardModel(jsonAsset.text);
-                m_viewModel = new DashboardViewModel(model);
-            }
-            else
-            {
-                Debug.LogError("[DashboardView] zh_CN 번역 에셋 로드 실패!");
-            }
+            // View 내부 리소스 직접 로드 금지 - VContainer Scope로 이관됨
         }
 
         /// <summary>

@@ -3,6 +3,7 @@ using Terresquall;
 using UnityEngine.InputSystem;
 using System;
 using GameArifiction.Interaction;
+using VContainer;
 
 namespace GameArifiction.Player
 {
@@ -45,10 +46,19 @@ namespace GameArifiction.Player
         #endregion
 
         #region 내부 필드
+        private PlayerViewModelFactory m_viewModelFactory;
         private PlayerViewModel m_viewModel;
         private bool m_isInitialized = false;
         private IInteractable m_currentInteractable;
         private PolygonCollider2D m_cachedFloorCollider;
+        #endregion
+
+        #region 의존성 주입 (Dependency Injection)
+        [Inject]
+        public void Construct(PlayerViewModelFactory viewModelFactory)
+        {
+            m_viewModelFactory = viewModelFactory;
+        }
         #endregion
 
         #region 유니티 생명주기
@@ -155,8 +165,16 @@ namespace GameArifiction.Player
                 }
             }
 
-            var model = new PlayerModel(m_moveSpeed);
-            m_viewModel = new PlayerViewModel(model, startPos);
+            if (m_viewModelFactory != null)
+            {
+                m_viewModel = m_viewModelFactory.Create(m_moveSpeed, startPos);
+            }
+            else
+            {
+                Debug.LogError("[PlayerView] PlayerViewModelFactory가 주입되지 않았습니다! VContainer 설정을 확인하십시오.");
+                // 에디터 테스트 등 예외 상황을 위한 안전 폴백
+                m_viewModel = new PlayerViewModel(new PlayerModel(m_moveSpeed), startPos);
+            }
 
             m_viewModel.OnPositionChanged += UpdatePosition;
             m_viewModel.OnStateChanged += UpdateAnimation;

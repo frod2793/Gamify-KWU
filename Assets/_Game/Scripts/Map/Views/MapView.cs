@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using VContainer;
 
 namespace GameArifiction.Map
 {
@@ -24,14 +25,21 @@ namespace GameArifiction.Map
         private MapViewModel m_viewModel;
         #endregion
 
+        #region 의존성 주입 (Dependency Injection)
+        [Inject]
+        public void Construct(MapViewModel viewModel)
+        {
+            m_viewModel = viewModel;
+        }
+        #endregion
+
         #region 유니티 생명주기 (Unity Lifecycle)
         /// <summary>
-        /// 뷰모델을 초기화합니다.
+        /// 초기화(Awake) 관련 처리를 수행합니다.
         /// </summary>
         private void Awake()
         {
-            MapModel model = new MapModel();
-            m_viewModel = new MapViewModel(model);
+            // 의존성 주입 완료 후 초기화 필요한 로직이 있다면 작성
         }
 
         /// <summary>

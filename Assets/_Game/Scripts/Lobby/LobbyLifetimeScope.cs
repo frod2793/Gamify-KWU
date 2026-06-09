@@ -4,6 +4,10 @@ using VContainer.Unity;
 using GamifyKWU.UI.Title;
 using GameArifiction.Player;
 using GameArifiction.Interaction;
+using GameArifiction.Map;
+using GamifyKWU.UI.Dashboard.Models;
+using GamifyKWU.UI.Dashboard.ViewModels;
+using GamifyKWU.UI.Dashboard.Views;
 
 /// <summary>
 /// [기능]: 로비 씬의 모든 의존성(PlayerSO, UIManager, TitleView, IntroCutsceneController, PlayerView 등)을 VContainer 컨테이너에 자동 추출 및 등록하는 수명주기 스코프 클래스
@@ -45,11 +49,38 @@ public class LobbyLifetimeScope : LifetimeScope
 
         // 3. 나머지 씬 하이어라키 뷰 자동 등록
         builder.RegisterComponentInHierarchy<UIManager>();
-        builder.RegisterComponentInHierarchy<TitleView>();
-        builder.RegisterComponentInHierarchy<IntroCutsceneController>();
+        
+        // 뷰들이 비활성화(Inactive) 상태로 씬에 배치될 경우 VContainer 탐색 실패 예방
+        SafeRegisterComponent<TitleView>(builder);
+        SafeRegisterComponent<IntroCutsceneController>(builder);
+        SafeRegisterComponent<MapView>(builder);
+        SafeRegisterComponent<DashboardView>(builder);
+        SafeRegisterComponent<InteractionUI_View>(builder);
 
         // 4. 로비 씬 중앙 진입점 (LobbyFlowController) 엔트리포인트 등록
         builder.RegisterEntryPoint<GamifyKWU.Lobby.LobbyFlowController>(Lifetime.Scoped);
+
+        // 4-1. 도메인 모델, 뷰모델 및 팩토리 등록
+        builder.Register<PlayerViewModelFactory>(Lifetime.Scoped);
+        builder.Register<MapModel>(Lifetime.Scoped);
+        builder.Register<MapViewModel>(Lifetime.Scoped).AsImplementedInterfaces().AsSelf();
+        
+        // 추가 등록: Title 도메인
+        builder.Register(container => new TitleModel("Lobby"), Lifetime.Scoped);
+        builder.Register<TitleViewModel>(Lifetime.Scoped);
+
+        // 추가 등록: Dashboard 도메인
+        builder.Register(container => 
+        {
+            TextAsset jsonAsset = Resources.Load<TextAsset>("Localization/zh_CN");
+            string jsonText = jsonAsset != null ? jsonAsset.text : "{}";
+            return new DashboardModel(jsonText);
+        }, Lifetime.Scoped);
+        builder.Register<DashboardViewModel>(Lifetime.Scoped);
+
+        // 추가 등록: Interaction 도메인
+        builder.Register<InteractionUI_Model>(Lifetime.Scoped);
+        builder.Register<InteractionUI_ViewModel>(Lifetime.Scoped);
 
         // 5. 공통 사운드 시스템 등록 (전역 유지)
         var soundView = FindFirstObjectByType<GameArifiction.Core.Audio.SoundPlayerView>();
@@ -65,5 +96,23 @@ public class LobbyLifetimeScope : LifetimeScope
         builder.RegisterBuildCallback(container => container.Inject(soundView));
     }
 
+    #endregion
+
+    #region 내부 도우미 메서드 (Helper)
+    /// <summary>
+    /// [기능]: 씬에서 비활성화된 상태의 컴포넌트라도 찾아 VContainer에 안전하게 등록합니다.
+    /// </summary>
+    private void SafeRegisterComponent<T>(IContainerBuilder builder) where T : MonoBehaviour
+    {
+        var comp = FindFirstObjectByType<T>(FindObjectsInactive.Include);
+        if (comp != null)
+        {
+            builder.RegisterComponent(comp);
+        }
+        else
+        {
+            Debug.LogWarning($"[LobbyLifetimeScope] 씬 내에 {typeof(T).Name} 컴포넌트가 존재하지 않아 등록을 건너뜁니다. (아직 배치하지 않았다면 무시해도 됩니다)");
+        }
+    }
     #endregion
 }

@@ -67,6 +67,11 @@ namespace GameArifiction.GradeRunner
 
                 // Debug.Log("[GradeRunnerAudioPresenter] 뷰모델 사운드 관련 이벤트 해제 완료.");
             }
+
+            if (m_soundService != null)
+            {
+                m_soundService.StopBGM();
+            }
         }
 
         #endregion
@@ -84,8 +89,8 @@ namespace GameArifiction.GradeRunner
                 return;
             }
 
-            // 튜토리얼 대기 상태 또는 1페이즈 플레이 시작 시 1페이즈 BGM 재생
-            if ((state == GradeRunnerState.Tutorial || state == GradeRunnerState.Playing) && m_viewModel.CurrentPhase == GradeRunnerPhase.Phase1)
+            // 1페이즈 플레이 시작 시 1페이즈 BGM 재생
+            if (state == GradeRunnerState.Playing && m_viewModel.CurrentPhase == GradeRunnerPhase.Phase1)
             {
                 m_soundService.PlayBGM(SoundDefine.Bgm_graderunner_phase1);
                 // Debug.Log("[GradeRunnerAudioPresenter] 1페이즈 BGM 재생 시작.");

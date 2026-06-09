@@ -40,19 +40,19 @@ namespace GameArifiction.GradeRunner
 
         [Header("코드(장애물) 1페이즈 스폰 주기")]
         [SerializeField]
-        [Tooltip("1페이즈(30초~10초) 동안의 코드 투하 최소 간격입니다. 기본값 0.5초.")]
-        private float m_codeSpawnIntervalMinP1 = 0.5f;
+        [Tooltip("1페이즈(30초~10초) 동안의 코드 투하 최소 간격입니다. 기본값 0.5초 -> 하향 조정 0.8초.")]
+        private float m_codeSpawnIntervalMinP1 = 0.8f;
         [SerializeField]
-        [Tooltip("1페이즈(30초~10초) 동안의 코드 투하 최대 간격입니다. 기본값 0.7초.")]
-        private float m_codeSpawnIntervalMaxP1 = 0.7f;
+        [Tooltip("1페이즈(30초~10초) 동안의 코드 투하 최대 간격입니다. 기본값 0.7초 -> 하향 조정 1.1초.")]
+        private float m_codeSpawnIntervalMaxP1 = 1.1f;
 
         [Header("코드(장애물) 2페이즈 스폰 주기")]
         [SerializeField]
-        [Tooltip("2페이즈(10초 이하) 동안의 코드 투하 최소 간격입니다. 기본값 0.3초.")]
-        private float m_codeSpawnIntervalMinP2 = 0.3f;
+        [Tooltip("2페이즈(10초 이하) 동안의 코드 투하 최소 간격입니다. 기본값 0.3초 -> 하향 조정 0.5초.")]
+        private float m_codeSpawnIntervalMinP2 = 0.5f;
         [SerializeField]
-        [Tooltip("2페이즈(10초 이하) 동안의 코드 투하 최대 간격입니다. 기본값 0.5초.")]
-        private float m_codeSpawnIntervalMaxP2 = 0.5f;
+        [Tooltip("2페이즈(10초 이하) 동안의 코드 투하 최대 간격입니다. 기본값 0.5초 -> 하향 조정 0.8초.")]
+        private float m_codeSpawnIntervalMaxP2 = 0.8f;
 
         [Header("낙하 소요 시간")]
         [SerializeField]

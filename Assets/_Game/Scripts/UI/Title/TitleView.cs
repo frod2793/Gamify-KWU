@@ -28,6 +28,16 @@ namespace GamifyKWU.UI.Title
 
         #endregion
 
+        #region 의존성 주입 (Dependency Injection)
+
+        [Inject]
+        public void Construct(TitleViewModel viewModel)
+        {
+            m_viewModel = viewModel;
+        }
+
+        #endregion
+
         #region 유니티 생명주기 (Unity Lifecycle)
 
         private void Start()
@@ -53,10 +63,14 @@ namespace GamifyKWU.UI.Title
         /// </summary>
         private void InitializeMVVM()
         {
-            TitleModel model = new TitleModel("Lobby");
-            m_viewModel = new TitleViewModel(model);
-            
-            m_viewModel.OnPlayCommandTriggered += HandlePlayCommandTriggered;
+            if (m_viewModel != null)
+            {
+                m_viewModel.OnPlayCommandTriggered += HandlePlayCommandTriggered;
+            }
+            else
+            {
+                Debug.LogError("[TitleView] 뷰모델이 주입되지 않았습니다!");
+            }
         }
 
         #endregion

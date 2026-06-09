@@ -87,7 +87,7 @@ namespace GameArifiction.GradeRunner
         /// <summary>
         /// [기능]: 현재 게임이 실질적 플레이 진행이 가능한 활성 상태인지를 판별합니다.
         /// </summary>
-        public bool IsPlayable => m_currentState == GradeRunnerState.Playing || m_currentState == GradeRunnerState.Phase2Cutscene;
+        public bool IsPlayable => m_currentState == GradeRunnerState.Playing && !m_isPaused;
 
         public string IntroDialogue => m_dialogueSO != null ? m_dialogueSO.IntroDialogue : "자, 지금부터 코딩 테스트를 시작하겠다!";
         public string Phase2Dialogue => m_dialogueSO != null ? m_dialogueSO.Phase2Dialogue : "아직 끝나지 않았다! 진정한 매운맛을 보여주지!";

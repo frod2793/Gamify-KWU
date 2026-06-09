@@ -111,6 +111,7 @@ namespace GameArifiction.GradeRunner
             if (!m_viewModel.IsPlayable)
             {
                 m_currentInputX = 0f;
+                UpdateAnimation(PlayerState.IDLE);
                 return;
             }
 

@@ -899,6 +899,14 @@ PrefabInstance:
       propertyPath: m_mapObject
       value: 
       objectReference: {fileID: 1906981634}
+    - target: {fileID: 2936699064874036173, guid: 2e7de7bd6e18f4ed08683172702ba38b, type: 3}
+      propertyPath: m_FlipX
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2936699064874036173, guid: 2e7de7bd6e18f4ed08683172702ba38b, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -1630175228, guid: ba1aa2f5c966143f0ab1d9db897f90f0, type: 3}
     - target: {fileID: 4529833177387594419, guid: 2e7de7bd6e18f4ed08683172702ba38b, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
