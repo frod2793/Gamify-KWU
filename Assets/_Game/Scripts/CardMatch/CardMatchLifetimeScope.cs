@@ -45,7 +45,6 @@ namespace GameArifiction.CardMatch
 
             // 2. 뷰 컴포넌트 자동 탐색 및 등록
             builder.RegisterComponentInHierarchy<CardMatchView>();
-            builder.RegisterComponentInHierarchy<CardMatchTitleView>();
             builder.RegisterComponentInHierarchy<CardMatchResultPopupView>();
 
             // 3. EntryPoint (C# 진입점) 및 씬 제어 등록

@@ -37,11 +37,32 @@ namespace GameArifiction.CardMatch
         private CardMatchViewModel m_viewModel;
         private List<CardView> m_cardViews;
         private bool m_isPaused;
+        private System.Action m_onStartPopupClosed;
+
+        // 사운드 관련 필드
+        private AudioSource m_bgmSource;
+        private AudioSource m_sfxSource;
+        private AudioClip m_bgmClip;
+        private AudioClip m_flipClip;
+        private AudioClip m_correctClip;
         #endregion
 
         #region MonoBehaviour
         private void Awake()
         {
+            m_bgmSource = gameObject.AddComponent<AudioSource>();
+            m_bgmSource.loop = true;
+            m_bgmSource.playOnAwake = false;
+            m_bgmSource.volume = 0.5f;
+
+            m_sfxSource = gameObject.AddComponent<AudioSource>();
+            m_sfxSource.loop = false;
+            m_sfxSource.playOnAwake = false;
+
+            m_bgmClip = Resources.Load<AudioClip>("Audio/CardMatch/Sound_Bgm");
+            m_flipClip = Resources.Load<AudioClip>("Audio/CardMatch/Sound_Flip");
+            m_correctClip = Resources.Load<AudioClip>("Audio/CardMatch/Sound_Correct");
+
             if (m_pauseButton != null)
             {
                 m_pauseButton.onClick.AddListener(func_OnPauseButtonClick);
@@ -101,6 +122,12 @@ namespace GameArifiction.CardMatch
             {
                 m_inGamePanel.SetActive(true);
             }
+
+            if (m_bgmSource != null && m_bgmClip != null)
+            {
+                m_bgmSource.clip = m_bgmClip;
+                m_bgmSource.Play();
+            }
         }
 
         /// <summary>
@@ -112,6 +139,37 @@ namespace GameArifiction.CardMatch
             if (m_inGamePanel != null)
             {
                 m_inGamePanel.SetActive(false);
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 게임 시작 시 게임방법 팝업을 띄웁니다.
+        /// [작성자]: 김지연
+        /// </summary>
+        public void ShowHowToPlayPopupAtStart(System.Action onPopupClosed)
+        {
+            m_onStartPopupClosed = onPopupClosed;
+            
+            m_isPaused = true;
+
+            if (m_howToPlayPopup != null)
+            {
+                CanvasGroup canvasGroup = m_howToPlayPopup.GetComponent<CanvasGroup>();
+                if (canvasGroup == null)
+                {
+                    canvasGroup = m_howToPlayPopup.AddComponent<CanvasGroup>();
+                }
+
+                canvasGroup.DOKill();
+                canvasGroup.alpha = 1f;
+                m_howToPlayPopup.SetActive(true);
+            }
+            else
+            {
+                m_onStartPopupClosed?.Invoke();
+                m_onStartPopupClosed = null;
+                Time.timeScale = 1f;
+                m_isPaused = false;
             }
         }
         #endregion
@@ -208,6 +266,12 @@ namespace GameArifiction.CardMatch
             if (isFaceUp)
             {
                 m_cardViews[cardIndex].FlipToFront();
+                
+                // 카드 뒤집는 사운드 재생
+                if (m_sfxSource != null && m_flipClip != null)
+                {
+                    m_sfxSource.PlayOneShot(m_flipClip, 0.7f);
+                }
             }
             else
             {
@@ -223,14 +287,24 @@ namespace GameArifiction.CardMatch
         {
             Debug.Log($"[CardMatchView] 매칭 성공 연출: 카드 {firstIndex}, {secondIndex}");
 
-            if (firstIndex >= 0 && firstIndex < m_cardViews.Count)
+            // 두 번째 카드의 뒤집기 애니메이션(0.3초)이 끝난 직후 성공 이펙트가 재생되도록 딜레이 적용
+            DOVirtual.DelayedCall(0.3f, () => 
             {
-                m_cardViews[firstIndex].PlayMatchSuccessEffect();
-            }
-            if (secondIndex >= 0 && secondIndex < m_cardViews.Count)
-            {
-                m_cardViews[secondIndex].PlayMatchSuccessEffect();
-            }
+                // 매칭 성공 사운드 재생
+                if (m_sfxSource != null && m_correctClip != null)
+                {
+                    m_sfxSource.PlayOneShot(m_correctClip);
+                }
+
+                if (firstIndex >= 0 && firstIndex < m_cardViews.Count)
+                {
+                    m_cardViews[firstIndex].PlayMatchSuccessEffect();
+                }
+                if (secondIndex >= 0 && secondIndex < m_cardViews.Count)
+                {
+                    m_cardViews[secondIndex].PlayMatchSuccessEffect();
+                }
+            });
         }
 
         /// <summary>
@@ -252,7 +326,7 @@ namespace GameArifiction.CardMatch
             Debug.Log("[CardMatchView] 미리보기: 모든 카드 앞면 공개");
             for (int i = 0; i < m_cardViews.Count; i++)
             {
-                m_cardViews[i].ShowFrontImmediate();
+                m_cardViews[i].FlipToFront();
             }
         }
 
@@ -323,8 +397,8 @@ namespace GameArifiction.CardMatch
 
                 canvasGroup.alpha = 0f;
                 m_howToPlayPopup.SetActive(true);
-                canvasGroup.DOFade(1f, 0.5f)
-                    .SetEase(Ease.OutQuart)
+                canvasGroup.DOFade(1f, 0.4f)
+                    .SetEase(Ease.OutCubic)
                     .SetUpdate(true);
             }
         }
@@ -342,14 +416,27 @@ namespace GameArifiction.CardMatch
                 CanvasGroup canvasGroup = m_howToPlayPopup.GetComponent<CanvasGroup>();
                 if (canvasGroup != null)
                 {
-                    canvasGroup.DOFade(0f, 0.4f)
-                        .SetEase(Ease.InQuart)
+                    canvasGroup.DOFade(0f, 0.35f)
+                        .SetEase(Ease.OutCubic)
                         .SetUpdate(true)
                         .OnComplete(() =>
                         {
                             m_howToPlayPopup.SetActive(false);
-                            Time.timeScale = 1f;
-                            m_isPaused = false;
+
+                            if (m_onStartPopupClosed != null)
+                            {
+                                m_isPaused = false;
+                                DOVirtual.DelayedCall(0.2f, () => 
+                                {
+                                    m_onStartPopupClosed.Invoke();
+                                    m_onStartPopupClosed = null;
+                                });
+                            }
+                            else
+                            {
+                                Time.timeScale = 1f;
+                                m_isPaused = false;
+                            }
                         });
                 }
             }

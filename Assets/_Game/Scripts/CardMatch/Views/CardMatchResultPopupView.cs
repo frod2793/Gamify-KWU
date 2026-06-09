@@ -20,6 +20,12 @@ namespace GameArifiction.CardMatch
         [SerializeField] private GameObject m_resultPanel;
         [SerializeField] private TextMeshProUGUI m_titleText;
         [SerializeField] private TextMeshProUGUI m_gradeText;
+        [SerializeField] private Image m_gradeImage;
+        
+        [Header("학점 이미지 세팅 (A, B, C, D, F)")]
+        [SerializeField] private Sprite[] m_gradeSprites;
+
+        [Header("기타 정보")]
         [SerializeField] private TextMeshProUGUI m_flipCountText;
         [SerializeField] private TextMeshProUGUI m_messageText;
         [SerializeField] private Button m_nextButton;
@@ -66,7 +72,24 @@ namespace GameArifiction.CardMatch
 
             if (m_gradeText != null)
             {
-                m_gradeText.text = grade.ToString();
+                m_gradeText.gameObject.SetActive(false);
+            }
+
+            if (m_gradeImage != null && m_gradeSprites != null)
+            {
+                m_gradeImage.gameObject.SetActive(true);
+                
+                int index = (int)grade - 1; // A를 0번 인덱스로 설정
+                
+                if (index >= 0 && index < m_gradeSprites.Length)
+                {
+                    m_gradeImage.sprite = m_gradeSprites[index];
+                    m_gradeImage.preserveAspect = true;
+                }
+                else
+                {
+                    Debug.LogWarning($"[CardMatchResultPopupView] 학점 {grade}에 해당하는 이미지가 배열에 없습니다.");
+                }
             }
             if (m_flipCountText != null)
             {

@@ -22,9 +22,8 @@ MonoBehaviour:
   m_gradeB_MaxFlips: 48
   m_gradeC_MaxFlips: 56
   m_gradeD_MaxFlips: 60
-  m_gradeA_Message: "\uCD95\uD558\uD574 !! \uB9CC\uC810\uC774\uC57C !!"
-  m_gradeB_Message: "\uC544\uC27D\uAE34 \uD558\uC9C0\uB9CC \uD3C9\uADE0 \uC810\uC218
-    !!"
-  m_gradeC_Message: "\uC7A5\uD559\uAE08\u2026 \uBC1B\uC744 \uC218 \uC788\uACA0\uC9C0..?"
-  m_gradeD_Message: "\uD070\uC77C\uC774\uC57C\u2026 \uC131\uC801 \uACBD\uACE0 \uB098\uC624\uACA0\uB294\uB370..?"
-  m_gradeF_Message: "\uC7AC\uC218\uAC15\uD558\uC790\u2026"
+  m_gradeA_Message: 자네, 대학원 생각 없나?
+  m_gradeB_Message: 오, 제법 잘했는걸?
+  m_gradeC_Message: 조금 더 노력하시게.
+  m_gradeD_Message: 음... 공부는 한 건가?
+  m_gradeF_Message: 자네는 학사경고일세.

@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
 using System;
+using Cysharp.Threading.Tasks;
 
 namespace GameArifiction.CardMatch
 {
@@ -27,6 +28,8 @@ namespace GameArifiction.CardMatch
         private bool m_isFaceUp;
         private Action<int> m_onCardClicked;
         private Button m_button;
+
+        private static Sprite[] s_gifFrames; 
         #endregion
 
         #region Properties
@@ -70,6 +73,7 @@ namespace GameArifiction.CardMatch
             if (m_logoImage != null)
             {
                 m_logoImage.sprite = logoSprite;
+                m_logoImage.preserveAspect = true;
             }
 
             ShowBack();
@@ -138,6 +142,77 @@ namespace GameArifiction.CardMatch
         public void PlayMatchSuccessEffect()
         {
             transform.DOPunchScale(Vector3.one * 0.15f, 0.3f, 5, 0.5f);
+
+            // GIF 이펙트 재생 (UniTask)
+            PlayGifEffectAsync().Forget();
+        }
+
+        /// <summary>
+        /// [기능]: Resources 폴더의 GIF 분할 프레임들을 로드하여 애니메이션으로 재생합니다.
+        /// [작성자]: 김지연
+        /// </summary>
+        private async UniTaskVoid PlayGifEffectAsync()
+        {
+            // 1. 프레임 최초 로드 및 캐싱
+            if (s_gifFrames == null || s_gifFrames.Length == 0)
+            {
+                Texture2D[] textures = Resources.LoadAll<Texture2D>("MatchEffect");
+                if (textures != null && textures.Length > 0)
+                {
+                    Array.Sort(textures, (a, b) => a.name.CompareTo(b.name));
+                    s_gifFrames = new Sprite[textures.Length];
+                    for (int i = 0; i < textures.Length; i++)
+                    {
+                        s_gifFrames[i] = Sprite.Create(textures[i], new Rect(0, 0, textures[i].width, textures[i].height), new Vector2(0.5f, 0.5f));
+                    }
+                }
+            }
+
+            if (s_gifFrames == null || s_gifFrames.Length == 0) return;
+
+            // 2. 이펙트 재생용 임시 오브젝트 생성
+            GameObject gifObj = new GameObject("GifEffect", typeof(RectTransform), typeof(Image));
+            gifObj.transform.SetParent(transform, false);
+            gifObj.transform.SetAsLastSibling(); // 카드 내용물 가장 위에 표시
+
+            RectTransform rect = gifObj.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.anchoredPosition = new Vector2(-5f, 20f);
+            rect.localScale = Vector3.one;
+            
+            rect.sizeDelta = new Vector2(165f, 215f);
+
+            Image image = gifObj.GetComponent<Image>();
+            image.preserveAspect = false;
+
+            float delayPerFrame = 0.1f;
+            var ct = this.GetCancellationTokenOnDestroy();
+
+            try
+            {
+                for (int i = 0; i < s_gifFrames.Length; i++)
+                {
+                    image.sprite = s_gifFrames[i];
+                    await UniTask.Delay(TimeSpan.FromSeconds(delayPerFrame), cancellationToken: ct);
+                }
+
+                image.DOFade(0f, 0.3f);
+                await UniTask.Delay(TimeSpan.FromSeconds(0.3f), cancellationToken: ct);
+            }
+            catch (OperationCanceledException)
+            {
+                // 오브젝트 파괴 시 발생할 수 있는 정상적인 취소 예외 무시
+            }
+            finally
+            {
+                if (gifObj != null)
+                {
+                    Destroy(gifObj);
+                }
+            }
         }
 
         /// <summary>

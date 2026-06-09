@@ -48,11 +48,11 @@ namespace GameArifiction.CardMatch
 
         #region 학점별 멘트 (Grade Messages)
         [Header("학점별 멘트")]
-        [SerializeField] private string m_gradeA_Message = "축하해 !! 만점이야 !!";
-        [SerializeField] private string m_gradeB_Message = "아쉽긴 하지만 평균 점수 !!";
-        [SerializeField] private string m_gradeC_Message = "장학금… 받을 수 있겠지..?";
-        [SerializeField] private string m_gradeD_Message = "큰일이야… 성적 경고 나오겠는데..?";
-        [SerializeField] private string m_gradeF_Message = "재수강하자…";
+        [SerializeField] private string m_gradeA_Message = "자네, 대학원 생각 없나?";
+        [SerializeField] private string m_gradeB_Message = "오, 제법 잘했는걸?";
+        [SerializeField] private string m_gradeC_Message = "조금 더 노력하시게.";
+        [SerializeField] private string m_gradeD_Message = "음... 공부는 한 건가?";
+        [SerializeField] private string m_gradeF_Message = "자네는 학사경고일세.";
         #endregion
 
         #region Properties

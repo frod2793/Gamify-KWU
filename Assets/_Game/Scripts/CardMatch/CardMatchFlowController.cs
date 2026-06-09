@@ -16,7 +16,6 @@ namespace GameArifiction.CardMatch
     {
         #region Private Fields (내부 의존성 필드)
         private readonly CardMatchView m_gameView;
-        private readonly CardMatchTitleView m_titleView;
         private readonly CardMatchResultPopupView m_resultPopupView;
         private readonly CardMatchSettingsSO m_settings;
         private readonly PlayerSO m_playerSO;
@@ -32,13 +31,11 @@ namespace GameArifiction.CardMatch
         [Inject]
         public CardMatchFlowController(
             CardMatchView gameView,
-            CardMatchTitleView titleView,
             CardMatchResultPopupView resultPopupView,
             CardMatchSettingsSO settings,
             PlayerSO playerSO)
         {
             m_gameView = gameView;
-            m_titleView = titleView;
             m_resultPopupView = resultPopupView;
             m_settings = settings;
             m_playerSO = playerSO;
@@ -94,36 +91,23 @@ namespace GameArifiction.CardMatch
                 Debug.LogWarning("[CardMatchFlowController] CardMatchResultPopupView가 하이어라키 내에 탐색되지 않았습니다.");
             }
 
-            // 6. 타이틀 화면 초기화 및 표시
-            if (m_titleView != null)
-            {
-                m_titleView.Initialize(OnGameStartRequested);
-            }
-            else
-            {
-                // 타이틀 뷰가 없으면 바로 게임 시작
-                Debug.LogWarning("[CardMatchFlowController] CardMatchTitleView가 없어 바로 게임을 시작합니다.");
-                OnGameStartRequested();
-            }
+            // 6. 게임방법 팝업 띄우기
+            m_gameView.ShowInGame();
+            m_gameView.ShowHowToPlayPopupAtStart(OnGameStartRequested);
 
-            Debug.Log("[CardMatchFlowController] 카드 맞추기 미니게임 초기화 완료.");
+            Debug.Log("[CardMatchFlowController] 카드 맞추기 미니게임 초기화 완료. (팝업 표시)");
         }
         #endregion
 
         #region Private Methods - 게임 흐름 콜백 (Game Flow Callbacks)
         /// <summary>
-        /// [기능]: 타이틀 화면에서 [게임 시작] 버튼 클릭 시 호출됩니다.
-        ///         인게임 화면을 표시하고 미리보기를 포함한 게임을 개시합니다.
+        /// [기능]: 시작 팝업의 닫기 버튼 클릭 시 호출됩니다.
+        ///         팝업이 닫힌 직후 미리보기를 포함한 게임을 개시합니다.
         /// [작성자]: 김지연
         /// </summary>
         private void OnGameStartRequested()
         {
-            Debug.Log("[CardMatchFlowController] 게임 시작 요청됨. 인게임 화면으로 전환합니다.");
-
-            if (m_gameView != null)
-            {
-                m_gameView.ShowInGame();
-            }
+            Debug.Log("[CardMatchFlowController] 게임 시작");
 
             m_viewModel.StartGame();
         }
