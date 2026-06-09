@@ -293,7 +293,7 @@ namespace GameArifiction.ClawMachine
                             answerText, 
                             isCorrect
                         );
-                        dollView.Initialize(dollModel);
+                        dollView.Initialize(new DollStateDTO(dollModel));
                     }
 
                     viewModel.RegisterDollAnswer(dollGo.name, isCorrect);

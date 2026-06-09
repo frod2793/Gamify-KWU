@@ -78,9 +78,12 @@ namespace GameArifiction.Core.Audio
 
         private void HandleSfxVolumeChanged(float volume)
         {
-            foreach (var sfx in m_sfxSources)
+            for (int i = 0; i < m_sfxSources.Count; i++)
             {
-                sfx.volume = volume;
+                if (m_sfxSources[i] != null)
+                {
+                    m_sfxSources[i].volume = volume;
+                }
             }
         }
 
@@ -125,9 +128,13 @@ namespace GameArifiction.Core.Audio
 
         private AudioSource GetAvailableSfxSource()
         {
-            foreach (var sfx in m_sfxSources)
+            for (int i = 0; i < m_sfxSources.Count; i++)
             {
-                if (!sfx.isPlaying) return sfx;
+                AudioSource sfx = m_sfxSources[i];
+                if (sfx != null && !sfx.isPlaying)
+                {
+                    return sfx;
+                }
             }
 
             var newSource = gameObject.AddComponent<AudioSource>();

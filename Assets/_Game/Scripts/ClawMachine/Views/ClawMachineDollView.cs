@@ -45,7 +45,7 @@ namespace GameArifiction.ClawMachine
         #endregion
 
         #region 내부 필드 (Private Fields)
-        private DollModel m_model;
+        private DollStateDTO m_state;
         private Rigidbody2D m_rigidbody;
         private SpriteRenderer m_spriteRenderer;
 
@@ -63,11 +63,7 @@ namespace GameArifiction.ClawMachine
         {
             get
             {
-                if (m_model != null)
-                {
-                    return m_model.DollId;
-                }
-                return string.Empty;
+                return m_state.DollId;
             }
         }
 
@@ -76,11 +72,7 @@ namespace GameArifiction.ClawMachine
         {
             get
             {
-                if (m_model != null)
-                {
-                    return m_model.IsDisagree;
-                }
-                return false;
+                return m_state.IsDisagree;
             }
         }
 
@@ -92,11 +84,7 @@ namespace GameArifiction.ClawMachine
         {
             get
             {
-                if (m_model != null)
-                {
-                    return m_model.IsCorrect;
-                }
-                return false;
+                return m_state.IsCorrect;
             }
         }
 
@@ -125,43 +113,42 @@ namespace GameArifiction.ClawMachine
 
         #region 초기화 (Initialization)
         /// <summary>
-        /// [기능]: 인형의 데이터 모델을 설정하고, 출제된 퀴즈 답안 정보(텍스트 및 정답 여부)에 따라 텍스트 및 스프라이트 리소스를 연계 초기화합니다.
+        /// [기능]: 인형의 데이터 상태를 설정하고, 출제된 퀴즈 답안 정보(텍스트 및 정답 여부)에 따라 텍스트 및 스프라이트 리소스를 연계 초기화합니다.
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-05-31
+        /// [수정 날짜]: 2026-06-09
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: DollModel 직접 참조를 제거하고 DollStateDTO 바인딩으로 변경하여 MVVM 규칙 준수
         /// </summary>
-        public void Initialize(DollModel model)
+        public void Initialize(DollStateDTO state)
         {
-            m_model = model;
+            m_state = state;
 
-            if (m_model != null)
+            if (m_answerTextMesh != null)
             {
-                if (m_answerTextMesh != null)
-                {
-                    m_answerTextMesh.text = m_model.AnswerText;
-                }
+                m_answerTextMesh.text = m_state.AnswerText;
+            }
 
-                // 퀴즈 답안지 텍스트와 직렬화 설정 리스트를 비교하여 맞춤형 캡슐 스프라이트 적용
-                if (m_spriteRenderer != null && m_answerSpriteConfigs != null && m_answerSpriteConfigs.Count > 0)
+            // 퀴즈 답안지 텍스트와 직렬화 설정 리스트를 비교하여 맞춤형 캡슐 스프라이트 적용
+            if (m_spriteRenderer != null && m_answerSpriteConfigs != null && m_answerSpriteConfigs.Count > 0)
+            {
+                string answerText = m_state.AnswerText;
+                for (int i = 0; i < m_answerSpriteConfigs.Count; i++)
                 {
-                    string answerText = m_model.AnswerText;
-                    for (int i = 0; i < m_answerSpriteConfigs.Count; i++)
+                    AnswerSpriteConfig config = m_answerSpriteConfigs[i];
+                    if (config.AnswerTextKey == answerText)
                     {
-                        AnswerSpriteConfig config = m_answerSpriteConfigs[i];
-                        if (config.AnswerTextKey == answerText)
+                        if (config.CapsuleSprite != null)
                         {
-                            if (config.CapsuleSprite != null)
+                            m_spriteRenderer.sprite = config.CapsuleSprite;
+                            
+                            // 투명색이 아닌 유효한 색상일 경우에만 색상 보정치를 입힙니다.
+                            if (config.SpriteColor.a > 0.001f)
                             {
-                                m_spriteRenderer.sprite = config.CapsuleSprite;
-                                
-                                // 투명색이 아닌 유효한 색상일 경우에만 색상 보정치를 입힙니다.
-                                if (config.SpriteColor.a > 0.001f)
-                                {
-                                    m_spriteRenderer.color = config.SpriteColor;
-                                }
-
-                                Debug.Log($"[ClawMachineDollView] 답안 키워드 매칭에 의해 캡슐 스프라이트 교체 적용됨. (답안: {answerText}, Sprite: {config.CapsuleSprite.name})");
-                                break;
+                                m_spriteRenderer.color = config.SpriteColor;
                             }
+
+                            Debug.Log($"[ClawMachineDollView] 답안 키워드 매칭에 의해 캡슐 스프라이트 교체 적용됨. (답안: {answerText}, Sprite: {config.CapsuleSprite.name})");
+                            break;
                         }
                     }
                 }
