@@ -518,7 +518,6 @@ MonoBehaviour:
   - {fileID: 1603405464}
   - {fileID: 151552675}
   m_resultPopup: {fileID: 1919712728}
-  m_playerSO: {fileID: 0}
   m_transitionSettings: {fileID: 0}
   m_startDelay: 0
 --- !u!1 &54835358
@@ -1313,7 +1312,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameArifiction.ClawMachine.ClawGameView
   m_clawView: {fileID: 2125493787}
-  m_resultPopup: {fileID: 54835363}
+  m_resultPopup: {fileID: 0}
   m_leftButton: {fileID: 583615825}
   m_rightButton: {fileID: 1683027749}
   m_descendButton: {fileID: 933728952}

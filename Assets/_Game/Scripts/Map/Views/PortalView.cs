@@ -204,7 +204,7 @@ namespace GameArifiction.Map
         /// [작성자]: 윤승종
         /// [수정 날짜]: 2026-06-10
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 씬 이름 변수 대신 GetTargetSceneName() 헬퍼 함수를 호출하여 런타임 역추적 적용
+        /// [수정 내용]: 씬 이름 변수 대신 GetTargetSceneName() 헬퍼 함수를 호출하여 런타임 역추적 적용 및 Enum의 None(0)을 배제하고 A(1)~F(5) 등급을 0~4번 인덱스에 매핑하도록 -1 오프셋 보정 적용
         /// </summary>
         private void UpdateGradeDisplay()
         {
@@ -230,8 +230,9 @@ namespace GameArifiction.Map
                 }
                 else
                 {
-                    int index = (int)grade;
-                    if (m_gradeSprites != null && index < m_gradeSprites.Length && m_gradeSprites[index] != null)
+                    // None(0)을 제외한 A(1)~F(5) 값을 인스펙터 스프라이트 배열 0~4번 인덱스에 매치하도록 1을 감산합니다.
+                    int index = (int)grade - 1;
+                    if (index >= 0 && m_gradeSprites != null && index < m_gradeSprites.Length && m_gradeSprites[index] != null)
                     {
                         m_cachedGradeSpriteRenderer.sprite = m_gradeSprites[index];
                         m_cachedGradeSpriteRenderer.gameObject.SetActive(true);

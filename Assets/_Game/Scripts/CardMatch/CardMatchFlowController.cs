@@ -1,8 +1,10 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using System.Collections.Generic;
 using VContainer;
 using VContainer.Unity;
 using GameArifiction.Player;
+using GameArifiction.UI.Common;
 
 namespace GameArifiction.CardMatch
 {
@@ -16,9 +18,10 @@ namespace GameArifiction.CardMatch
     {
         #region Private Fields (내부 의존성 필드)
         private readonly CardMatchView m_gameView;
-        private readonly CardMatchResultPopupView m_resultPopupView;
+        private readonly CommonResultPopupView m_resultPopupView;
         private readonly CardMatchSettingsSO m_settings;
         private readonly PlayerSO m_playerSO;
+        private readonly EasyTransition.TransitionSettings m_transitionSettings;
 
         private CardMatchViewModel m_viewModel;
         #endregion
@@ -27,18 +30,23 @@ namespace GameArifiction.CardMatch
         /// <summary>
         /// [기능]: VContainer를 통해 의존성을 주입받아 초기화합니다.
         /// [작성자]: 김지연
+        /// [수정 날짜]: 2026-06-10
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: CardMatchResultPopupView에서 CommonResultPopupView로 의존성 주입 변경 및 TransitionSettings 추가
         /// </summary>
         [Inject]
         public CardMatchFlowController(
             CardMatchView gameView,
-            CardMatchResultPopupView resultPopupView,
+            CommonResultPopupView resultPopupView,
             CardMatchSettingsSO settings,
-            PlayerSO playerSO)
+            PlayerSO playerSO,
+            EasyTransition.TransitionSettings transitionSettings = null)
         {
             m_gameView = gameView;
             m_resultPopupView = resultPopupView;
             m_settings = settings;
             m_playerSO = playerSO;
+            m_transitionSettings = transitionSettings;
         }
         #endregion
 
@@ -88,7 +96,7 @@ namespace GameArifiction.CardMatch
             }
             else
             {
-                Debug.LogWarning("[CardMatchFlowController] CardMatchResultPopupView가 하이어라키 내에 탐색되지 않았습니다.");
+                Debug.LogWarning("[CardMatchFlowController] CommonResultPopupView가 하이어라키 내에 탐색되지 않았습니다.");
             }
 
             // 6. 게임방법 팝업 띄우기
@@ -113,8 +121,11 @@ namespace GameArifiction.CardMatch
         }
 
         /// <summary>
-        /// [기능]: 12쌍 전부 매칭 완료 시 호출됩니다. 결과 팝업을 표시합니다.
-        /// [작성자]: 김지연
+        /// [기능]: 12쌍 전부 매칭 완료 시 호출됩니다. 공용 결과 팝업을 설정하고 표시합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-10
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 전용 팝업에서 공용 결과 팝업(CommonResultPopupView) 적용으로 교체 및 DTO 생성 바인딩
         /// </summary>
         private void OnGameComplete(MinigameGrade grade, string message, int flipCount)
         {
@@ -122,8 +133,52 @@ namespace GameArifiction.CardMatch
 
             if (m_resultPopupView != null)
             {
-                m_resultPopupView.Show(grade, message, flipCount);
+                string titleText = "카드 맞추기 결과";
+                string descriptionText = $"뒤집기 횟수: {flipCount}회\n\n{message}";
+                string lectureName = m_settings != null ? m_settings.LectureName : "카드 맞추기";
+
+                CommonPopupDataDTO popupData = new CommonPopupDataDTO(
+                    titleText,
+                    descriptionText,
+                    lectureName,
+                    grade,
+                    "로비로 이동",
+                    func_OnExitConfirm,
+                    "CardMatch"
+                );
+
+                m_resultPopupView.Setup(popupData);
             }
+        }
+
+        /// <summary>
+        /// [기능]: 공용 결과 팝업 확인 클릭 시 실행될 콜백으로, 로비 씬 복원 처리를 수행하고 화면을 전환합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-10
+        /// </summary>
+        private void func_OnExitConfirm()
+        {
+            Debug.Log("[CardMatchFlowController] 플레이어가 확인 버튼을 클릭하여 로비로 복귀합니다.");
+
+            // 로비 씬 복원 활성화 플래그 주입
+            if (m_playerSO != null)
+            {
+                m_playerSO.HasSavedPosition = true;
+            }
+
+            // EasyTransition 적용 검출
+            if (m_transitionSettings != null)
+            {
+                EasyTransition.TransitionManager manager = Object.FindFirstObjectByType<EasyTransition.TransitionManager>();
+                if (manager != null)
+                {
+                    EasyTransition.TransitionManager.Instance().Transition("Lobby", m_transitionSettings, 0.1f);
+                    return;
+                }
+            }
+
+            // 트랜지션 유실 시 일반 씬 매니저 다이렉트 전이 폴백
+            SceneManager.LoadScene("Lobby");
         }
         #endregion
 

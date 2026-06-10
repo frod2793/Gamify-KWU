@@ -99,6 +99,13 @@ namespace GamifyKWU.UI.Title
 
         #region 유니티 생명주기 (Unity Lifecycle)
 
+        /// <summary>
+        /// [기능]: 라이프사이클 초기화 및 디버그 상태 설정에 따른 데이터 초기화 처리
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-10
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: m_forcePlayIntro 옵션 활성화 상태일 시 플레이어 성적 및 세션 데이터(PlayerSO)도 강제 초기화 연동
+        /// </summary>
         private void Start()
         {
             if (m_speechBubblePanel != null)
@@ -113,6 +120,12 @@ namespace GamifyKWU.UI.Title
                 {
                     m_cameraFollow = mainCam.GetComponent<GameArifiction.Camera.CameraFollow>();
                 }
+            }
+
+            if (m_playerSO != null && m_forcePlayIntro)
+            {
+                m_playerSO.ResetData();
+                Debug.Log("[IntroCutsceneController] 디버그 옵션 m_forcePlayIntro가 활성화되어 있어 플레이 기록(PlayerSO)을 초기화합니다.");
             }
 
             if (m_playerSO != null && !m_forcePlayIntro)

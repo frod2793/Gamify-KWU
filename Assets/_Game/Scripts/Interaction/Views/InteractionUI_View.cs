@@ -21,6 +21,14 @@ namespace GameArifiction.Interaction
         [SerializeField]
         [Tooltip("상호작용 안내 문구를 출력할 TMPro 텍스트 컴포넌트입니다.")]
         private TMP_Text m_promptText;
+
+        [SerializeField]
+        [Tooltip("세팅 팝업을 열 수 있는 버튼 컴포넌트입니다.")]
+        private Button m_settingsButton;
+
+        [SerializeField]
+        [Tooltip("세팅 버튼 클릭 시 활성화될 공통 설정 팝업 뷰 컴포넌트입니다.")]
+        private GameArifiction.UI.Common.CommonSettingsPopupView m_settingsPopup;
         #endregion
 
         #region 내부 필드
@@ -60,6 +68,12 @@ namespace GameArifiction.Interaction
             if (m_interactionButton != null)
             {
                 m_interactionButton.onClick.AddListener(func_OnInteractButtonClicked);
+            }
+
+            // [자동 이벤트 등록]: 설정 버튼 클릭
+            if (m_settingsButton != null)
+            {
+                m_settingsButton.onClick.AddListener(func_OnSettingsButtonClicked);
             }
             
             // 자동 주입 후 상태 변화 이벤트 구독
@@ -102,6 +116,11 @@ namespace GameArifiction.Interaction
             {
                 m_interactionButton.onClick.RemoveListener(func_OnInteractButtonClicked);
             }
+
+            if (m_settingsButton != null)
+            {
+                m_settingsButton.onClick.RemoveListener(func_OnSettingsButtonClicked);
+            }
         }
         #endregion
 
@@ -115,6 +134,23 @@ namespace GameArifiction.Interaction
             if (m_viewModel != null)
             {
                 m_viewModel.ExecuteInteraction();
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 세팅 버튼이 클릭되었을 때 설정 팝업을 띄우는 핸들러 (func_ 규칙 엄수)
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void func_OnSettingsButtonClicked()
+        {
+            if (m_settingsPopup != null)
+            {
+                m_settingsPopup.ShowPopup();
+                Debug.Log("[InteractionUI_View] 설정 버튼 클릭으로 공통 설정 팝업을 오픈했습니다.");
+            }
+            else
+            {
+                Debug.LogWarning("[InteractionUI_View] 설정 버튼이 클릭되었으나 연결된 설정 팝업(m_settingsPopup)이 존재하지 않습니다.");
             }
         }
 

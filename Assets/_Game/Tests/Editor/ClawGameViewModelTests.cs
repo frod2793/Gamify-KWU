@@ -54,7 +54,7 @@ namespace GameArifiction.Tests.Editor
         public void SubmitAnswer_CorrectAnswer_TransitionsToResult()
         {
             // Arrange
-            m_viewModel.RegisterDollAnswer("doll_1", true);
+            m_viewModel.RegisterDollAnswer("doll_1", "테스트정답", true);
             bool successFired = false;
             m_viewModel.OnQuizSuccess += () => successFired = true;
 
@@ -69,15 +69,15 @@ namespace GameArifiction.Tests.Editor
         /// <summary>
         /// [기능]: 잘못된 오답을 제출했을 때 실패 상태 전이 및 OnQuizFailed 이벤트 발행만 발생하는지 검증합니다.
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-05-27
+        /// [수정 날짜]: 2026-06-10
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 오답 시 OnReTakeRequested는 발사되지 않는 도메인 설계 사양에 맞게 Assert.IsFalse로 검증 수정
+        /// [수정 내용]: 오답 시 OnReTakeRequested는 발사되지 않는 도메인 설계 사양에 맞게 Assert.IsFalse로 검증 수정 및 RegisterDollAnswer 파라미터 수정
         /// </summary>
         [Test]
         public void SubmitAnswer_WrongAnswer_TransitionsToReTakeRequest()
         {
             // Arrange
-            m_viewModel.RegisterDollAnswer("doll_2", false);
+            m_viewModel.RegisterDollAnswer("doll_2", "테스트오답", false);
             bool failedFired = false;
             bool reTakeFired = false;
             m_viewModel.OnQuizFailed += () => failedFired = true;
@@ -96,7 +96,7 @@ namespace GameArifiction.Tests.Editor
         public void AcceptReTake_RestoresPlayCountAndTransitionsToIdle()
         {
             // Arrange
-            m_viewModel.RegisterDollAnswer("doll_2", false);
+            m_viewModel.RegisterDollAnswer("doll_2", "테스트오답", false);
             m_viewModel.func_SubmitAnswer("doll_2"); // Moves to ReTakeRequest
             m_model.RestorePlayCount(0); // deplete count
 

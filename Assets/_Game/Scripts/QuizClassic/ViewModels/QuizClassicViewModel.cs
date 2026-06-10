@@ -65,6 +65,18 @@ namespace GameArifiction.QuizClassic
             }
         }
 
+        /// <summary>
+        /// [기능]: 클래식 퀴즈 뷰모델에서는 성적 학점을 개별 사용하지 않으므로 호환성 규격만 충족합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public MinigameGrade QuizGrade => MinigameGrade.F;
+
+        /// <summary>
+        /// [기능]: 인형뽑기부터 퀴즈까지 누적된 미니게임 총 소요 시간(초)
+        /// [작성자]: 윤승종
+        /// </summary>
+        public float TotalPlayTime => m_playerSO != null ? m_playerSO.TotalMinigamePlayTime : 0f;
+
         #endregion
 
 
@@ -218,6 +230,33 @@ namespace GameArifiction.QuizClassic
         {
             StopTimer();
             StopNextQuizDeferred();
+        }
+
+        /// <summary>
+        /// [기능]: 미니게임 최종 학점 성적을 데이터 모델(PlayerSO)에 기록합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-10
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 성적 저장 미니게임 ID를 "ClawMachineQuiz"에서 "ClawMachine"으로 변경
+        /// </summary>
+        public void SaveFinalGrade(MinigameGrade grade)
+        {
+            // [수정]: 클래식 퀴즈의 성적은 무시하고 오직 뽑기 게임(ClawMachine) 결과만 최종 성적으로 사용합니다.
+            Debug.Log($"[QuizClassicViewModel] 미니게임 최종 학점 저장을 스킵합니다. (오직 뽑기 게임 결과만 반영됨)");
+        }
+
+        /// <summary>
+        /// [기능]: 메인 로비로 복귀할 때 플레이어의 좌표 보존 플래그를 세팅합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-10
+        /// </summary>
+        public void SaveExitLobbyPosition()
+        {
+            if (m_playerSO != null)
+            {
+                m_playerSO.HasSavedPosition = true;
+                Debug.Log($"[QuizClassicViewModel] 로비 복귀 상태 세팅 완료 (HasSavedPosition = true). 복귀 좌표: {m_playerSO.LastPosition}");
+            }
         }
 
         #endregion

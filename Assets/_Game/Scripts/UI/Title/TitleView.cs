@@ -54,6 +54,19 @@ namespace GamifyKWU.UI.Title
         [Tooltip("애니메이션의 Ease 종류입니다.")]
         private Ease m_logoAnimEase = Ease.OutBack;
 
+        [Header("타이틀 로고 플로팅 설정")]
+        [SerializeField]
+        [Tooltip("타이틀 로고에 둥둥 뜨는 플로팅 이펙트를 적용할지 여부입니다.")]
+        private bool m_useFloatingEffect = true;
+
+        [SerializeField]
+        [Tooltip("플로팅 이펙트의 위아래 흔들림 진폭(px)입니다.")]
+        private float m_floatingAmplitude = 15f;
+
+        [SerializeField]
+        [Tooltip("플로팅 이펙트의 한 주기 시간(초)입니다.")]
+        private float m_floatingDuration = 1.5f;
+
         #endregion
 
         #region 내부 필드 (Private Fields)
@@ -85,6 +98,11 @@ namespace GamifyKWU.UI.Title
 
         private void OnDestroy()
         {
+            if (m_titleLogoRect != null)
+            {
+                m_titleLogoRect.DOKill();
+            }
+
             if (m_viewModel != null)
             {
                 m_viewModel.OnPlayCommandTriggered -= HandlePlayCommandTriggered;
@@ -129,26 +147,55 @@ namespace GamifyKWU.UI.Title
             // DOTween 안전 예외 처리 (이전 실행 중인 트윈이 있다면 정지)
             m_titleLogoRect.DOKill();
 
+            Vector2 originalPos = m_titleLogoRect.anchoredPosition;
+
             switch (m_logoAnimType)
             {
                 case TitleLogoAnimType.RotateAndFlyIn:
-                    Vector2 originalPos = m_titleLogoRect.anchoredPosition;
                     m_titleLogoRect.anchoredPosition = originalPos + m_flyInStartOffset;
                     m_titleLogoRect.localRotation = Quaternion.Euler(0f, 0f, m_flyInStartRotation);
 
                     m_titleLogoRect.DOAnchorPos(originalPos, m_logoAnimDuration).SetEase(m_logoAnimEase);
-                    m_titleLogoRect.DOLocalRotate(Vector3.zero, m_logoAnimDuration, RotateMode.FastBeyond360).SetEase(m_logoAnimEase);
+                    m_titleLogoRect.DOLocalRotate(Vector3.zero, m_logoAnimDuration, RotateMode.FastBeyond360)
+                        .SetEase(m_logoAnimEase)
+                        .OnComplete(() => StartFloatingAnimation(originalPos));
                     break;
 
                 case TitleLogoAnimType.ScalePopIn:
                     m_titleLogoRect.localScale = Vector3.zero;
-                    m_titleLogoRect.DOScale(Vector3.one, m_logoAnimDuration).SetEase(m_logoAnimEase);
+                    m_titleLogoRect.DOScale(Vector3.one, m_logoAnimDuration)
+                        .SetEase(m_logoAnimEase)
+                        .OnComplete(() => StartFloatingAnimation(originalPos));
                     break;
 
                 case TitleLogoAnimType.None:
                 default:
+                    StartFloatingAnimation(originalPos);
                     break;
             }
+        }
+
+        /// <summary>
+        /// [기능]: 등장 애니메이션이 완전히 끝난 뒤, 로고 이미지에 부드럽게 위아래로 흔들리는 플로팅 연출을 재생합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-10
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 등장 애니메이션 종료 콜백과 연계하여 둥둥 뜨는 요요 애니메이션 구현
+        /// </summary>
+        private void StartFloatingAnimation(Vector2 anchorPos)
+        {
+            if (!m_useFloatingEffect || m_titleLogoRect == null)
+            {
+                return;
+            }
+
+            // 이전 트윈 중복 제거 및 초기 위치 재싱크
+            m_titleLogoRect.DOKill();
+            m_titleLogoRect.anchoredPosition = anchorPos;
+
+            m_titleLogoRect.DOAnchorPosY(anchorPos.y + m_floatingAmplitude, m_floatingDuration)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo);
         }
 
         #endregion

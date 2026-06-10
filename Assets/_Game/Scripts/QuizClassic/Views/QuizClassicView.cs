@@ -46,10 +46,7 @@ namespace GameArifiction.QuizClassic
 
         #region 내부 필드 (Private Fields)
 
-        [Header("세션 데이터")]
-        [SerializeField]
-        [Tooltip("씬 간 플레이어 위치 상태 보존을 위한 ScriptableObject 데이터 자산입니다.")]
-        private PlayerSO m_playerSO;
+        // [삭제]: View에서 Model인 PlayerSO를 직접 참조하여 수정하는 MVVM 위반 행위를 단절하기 위해 의존성 삭제
 
         [Header("이지 트랜지션 설정")]
         [SerializeField]
@@ -325,36 +322,33 @@ namespace GameArifiction.QuizClassic
 
             if (m_viewModel.IsLastQuiz)
             {
-                float totalPlayTime = 0f;
+                // [리팩토링]: 뷰모델의 프로퍼티를 통해 실제 총 누적 플레이 소요 시간 획득
+                float totalPlayTime = m_viewModel.TotalPlayTime;
                 MinigameGrade calculatedGrade = MinigameGrade.D;
 
-                if (m_playerSO != null)
+                if (totalPlayTime <= 60f)
                 {
-                    totalPlayTime = m_playerSO.TotalMinigamePlayTime;
-                    
-                    if (totalPlayTime <= 60f)
-                    {
-                        calculatedGrade = MinigameGrade.A;
-                    }
-                    else if (totalPlayTime <= 80f)
-                    {
-                        calculatedGrade = MinigameGrade.B;
-                    }
-                    else if (totalPlayTime <= 100f)
-                    {
-                        calculatedGrade = MinigameGrade.C;
-                    }
-                    else if (totalPlayTime <= 120f)
-                    {
-                        calculatedGrade = MinigameGrade.D;
-                    }
-                    else
-                    {
-                        calculatedGrade = MinigameGrade.F;
-                    }
-
-                    m_playerSO.SetMinigameGrade("ClawMachineQuiz", calculatedGrade);
+                    calculatedGrade = MinigameGrade.A;
                 }
+                else if (totalPlayTime <= 80f)
+                {
+                    calculatedGrade = MinigameGrade.B;
+                }
+                else if (totalPlayTime <= 100f)
+                {
+                    calculatedGrade = MinigameGrade.C;
+                }
+                else if (totalPlayTime <= 120f)
+                {
+                    calculatedGrade = MinigameGrade.D;
+                }
+                else
+                {
+                    calculatedGrade = MinigameGrade.F;
+                }
+
+                // [리팩토링]: 뷰가 직접 저장하지 않고 뷰모델에 성적 기록 위임
+                m_viewModel.SaveFinalGrade(calculatedGrade);
 
                 targetGrade = calculatedGrade;
 
@@ -364,7 +358,7 @@ namespace GameArifiction.QuizClassic
 
                 CommonPopupDataDTO popupData = new CommonPopupDataDTO(
                     titleText,
-                    "남은 시간",
+                    $"소요시간: {totalPlayTime:F0}초",
                     "UX/UI개론",
                     targetGrade,
                     confirmText,
@@ -451,10 +445,10 @@ namespace GameArifiction.QuizClassic
         {
             Debug.Log("[QuizClassicView] 플레이어가 클래식 퀴즈 최종 완료 성적표를 확인하고 메인(Lobby)으로 이동합니다.");
             
-            if (m_playerSO != null)
+            // [리팩토링]: 뷰가 직접 Model에 접근하여 플래그를 세팅하던 로직을 뷰모델에 위임
+            if (m_viewModel != null)
             {
-                m_playerSO.HasSavedPosition = true;
-                Debug.Log($"[QuizClassicView] 로비로 돌아갈 때 마지막 복귀 위치 복원을 위해 HasSavedPosition 플래그를 true로 활성화했습니다. 위치: {m_playerSO.LastPosition}");
+                m_viewModel.SaveExitLobbyPosition();
             }
 
             if (m_transitionSettings != null)

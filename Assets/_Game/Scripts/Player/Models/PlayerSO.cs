@@ -57,7 +57,14 @@ namespace GameArifiction.Player
         public float TotalMinigamePlayTime
         {
             get => m_totalMinigamePlayTime;
-            set => m_totalMinigamePlayTime = value;
+            set
+            {
+                m_totalMinigamePlayTime = value;
+                SaveToLocal();
+#if UNITY_EDITOR
+                UnityEditor.EditorUtility.SetDirty(this);
+#endif
+            }
         }
 
         public Vector2 LastPosition
@@ -67,6 +74,10 @@ namespace GameArifiction.Player
             {
                 m_lastPosition = value;
                 m_hasSavedPosition = true;
+                SaveToLocal();
+#if UNITY_EDITOR
+                UnityEditor.EditorUtility.SetDirty(this);
+#endif
             }
         }
 
@@ -76,6 +87,10 @@ namespace GameArifiction.Player
             set
             {
                 m_hasSavedPosition = value;
+                SaveToLocal();
+#if UNITY_EDITOR
+                UnityEditor.EditorUtility.SetDirty(this);
+#endif
             }
         }
 
@@ -85,13 +100,35 @@ namespace GameArifiction.Player
             set
             {
                 m_isIntroPlayed = value;
+                SaveToLocal();
+#if UNITY_EDITOR
+                UnityEditor.EditorUtility.SetDirty(this);
+#endif
             }
         }
 
         public IReadOnlyList<MinigameRecord> MinigameRecords => m_minigameRecords;
         #endregion
 
+        #region 유니티 생명주기 (Unity Lifecycle)
+        /// <summary>
+        /// [기능]: 오브젝트 로딩 시 로컬 저장소로부터 데이터를 자동으로 로드합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void OnEnable()
+        {
+            LoadFromLocal();
+        }
+        #endregion
+
         #region 공개 메서드 (Public Methods)
+        /// <summary>
+        /// [기능]: 플레이어 데이터를 모두 초기화하고 로컬 스토리지 데이터도 삭제합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-10
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 초기화 시 로컬 저장소(PlayerPrefs) 데이터도 함께 삭제하도록 수정
+        /// </summary>
         public void ResetData()
         {
             m_lastPosition = Vector2.zero;
@@ -99,6 +136,13 @@ namespace GameArifiction.Player
             m_minigameRecords.Clear();
             m_totalMinigamePlayTime = 0f;
             m_isIntroPlayed = false;
+
+            PlayerPrefs.DeleteKey("GamifyKWU_PlayerSOData");
+            PlayerPrefs.Save();
+            Debug.Log("[PlayerSO] 로컬 저장소 데이터를 초기화하고 메모리 데이터를 리셋했습니다.");
+#if UNITY_EDITOR
+            UnityEditor.EditorUtility.SetDirty(this);
+#endif
         }
 
         /// <summary>
@@ -106,7 +150,7 @@ namespace GameArifiction.Player
         /// [작성자]: 윤승종
         /// [수정 날짜]: 2026-06-10
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 반복 플레이 시 더 높은 성적으로만 갱신되도록 비교 로직 추가
+        /// [수정 내용]: 성적 갱신 시 로컬 스토리지(PlayerPrefs)에 영구 저장 연동
         /// </summary>
         public void SetMinigameGrade(string minigameId, MinigameGrade grade)
         {
@@ -134,6 +178,10 @@ namespace GameArifiction.Player
                         record.Grade = grade;
                         m_minigameRecords[i] = record;
                         Debug.Log($"[PlayerSO] 미니게임 '{minigameId}' 성적이 더 높은 성적으로 갱신되었습니다: {currentGrade} -> {grade}");
+                        SaveToLocal();
+#if UNITY_EDITOR
+                        UnityEditor.EditorUtility.SetDirty(this);
+#endif
                     }
                     else
                     {
@@ -145,6 +193,10 @@ namespace GameArifiction.Player
 
             m_minigameRecords.Add(new MinigameRecord { MinigameId = minigameId, Grade = grade });
             Debug.Log($"[PlayerSO] 미니게임 '{minigameId}'의 첫 성적이 기록되었습니다: {grade}");
+            SaveToLocal();
+#if UNITY_EDITOR
+            UnityEditor.EditorUtility.SetDirty(this);
+#endif
         }
 
         public MinigameGrade GetMinigameGrade(string minigameId)
@@ -157,6 +209,76 @@ namespace GameArifiction.Player
                 }
             }
             return MinigameGrade.None;
+        }
+
+        /// <summary>
+        /// [기능]: 현재 플레이어 세션 데이터를 로컬 저장소(PlayerPrefs)에 JSON 직렬화하여 영구 저장합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void SaveToLocal()
+        {
+            PlayerSODataWrapper wrapper = new PlayerSODataWrapper();
+            wrapper.MinigameRecords = m_minigameRecords;
+            wrapper.TotalMinigamePlayTime = m_totalMinigamePlayTime;
+            wrapper.IsIntroPlayed = m_isIntroPlayed;
+            wrapper.LastPosition = m_lastPosition;
+            wrapper.HasSavedPosition = m_hasSavedPosition;
+
+            string json = JsonUtility.ToJson(wrapper);
+            PlayerPrefs.SetString("GamifyKWU_PlayerSOData", json);
+            PlayerPrefs.Save();
+            Debug.Log($"[PlayerSO] 로컬 저장소(PlayerPrefs)에 세션 데이터 세이브 완료: {json}");
+        }
+
+        /// <summary>
+        /// [기능]: 로컬 저장소(PlayerPrefs)에 저장된 플레이어 JSON 데이터를 로드하여 세션을 완벽히 복원합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void LoadFromLocal()
+        {
+            if (PlayerPrefs.HasKey("GamifyKWU_PlayerSOData"))
+            {
+                string json = PlayerPrefs.GetString("GamifyKWU_PlayerSOData");
+                try
+                {
+                    PlayerSODataWrapper wrapper = JsonUtility.FromJson<PlayerSODataWrapper>(json);
+                    if (wrapper != null)
+                    {
+                        m_minigameRecords = wrapper.MinigameRecords ?? new List<MinigameRecord>();
+                        m_totalMinigamePlayTime = wrapper.TotalMinigamePlayTime;
+                        m_isIntroPlayed = wrapper.IsIntroPlayed;
+                        m_lastPosition = wrapper.LastPosition;
+                        m_hasSavedPosition = wrapper.HasSavedPosition;
+                        Debug.Log($"[PlayerSO] 로컬 저장소(PlayerPrefs)로부터 세션 데이터 로드 완료: {json}");
+#if UNITY_EDITOR
+                        UnityEditor.EditorUtility.SetDirty(this);
+#endif
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"[PlayerSO] 로컬 데이터 파싱 실패: {ex.Message}");
+                }
+            }
+            else
+            {
+                Debug.Log("[PlayerSO] 로컬 저장소에 기존 세션 데이터가 존재하지 않아 기본값 에셋 데이터를 유지합니다.");
+            }
+        }
+        #endregion
+
+        #region 내부 클래스 (Private Class)
+        /// <summary>
+        /// [기능]: PlayerSO의 데이터를 로컬 디스크에 직렬화하기 위해 속성들을 감싸는 데이터 구조 클래스
+        /// </summary>
+        [System.Serializable]
+        private class PlayerSODataWrapper
+        {
+            public List<MinigameRecord> MinigameRecords;
+            public float TotalMinigamePlayTime;
+            public bool IsIntroPlayed;
+            public Vector2 LastPosition;
+            public bool HasSavedPosition;
         }
         #endregion
     }

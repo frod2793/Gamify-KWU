@@ -5,6 +5,8 @@ using VContainer.Unity;
 using GamifyKWU.CraneGame.Data;
 using GameArifiction.Player;
 using GameArifiction.Core.Audio;
+using GameArifiction.UI.Common;
+using GameArifiction.QuizClassic;
 
 namespace GameArifiction.ClawMachine
 {
@@ -27,6 +29,8 @@ namespace GameArifiction.ClawMachine
         private readonly ClawSceneReferencesDTO m_sceneReferences;
         private readonly ClawGameTutorialPopupView m_tutorialPopupView;
         private readonly ISoundService m_soundService;
+        private readonly QuizClassicFlowController m_quizFlowController;
+        private readonly QuizClassicView m_quizClassicView;
 
         // 씬 참조 캐싱 및 기본 상수 제어
         private const float SPAWN_MIN_DISTANCE = 0.6f;
@@ -51,7 +55,9 @@ namespace GameArifiction.ClawMachine
             QuizDatabaseSO quizDatabase,
             ClawSceneReferencesDTO sceneReferences,
             ClawGameTutorialPopupView tutorialPopupView,
-            ISoundService soundService)
+            ISoundService soundService,
+            QuizClassicFlowController quizFlowController,
+            QuizClassicView quizClassicView)
         {
             m_viewModel = viewModel;
             m_quizUIView = quizUIView;
@@ -62,6 +68,8 @@ namespace GameArifiction.ClawMachine
             m_sceneReferences = sceneReferences;
             m_tutorialPopupView = tutorialPopupView;
             m_soundService = soundService;
+            m_quizFlowController = quizFlowController;
+            m_quizClassicView = quizClassicView;
         }
         #endregion
 
@@ -128,18 +136,18 @@ namespace GameArifiction.ClawMachine
             // 3. 퀴즈 캡슐 동적 스폰
             SpawnQuizDolls(m_viewModel, selectedQuiz);
 
-            // 4. 결과 팝업 뷰 초기화
+            // 4. 결과 팝업 뷰 초기화 (정오답 이벤트 자체 구독 및 연출)
             if (m_resultPopupView != null)
             {
                 m_resultPopupView.Initialize(m_viewModel);
                 Debug.Log("[ClawGameFlowController] ClawGameResultPopupView 초기화 완료.");
             }
 
-            // 5. 최상위 UI 게임 뷰 초기화
+            // 5. 최상위 UI 게임 뷰 초기화 (튜토리얼 및 결과 팝업 연결)
             if (m_gameView != null)
             {
                 m_gameView.Initialize(m_viewModel, m_resultPopupView, m_tutorialPopupView);
-                Debug.Log("[ClawGameFlowController] ClawGameView 초기화 및 팝업 연결 완료.");
+                Debug.Log("[ClawGameFlowController] ClawGameView 초기화 완료.");
             }
 
             // 6. 물리 센서 및 퀴즈 UI 뷰 초기화
@@ -169,6 +177,8 @@ namespace GameArifiction.ClawMachine
         /// </summary>
         public void Dispose()
         {
+
+
             if (m_soundService != null)
             {
                 m_soundService.StopBGM();
@@ -296,7 +306,7 @@ namespace GameArifiction.ClawMachine
                         dollView.Initialize(new DollStateDTO(dollModel));
                     }
 
-                    viewModel.RegisterDollAnswer(dollGo.name, isCorrect);
+                    viewModel.RegisterDollAnswer(dollGo.name, answerText, isCorrect);
                 }
             }
 
@@ -346,6 +356,8 @@ namespace GameArifiction.ClawMachine
 
             return bestPos;
         }
+
+
         #endregion
     }
 }

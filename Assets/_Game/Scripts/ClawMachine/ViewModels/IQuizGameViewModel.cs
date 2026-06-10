@@ -1,4 +1,5 @@
 using System;
+using GameArifiction.Player;
 
 namespace GameArifiction.ClawMachine
 {
@@ -20,6 +21,7 @@ namespace GameArifiction.ClawMachine
 
         int ReTakeCount { get; }
         float TimeLeft { get; }
+        MinigameGrade QuizGrade { get; }
 
         #endregion
 

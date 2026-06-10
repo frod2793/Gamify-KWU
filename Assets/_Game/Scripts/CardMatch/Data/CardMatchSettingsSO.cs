@@ -29,6 +29,10 @@ namespace GameArifiction.CardMatch
 
         [Tooltip("매칭 성공 시 이펙트 표시 후 대기 시간 (초)")]
         [SerializeField] private float m_matchSuccessDelay = 0.5f;
+
+        [Header("강의 정보 설정")]
+        [Tooltip("공용 결과 팝업에 표시될 이 미니게임의 담당 교과목명입니다.")]
+        [SerializeField] private string m_lectureName = "카드 맞추기";
         #endregion
 
         #region 학점 판정 기준 (Grade Thresholds)
@@ -62,6 +66,7 @@ namespace GameArifiction.CardMatch
         public int Rows => m_rows;
         public float MatchFailDelay => m_matchFailDelay;
         public float MatchSuccessDelay => m_matchSuccessDelay;
+        public string LectureName => m_lectureName;
         #endregion
 
         #region Public Methods

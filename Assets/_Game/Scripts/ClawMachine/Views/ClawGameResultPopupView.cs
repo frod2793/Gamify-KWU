@@ -122,9 +122,9 @@ namespace GameArifiction.ClawMachine
         /// <summary>
         /// [기능]: 성공과 실패 상태 분기에 부합하는 안내문 출력 및 버튼 컴포넌트의 가시성/워딩 동적 세팅을 수행합니다.
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-06-06
+        /// [수정 날짜]: 2026-06-10
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 정오답 결과를 단일 Image의 Sprite 교체 방식으로 연출하도록 수정
+        /// [수정 내용]: 뷰모델의 SubmittedAnswer 정보를 캐싱하여 정오답 선택한 답안 피드백 텍스트 연출 추가
         /// </summary>
         private void UpdatePanelContent(bool isSuccess)
         {
@@ -132,6 +132,8 @@ namespace GameArifiction.ClawMachine
             {
                 return;
             }
+
+            ClawGameViewModel clawVM = m_viewModel as ClawGameViewModel;
 
             // 단일 Image 컴포넌트의 Sprite 교체 방식 적용 (Canvas Rebuild 오버헤드 원천 차단)
             if (m_statusIconImage != null)
@@ -150,44 +152,34 @@ namespace GameArifiction.ClawMachine
 
             if (isSuccess)
             {
-                // A. 인형뽑기 집게 퀴즈 성공 시 UI 세팅 및 성적 판정 계산
-                float elapsedClawTime = Mathf.Max(0f, 120f - m_viewModel.TimeLeft);
-                MinigameGrade calculatedGrade = MinigameGrade.D;
+                // A. 인형뽑기 집게 퀴즈 성공 시 UI 세팅
+                float elapsedClawTime = 0f;
+                MinigameGrade finalGrade = MinigameGrade.D;
 
-                // 성적 판정 기준 (120초 기준 소요 시간 기준):
-                // A - 60초 내
-                // B - 70~80초 사이 (60초 초과 80초 이하)
-                // C - 90~100초 사이 (80초 초과 100초 이하)
-                // D - 110~120초 사이 (100초 초과 120초 이하)
-                // F - 시간 초과 (120초 초과)
-                if (elapsedClawTime <= 60f)
+                if (clawVM != null)
                 {
-                    calculatedGrade = MinigameGrade.A;
-                }
-                else if (elapsedClawTime <= 80f)
-                {
-                    calculatedGrade = MinigameGrade.B;
-                }
-                else if (elapsedClawTime <= 100f)
-                {
-                    calculatedGrade = MinigameGrade.C;
-                }
-                else if (elapsedClawTime <= 120f)
-                {
-                    calculatedGrade = MinigameGrade.D;
+                    finalGrade = clawVM.QuizGrade;
+                    elapsedClawTime = clawVM.ElapsedClawTime;
                 }
                 else
                 {
-                    calculatedGrade = MinigameGrade.F;
+                    elapsedClawTime = Mathf.Max(0f, 120f - m_viewModel.TimeLeft);
                 }
 
                 if (PlayerSO != null)
                 {
-                    // PlayerSO 데이터에 저장 반영
-                    PlayerSO.SetMinigameGrade("ClawMachineQuiz", calculatedGrade);
+                    // PlayerSO 데이터에 저장 반영 (성적 저장 키값을 CraneGame으로 통일하고 뷰모델 산출 성적 대입)
+                    PlayerSO.SetMinigameGrade("CraneGame", finalGrade);
                 }
 
-                m_descriptionText.text = "정답\n정답이다";
+                // 뷰모델에서 플레이어가 빠뜨린 답안 텍스트 획득
+                string subAnswer = string.Empty;
+                if (clawVM != null)
+                {
+                    subAnswer = clawVM.SubmittedAnswer;
+                }
+
+                m_descriptionText.text = $"정답입니다!\n\n선택한 답안: {subAnswer}\n소요시간: {elapsedClawTime:F0}초";
                 
                 if (m_confirmButtonText != null)
                 {
@@ -202,7 +194,22 @@ namespace GameArifiction.ClawMachine
                     m_confirmButton.gameObject.SetActive(true);
                 }
 
-                m_descriptionText.text = "재수강\n재수강이다";
+                // 뷰모델에서 플레이어가 빠뜨린 답안 텍스트 획득
+                string subAnswer = string.Empty;
+                if (clawVM != null)
+                {
+                    subAnswer = clawVM.SubmittedAnswer;
+                }
+
+                // 시간 초과 vs 오답 판정 분리
+                if (m_viewModel.TimeLeft <= 0.001f)
+                {
+                    m_descriptionText.text = "시간 초과!\n다시 도전해보세요.";
+                }
+                else
+                {
+                    m_descriptionText.text = $"틀렸습니다!\n\n선택한 답안: {subAnswer}\n다시 도전해보세요.";
+                }
 
                 if (m_confirmButtonText != null)
                 {

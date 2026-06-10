@@ -27,7 +27,7 @@ namespace GameArifiction.ClawMachine
         private CancellationTokenSource m_timerCts;
 
         // [신규]: 퀴즈 정답 추적 및 캡슐 퀴즈 데이터 매핑 딕셔너리
-        private readonly Dictionary<string, bool> m_dollAnswers = new Dictionary<string, bool>();
+        private readonly Dictionary<string, (string AnswerText, bool IsCorrect)> m_dollAnswers = new Dictionary<string, (string AnswerText, bool IsCorrect)>();
         private QuizData m_currentQuiz;
 
         #endregion
@@ -81,6 +81,15 @@ namespace GameArifiction.ClawMachine
                 return 120f;
             }
         }
+
+        /// <summary>
+        /// [기능]: 인형뽑기 게임 채점에서 획득한 최종 학점 등급
+        /// [작성자]: 윤승종
+        /// </summary>
+        public MinigameGrade QuizGrade { get; private set; } = MinigameGrade.D;
+        public float ElapsedClawTime { get; private set; } = 0f;
+        public string SubmittedAnswer { get; private set; } = string.Empty;
+
         #endregion
 
         #region 초기화 (Initialization)
@@ -129,32 +138,78 @@ namespace GameArifiction.ClawMachine
         }
 
         /// <summary>
-        /// [기능]: 캡슐의 고유 ID와 정답 여부를 등록합니다. (캡슐 스폰 시 Initializer에서 호출)
+        /// [기능]: 캡슐의 고유 ID, 답안 텍스트, 그리고 정답 여부를 등록합니다. (캡슐 스폰 시 Initializer에서 호출)
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-10
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 답안 피드백 팝업 구성을 위한 답안 텍스트 파라미터 추가
         /// </summary>
-        public void RegisterDollAnswer(string dollId, bool isCorrect)
+        public void RegisterDollAnswer(string dollId, string answerText, bool isCorrect)
         {
             if (!m_dollAnswers.ContainsKey(dollId))
             {
-                m_dollAnswers.Add(dollId, isCorrect);
+                m_dollAnswers.Add(dollId, (answerText, isCorrect));
             }
         }
 
         /// <summary>
         /// [기능]: 플레이어가 인형을 퇴출구에 빠뜨렸을 때 호출되어 정답 여부를 체킹하는 핵심 비즈니스 메서드
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-10
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 제출된 답안의 텍스트를 SubmittedAnswer 속성에 저장하여 피드백 팝업에 연계
         /// </summary>
         public void func_SubmitAnswer(string dollId)
         {
-            if (m_dollAnswers.TryGetValue(dollId, out bool isCorrect))
+            if (m_dollAnswers.TryGetValue(dollId, out var answerInfo))
             {
+                SubmittedAnswer = answerInfo.AnswerText;
+                bool isCorrect = answerInfo.IsCorrect;
+
                 if (isCorrect)
                 {
-                    Debug.Log($"[ClawGameViewModel] 정답 골인 감지! 축하합니다. 정답입니다. (DollId: {dollId})");
+                    Debug.Log($"[ClawGameViewModel] 정답 골인 감지! 축하합니다. 정답입니다. (DollId: {dollId}, Answer: {SubmittedAnswer})");
                     if (m_soundService != null)
                     {
                         m_soundService.PlaySFX(SoundDefine.Sfx_claw_success);
                     }
+
+                    // [타이머 즉시 정지]
+                    StopTimer();
+
+                    // [학점 판별]
+                    float totalTimeLimit = m_model != null ? m_model.GetTimeLimitForCurrentPlay() : 120f;
+                    float remainingTime = m_model != null ? m_model.RemainingTime : 0f;
+                    float elapsedClawTime = Mathf.Max(0f, totalTimeLimit - remainingTime);
+                    ElapsedClawTime = elapsedClawTime;
+
+                    if (elapsedClawTime <= 60f)
+                    {
+                        QuizGrade = MinigameGrade.A;
+                    }
+                    else if (elapsedClawTime <= 80f)
+                    {
+                        QuizGrade = MinigameGrade.B;
+                    }
+                    else if (elapsedClawTime <= 100f)
+                    {
+                        QuizGrade = MinigameGrade.C;
+                    }
+                    else if (elapsedClawTime <= 120f)
+                    {
+                        QuizGrade = MinigameGrade.D;
+                    }
+                    else
+                    {
+                        QuizGrade = MinigameGrade.F;
+                    }
+
+                    if (m_playerSO != null)
+                    {
+                        m_playerSO.SetMinigameGrade("CraneGame", QuizGrade);
+                        Debug.Log($"[ClawGameViewModel] 인형뽑기 퀴즈 성공 등급 저장 완료. 소요시간: {elapsedClawTime:F2}초, 등급: {QuizGrade}");
+                    }
+
                     OnQuizSuccess?.Invoke();
                     
                     // 게임 클리어 상태(Result)로 전이
@@ -162,7 +217,7 @@ namespace GameArifiction.ClawMachine
                 }
                 else
                 {
-                    Debug.Log($"[ClawGameViewModel] 오답 골인 감지! 오답입니다. (DollId: {dollId})");
+                    Debug.Log($"[ClawGameViewModel] 오답 골인 감지! 오답입니다. (DollId: {dollId}, Answer: {SubmittedAnswer})");
                     if (m_soundService != null)
                     {
                         m_soundService.PlaySFX(SoundDefine.Sfx_claw_fail);
@@ -325,8 +380,18 @@ public void NotifyAscendCompleted()
             ChangeState(ClawStateType.Result);
         }
 
+        /// <summary>
+        /// [기능]: 결과 연출 완료를 알리는 상태 통보를 처리합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-10
+        /// [수정 내용]: 정답을 성공적으로 맞추어 Result 상태인 경우에는 타이머가 재개되지 않고 대기하도록 방어 코드를 적용합니다.
+        /// </summary>
         public void NotifyResultCompleted()
         {
+            if (m_currentState == ClawStateType.Result)
+            {
+                return;
+            }
             ChangeState(ClawStateType.Idle);
         }
 

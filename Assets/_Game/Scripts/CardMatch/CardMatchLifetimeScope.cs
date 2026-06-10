@@ -2,6 +2,7 @@ using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 using GameArifiction.Player;
+using GameArifiction.UI.Common;
 
 namespace GameArifiction.CardMatch
 {
@@ -45,7 +46,7 @@ namespace GameArifiction.CardMatch
 
             // 2. 뷰 컴포넌트 자동 탐색 및 등록
             builder.RegisterComponentInHierarchy<CardMatchView>();
-            builder.RegisterComponentInHierarchy<CardMatchResultPopupView>();
+            builder.RegisterComponentInHierarchy<CommonResultPopupView>();
 
             // 3. EntryPoint (C# 진입점) 및 씬 제어 등록
             builder.RegisterEntryPoint<CardMatchFlowController>();
