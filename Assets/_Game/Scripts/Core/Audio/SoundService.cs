@@ -22,6 +22,18 @@ namespace GameArifiction.Core.Audio
         public event Action OnPauseBGMRequested;
         public event Action OnResumeBGMRequested;
 
+        /// <summary>
+        /// [기능]: 페이드 효과와 함께 BGM 재생이 요청되었을 때 발생합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public event Action<AudioClip, float> OnPlayBGMWithFadeRequested;
+
+        /// <summary>
+        /// [기능]: 페이드 효과와 함께 BGM 정지가 요청되었을 때 발생합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public event Action<float> OnStopBGMWithFadeRequested;
+
         private Dictionary<string, AudioClip> m_clipCache = new Dictionary<string, AudioClip>();
 
         public SoundService()
@@ -114,6 +126,41 @@ namespace GameArifiction.Core.Audio
         public void ResumeBGM()
         {
             OnResumeBGMRequested?.Invoke();
+        }
+
+        /// <summary>
+        /// [기능]: 특정 오디오 클립을 지정된 시간 동안 페이드인하며 BGM으로 재생합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-10
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 신규 생성
+        /// </summary>
+        public async UniTaskVoid PlayBGMWithFade(string clipPath, float duration = 1f)
+        {
+            Debug.Log($"[SoundService] PlayBGMWithFade 호출됨. 경로: {clipPath}, 지속시간: {duration}s");
+            var clip = await LoadClipAsync(clipPath);
+            if (clip != null)
+            {
+                Debug.Log($"[SoundService] 오디오 클립 로드 성공. 이벤트(OnPlayBGMWithFadeRequested)를 트리거합니다: {clip.name}");
+                OnPlayBGMWithFadeRequested?.Invoke(clip, duration);
+            }
+            else
+            {
+                Debug.LogError($"[SoundService] 오디오 클립 로드 실패. 경로: {clipPath}");
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 재생 중인 BGM을 지정된 시간 동안 페이드아웃하며 정지합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-10
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 신규 생성
+        /// </summary>
+        public void StopBGMWithFade(float duration = 1f)
+        {
+            Debug.Log($"[SoundService] StopBGMWithFade 호출됨. 지속시간: {duration}s");
+            OnStopBGMWithFadeRequested?.Invoke(duration);
         }
 
         private async UniTask<AudioClip> LoadClipAsync(string path)

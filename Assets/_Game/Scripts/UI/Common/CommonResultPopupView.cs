@@ -61,6 +61,11 @@ namespace GameArifiction.UI.Common
         [Tooltip("결과 확인 및 다음 단계를 진행하는 확인 버튼입니다.")]
         private Button m_confirmButton;
 
+        [Header("플레이어 데이터 연동")]
+        [SerializeField]
+        [Tooltip("미니게임 결과를 기록할 플레이어 데이터 에셋입니다.")]
+        private PlayerSO m_playerSO;
+
         #endregion
 
         #region 내부 필드 (Private Fields)
@@ -104,6 +109,17 @@ namespace GameArifiction.UI.Common
             if (data == null)
             {
                 return;
+            }
+
+            // 플레이어 데이터에 미니게임 성적 기록
+            if (m_playerSO != null && data.Grade.HasValue && data.Grade.Value != MinigameGrade.None)
+            {
+                // DTO에 명시적인 ID가 지정되어 있다면 이를 사용하고, 없으면 현재 활성화된 씬 이름 사용
+                string minigameId = string.IsNullOrEmpty(data.MinigameId)
+                    ? UnityEngine.SceneManagement.SceneManager.GetActiveScene().name
+                    : data.MinigameId;
+
+                m_playerSO.SetMinigameGrade(minigameId, data.Grade.Value);
             }
 
             // 1. 텍스트 설정

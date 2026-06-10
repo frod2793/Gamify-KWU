@@ -665,6 +665,7 @@ MonoBehaviour:
   m_spriteD: {fileID: 21300000, guid: 5bf09f7303451462cbcce28a3d2ad687, type: 3}
   m_spriteF: {fileID: 21300000, guid: b794fd167ecdc40f2b55117380b53de1, type: 3}
   m_confirmButton: {fileID: 5798963842783439546}
+  m_playerSO: {fileID: 11400000, guid: b0718fcbf5b323844b90327f2c1fb228, type: 2}
 --- !u!1 &5333190276176082449
 GameObject:
   m_ObjectHideFlags: 0

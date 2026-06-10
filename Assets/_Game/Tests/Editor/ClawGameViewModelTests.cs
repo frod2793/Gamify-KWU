@@ -138,6 +138,8 @@ namespace GameArifiction.Tests.Editor
         public event Action OnStopBGMRequested { add { } remove { } }
         public event Action OnPauseBGMRequested { add { } remove { } }
         public event Action OnResumeBGMRequested { add { } remove { } }
+        public event Action<AudioClip, float> OnPlayBGMWithFadeRequested { add { } remove { } }
+        public event Action<float> OnStopBGMWithFadeRequested { add { } remove { } }
 
         public void SetBgmVolume(float volume) { }
         public void SetSfxVolume(float volume) { }
@@ -157,5 +159,12 @@ namespace GameArifiction.Tests.Editor
         public void StopBGM() { }
         public void PauseBGM() { }
         public void ResumeBGM() { }
+
+        public UniTaskVoid PlayBGMWithFade(string clipPath, float duration = 1f)
+        {
+            return default;
+        }
+
+        public void StopBGMWithFade(float duration = 1f) { }
     }
 }

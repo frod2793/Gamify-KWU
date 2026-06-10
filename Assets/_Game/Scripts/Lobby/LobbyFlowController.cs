@@ -4,6 +4,8 @@ using VContainer.Unity;
 using GamifyKWU.UI.Title;
 using GameArifiction.Player;
 using GameArifiction.Interaction;
+using System;
+using GameArifiction.Core.Audio;
 
 /// <summary>
 /// [기능]: 로비 씬의 진입점 역할을 수행하며, 세션 상태를 판단하고 UI 패널 및 인트로 컷씬 개시를 관리하는 흐름 제어 클래스
@@ -11,7 +13,7 @@ using GameArifiction.Interaction;
 /// </summary>
 namespace GamifyKWU.Lobby
 {
-    public class LobbyFlowController : IStartable
+    public class LobbyFlowController : IStartable, IDisposable
     {
         #region 내부 필드 (Private Fields)
 
@@ -20,6 +22,7 @@ namespace GamifyKWU.Lobby
         private readonly TitleView m_titleView;
         private readonly IntroCutsceneController m_introController;
         private readonly PlayerView m_playerView;
+        private readonly ISoundService m_soundService;
 
         #endregion
 
@@ -35,18 +38,20 @@ namespace GamifyKWU.Lobby
             UIManager uiManager,
             TitleView titleView,
             IntroCutsceneController introController,
-            PlayerView playerView)
+            PlayerView playerView,
+            ISoundService soundService)
         {
             m_playerSO = playerSO;
             m_uiManager = uiManager;
             m_titleView = titleView;
             m_introController = introController;
             m_playerView = playerView;
+            m_soundService = soundService;
         }
 
         #endregion
 
-        #region 인터페이스 구현 (IStartable)
+        #region 인터페이스 구현 (IStartable, IDisposable)
 
         /// <summary>
         /// [기능]: VContainer 컨테이너 빌드가 완료된 직후 실행되는 시작 진입점 메서드
@@ -55,7 +60,30 @@ namespace GamifyKWU.Lobby
         public void Start()
         {
             Debug.Log("[LobbyFlowController] 로비 흐름 제어 프로세스를 개시합니다.");
+
+            if (m_soundService != null)
+            {
+                m_soundService.PlayBGMWithFade(SoundDefine.Lobby_Bgm, 1f);
+            }
+
             DetermineSessionState();
+        }
+
+        /// <summary>
+        /// [기능]: 컨트롤러가 파괴되거나 씬 전환 시 호출되어 리소스를 해제하고 BGM을 페이드아웃시킵니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-10
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 신규 구현
+        /// </summary>
+        public void Dispose()
+        {
+            Debug.Log("[LobbyFlowController] 로비 흐름 제어 프로세스를 종료하고 리소스를 해제합니다.");
+
+            if (m_soundService != null)
+            {
+                m_soundService.StopBGMWithFade(1f);
+            }
         }
 
         #endregion

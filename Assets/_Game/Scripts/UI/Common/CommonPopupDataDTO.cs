@@ -42,6 +42,11 @@ namespace GameArifiction.UI.Common
         /// </summary>
         public Action OnConfirm { get; set; }
 
+        /// <summary>
+        /// 미니게임 고유 식별 ID입니다. (생략 시 현재 활성화된 씬 이름 사용)
+        /// </summary>
+        public string MinigameId { get; set; }
+
         #endregion
 
         #region 초기화 (Initialization)
@@ -56,7 +61,8 @@ namespace GameArifiction.UI.Common
             string lectureName,
             MinigameGrade? grade,
             string confirmButtonText,
-            Action onConfirm)
+            Action onConfirm,
+            string minigameId = null)
         {
             Title = title;
             Description = description;
@@ -64,6 +70,7 @@ namespace GameArifiction.UI.Common
             Grade = grade;
             ConfirmButtonText = confirmButtonText;
             OnConfirm = onConfirm;
+            MinigameId = minigameId;
         }
 
         #endregion

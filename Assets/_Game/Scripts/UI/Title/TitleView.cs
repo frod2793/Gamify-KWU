@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using EasyTransition;
 using VContainer;
+using DG.Tweening;
 
 /// <summary>
 /// [기능]: 타이틀 화면 UI의 시각적 요소와 플레이어 입력을 담당하며, Transition 패키지를 제어하는 뷰 클래스입니다.
@@ -9,6 +10,17 @@ using VContainer;
 /// </summary>
 namespace GamifyKWU.UI.Title
 {
+    /// <summary>
+    /// [기능]: 타이틀 로고 이미지의 인트로 연출 애니메이션 타입 정의입니다.
+    /// [작성자]: 윤승종
+    /// </summary>
+    public enum TitleLogoAnimType
+    {
+        None,
+        RotateAndFlyIn, // 회전하며 날아오기
+        ScalePopIn      // 축소 상태에서 확대되며 나타나기 (Scale 0 -> 1)
+    }
+
     public class TitleView : MonoBehaviour
     {
         #region UI 참조 (Inspector)
@@ -16,6 +28,31 @@ namespace GamifyKWU.UI.Title
         [Header("트랜지션 설정")]
         [SerializeField] private TransitionSettings m_transitionSettings;
         [SerializeField] private float m_startDelay = 0f;
+
+        [Header("타이틀 로고 애니메이션 설정")]
+        [SerializeField]
+        [Tooltip("애니메이션을 적용할 타이틀 로고의 RectTransform입니다.")]
+        private RectTransform m_titleLogoRect;
+
+        [SerializeField]
+        [Tooltip("타이틀 시작 시 적용할 애니메이션 종류입니다.")]
+        private TitleLogoAnimType m_logoAnimType = TitleLogoAnimType.ScalePopIn;
+
+        [SerializeField]
+        [Tooltip("애니메이션 진행 시간(초)입니다.")]
+        private float m_logoAnimDuration = 0.8f;
+
+        [SerializeField]
+        [Tooltip("회전하며 날아올 때 시작할 오프셋 위치입니다.")]
+        private Vector2 m_flyInStartOffset = new Vector2(0f, 600f);
+
+        [SerializeField]
+        [Tooltip("회전하며 날아올 때의 시작 회전 각도(Z축)입니다.")]
+        private float m_flyInStartRotation = -180f;
+
+        [SerializeField]
+        [Tooltip("애니메이션의 Ease 종류입니다.")]
+        private Ease m_logoAnimEase = Ease.OutBack;
 
         #endregion
 
@@ -43,6 +80,7 @@ namespace GamifyKWU.UI.Title
         private void Start()
         {
             InitializeMVVM();
+            PlayTitleLogoAnimation();
         }
 
         private void OnDestroy()
@@ -70,6 +108,46 @@ namespace GamifyKWU.UI.Title
             else
             {
                 Debug.LogError("[TitleView] 뷰모델이 주입되지 않았습니다!");
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 설정된 애니메이션 타입에 맞춰 타이틀 로고의 인트로 연출을 재생합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-10
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 신규 생성 및 DOTween 애니메이션 구현
+        /// </summary>
+        private void PlayTitleLogoAnimation()
+        {
+            if (m_titleLogoRect == null)
+            {
+                Debug.LogWarning("[TitleView] m_titleLogoRect가 할당되지 않아 애니메이션을 재생할 수 없습니다.");
+                return;
+            }
+
+            // DOTween 안전 예외 처리 (이전 실행 중인 트윈이 있다면 정지)
+            m_titleLogoRect.DOKill();
+
+            switch (m_logoAnimType)
+            {
+                case TitleLogoAnimType.RotateAndFlyIn:
+                    Vector2 originalPos = m_titleLogoRect.anchoredPosition;
+                    m_titleLogoRect.anchoredPosition = originalPos + m_flyInStartOffset;
+                    m_titleLogoRect.localRotation = Quaternion.Euler(0f, 0f, m_flyInStartRotation);
+
+                    m_titleLogoRect.DOAnchorPos(originalPos, m_logoAnimDuration).SetEase(m_logoAnimEase);
+                    m_titleLogoRect.DOLocalRotate(Vector3.zero, m_logoAnimDuration, RotateMode.FastBeyond360).SetEase(m_logoAnimEase);
+                    break;
+
+                case TitleLogoAnimType.ScalePopIn:
+                    m_titleLogoRect.localScale = Vector3.zero;
+                    m_titleLogoRect.DOScale(Vector3.one, m_logoAnimDuration).SetEase(m_logoAnimEase);
+                    break;
+
+                case TitleLogoAnimType.None:
+                default:
+                    break;
             }
         }
 

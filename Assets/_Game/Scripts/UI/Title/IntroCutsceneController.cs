@@ -59,12 +59,12 @@ namespace GamifyKWU.UI.Title
         private RectTransform m_speechBubbleRect;
 
         [SerializeField]
-        [Tooltip("플레이어 캐릭터 머리 위에 띄우기 위한 월드 Y축 보정(Offset) 값입니다.")]
-        private float m_worldOffsetY = 2.3f;
+        [Tooltip("말풍선의 꼬리표를 기준으로 확장되고 위치가 동기화되도록 하는 피벗(Pivot) 값입니다. (예: 하단 중앙 = 0.5, 0)")]
+        private Vector2 m_bubblePivot = new Vector2(0.5f, 0f);
 
         [SerializeField]
-        [Tooltip("UI 스크린 좌표로 매핑된 뒤의 UI 기준 픽셀 x, y 보정(Offset) 오프셋입니다.")]
-        private Vector2 m_uiPixelOffset = Vector2.zero;
+        [Tooltip("플레이어 캐릭터 머리 위에 띄우기 위한 월드 Y축 보정(Offset) 값입니다.")]
+        private float m_worldOffsetY = 2.3f;
 
         [Header("타자 연출 설정")]
         [SerializeField]
@@ -82,9 +82,9 @@ namespace GamifyKWU.UI.Title
 
         private string[] m_tutorialTexts = new string[]
         {
-            "아휴... 광운대학교 마스코트로서 어느덧 [XX]년...\n그냥 얼굴만 비추면 다 되는 줄 알았는데, 총장님께서 마스코트의 가치를 증명하라며 성적표를 받아오라고 하시네?",
-            "그래서 여러 학과 중에 제일 재밌어 보이는 **'게임콘텐츠학과'**로 냉큼 달려왔지!\n와~ 보니까 신기하고 재밌어 보이는 미니게임들이 엄청 많은걸?",
-            "조아써! 이 게임들을 전부 플레이하고, 아주 우수한 성적을 받아서 총장님께 당당하게 보여드리는 거야! 다들 우니를 도와줄 거지?"
+            "아휴... 광운대학교 마스코트로서 어느덧 [XX]년...\n그냥 얼굴만 비추면 다 되는 줄 알았는데,\n총장님께서 마스코트의 가치를 증명하라며\n성적표를 받아오라고 하시네?",
+            "그래서 여러 학과 중에 제일 재밌어 보이는\n['게임콘텐츠학과']로 냉큼 달려왔지!\n와~ 보니까 신기하고 재밌어 보이는\n미니게임들이 엄청 많은걸?",
+            "조아써! 이 게임들을 전부 플레이하고,\n아주 우수한 성적을 받아서\n총장님께 당당하게 보여드리는 거야!\n다들 우니를 도와줄 거지?"
         };
         private int m_currentTextIndex = 0;
         private bool m_isIntroRunning = false;
@@ -93,6 +93,7 @@ namespace GamifyKWU.UI.Title
         private bool m_isTypingActive = false;
         private string m_fullTextOfCurrentPage = string.Empty;
         private GameArifiction.Camera.CameraFollow m_cameraFollow;
+        private RectTransform m_canvasRect;
 
         #endregion
 
@@ -279,6 +280,9 @@ namespace GamifyKWU.UI.Title
                 return;
             }
 
+            // [수정] 인스펙터에서의 피벗 값 수정을 실시간으로 반영하기 위해 매 프레임 피벗을 갱신합니다.
+            m_speechBubbleRect.pivot = m_bubblePivot;
+
             var activeCamera = m_cameraFollow.MainCamera;
             if (activeCamera == null)
             {
@@ -290,13 +294,18 @@ namespace GamifyKWU.UI.Title
 
             Vector2 screenPoint = activeCamera.WorldToScreenPoint(worldPos);
 
-            RectTransform canvasRect = m_speechBubbleRect.parent as RectTransform;
-            if (canvasRect != null)
+            // [최적화] parent 캐스팅 오버헤드를 줄이기 위한 레이지 캐싱(Lazy Caching) 적용
+            if (m_canvasRect == null)
+            {
+                m_canvasRect = m_speechBubbleRect.parent as RectTransform;
+            }
+
+            if (m_canvasRect != null)
             {
                 Vector2 localPoint;
-                if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, null, out localPoint))
+                if (RectTransformUtility.ScreenPointToLocalPointInRectangle(m_canvasRect, screenPoint, null, out localPoint))
                 {
-                    m_speechBubbleRect.anchoredPosition = localPoint + m_uiPixelOffset;
+                    m_speechBubbleRect.anchoredPosition = localPoint;
                 }
             }
         }
@@ -308,8 +317,17 @@ namespace GamifyKWU.UI.Title
                 m_speechBubblePanel.SetActive(true);
                 UpdateBubblePosition();
                 
-                m_speechBubblePanel.transform.localScale = Vector3.zero;
-                m_speechBubblePanel.transform.DOScale(Vector3.one, 0.3f).SetEase(Ease.OutBack);
+                // [수정] 피벗(꼬리표)이 (0.5, 0)으로 실시간 갱신되는 RectTransform을 직접 스케일 제어합니다.
+                if (m_speechBubbleRect != null)
+                {
+                    m_speechBubbleRect.localScale = Vector3.zero;
+                    m_speechBubbleRect.DOScale(Vector3.one, 0.3f).SetEase(Ease.OutBack);
+                }
+                else
+                {
+                    m_speechBubblePanel.transform.localScale = Vector3.zero;
+                    m_speechBubblePanel.transform.DOScale(Vector3.one, 0.3f).SetEase(Ease.OutBack);
+                }
 
                 m_fullTextOfCurrentPage = m_tutorialTexts[m_currentTextIndex];
                 StartTypingEffect(m_fullTextOfCurrentPage).Forget();
@@ -389,9 +407,19 @@ namespace GamifyKWU.UI.Title
 
             if (m_speechBubblePanel != null)
             {
-                m_speechBubblePanel.transform.DOScale(Vector3.zero, 0.2f)
-                    .SetEase(Ease.InBack)
-                    .OnComplete(() => m_speechBubblePanel.SetActive(false));
+                // [수정] 종료 시에도 설정된 피벗(꼬리표) 기준으로 축소하도록 RectTransform을 직접 제어합니다.
+                if (m_speechBubbleRect != null)
+                {
+                    m_speechBubbleRect.DOScale(Vector3.zero, 0.2f)
+                        .SetEase(Ease.InBack)
+                        .OnComplete(() => m_speechBubblePanel.SetActive(false));
+                }
+                else
+                {
+                    m_speechBubblePanel.transform.DOScale(Vector3.zero, 0.2f)
+                        .SetEase(Ease.InBack)
+                        .OnComplete(() => m_speechBubblePanel.SetActive(false));
+                }
             }
 
             if (m_cameraFollow != null)
