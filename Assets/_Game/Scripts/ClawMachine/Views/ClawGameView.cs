@@ -4,6 +4,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
 using DG.Tweening;
 using GameArifiction.Core.Audio;
+using GameArifiction.UI.Common;
 using VContainer;
 
 namespace GameArifiction.ClawMachine
@@ -51,8 +52,16 @@ namespace GameArifiction.ClawMachine
         private Button m_showTutorialButton;
 
         [SerializeField]
+        [Tooltip("게임 일시정지를 제어하는 UI 버튼입니다.")]
+        private Button m_pauseButton;
+
+        [SerializeField]
         [Tooltip("시작 카운트다운 숫자를 표시할 TextMeshProUGUI 컴포넌트입니다.")]
         private TMPro.TextMeshProUGUI m_countdownText;
+
+        [SerializeField]
+        [Tooltip("게임 일시정지 시 표시될 공통 일시정지 팝업 View입니다.")]
+        private CommonPausePopupView m_pausePopupView;
         #endregion
 
 
@@ -68,6 +77,9 @@ namespace GameArifiction.ClawMachine
         /// <summary>
         /// [기능]: VContainer를 통해 공통 사운드 서비스를 주입받습니다.
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-11
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: CommonPausePopupView를 인스펙터 바인딩으로 전환하여 주입 매개변수 제거
         /// </summary>
         [Inject]
         public void Construct(ISoundService soundService)
@@ -107,6 +119,10 @@ namespace GameArifiction.ClawMachine
             {
                 m_showTutorialButton.onClick.AddListener(func_OnShowTutorialButtonClick);
             }
+            if (m_pauseButton != null)
+            {
+                m_pauseButton.onClick.AddListener(func_OnPauseButtonClick);
+            }
 
             // [신규]: UI 좌우 이동 버튼 EventTrigger 기반 PointerDown/Up 동적 바인딩 주입 (타입 세이프 가동 보장)
             RegisterPointerEvent(m_leftButton, EventTriggerType.PointerDown, (data) => func_OnLeftButtonDown());
@@ -138,6 +154,10 @@ namespace GameArifiction.ClawMachine
             if (m_showTutorialButton != null)
             {
                 m_showTutorialButton.onClick.RemoveListener(func_OnShowTutorialButtonClick);
+            }
+            if (m_pauseButton != null)
+            {
+                m_pauseButton.onClick.RemoveListener(func_OnPauseButtonClick);
             }
 
             // EventTrigger 동적 바인딩 해제 (메모리 누수 차단)
@@ -426,6 +446,73 @@ namespace GameArifiction.ClawMachine
             {
                 m_tutorialPopupView.func_ShowTutorial();
             }
+        }
+
+        /// <summary>
+        /// [기능]: 일시정지 버튼 클릭 시 호출되는 콜백으로, 게임을 정지하고 일시정지 공통 팝업을 표시합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-11
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 비활성화된 부모 UI 계층 강제 활성화 가드 코드 추가 및 타임스케일 대입 순서 최적화
+        /// </summary>
+        public void func_OnPauseButtonClick()
+        {
+            if (m_soundService != null)
+            {
+                m_soundService.PlaySFX(SoundDefine.Sfx_claw_touch);
+                m_soundService.PauseBGM();
+            }
+
+            if (m_pausePopupView != null)
+            {
+                // [부모 레이어 렌더 가드]: 부모 노드 중 비활성화된 패널이나 캔버스가 있다면 강제로 켬
+                Transform parentNode = m_pausePopupView.transform.parent;
+                while (parentNode != null)
+                {
+                    if (!parentNode.gameObject.activeSelf)
+                    {
+                        parentNode.gameObject.SetActive(true);
+                        Debug.Log($"[ClawGameView] 비활성 상태인 부모 UI 오브젝트를 강제 활성화하였습니다: {parentNode.name}");
+                    }
+                    parentNode = parentNode.parent;
+                }
+
+                CommonPausePopupDataDTO pauseData = new CommonPausePopupDataDTO
+                {
+                    OnResume = () =>
+                    {
+                        Time.timeScale = 1f;
+                        if (m_soundService != null)
+                        {
+                            m_soundService.ResumeBGM();
+                        }
+                    },
+                    OnReplayTutorial = () =>
+                    {
+                        Time.timeScale = 1f;
+                        if (m_soundService != null)
+                        {
+                            m_soundService.ResumeBGM();
+                        }
+                        if (m_tutorialPopupView != null)
+                        {
+                            m_tutorialPopupView.func_ShowTutorial();
+                        }
+                    },
+                    OnReplayQuiz = null // 인형뽑기는 단독 퀴즈 재노출이 없으므로 null 설정으로 버튼 숨김
+                };
+
+                m_pausePopupView.Setup(pauseData);
+                m_pausePopupView.ShowPopup();
+                Debug.Log("[ClawGameView] 게임을 일시정지하고 일시정지 팝업을 활성화했습니다.");
+            }
+            else
+            {
+                Debug.LogWarning("[ClawGameView] CommonPausePopupView 의존성이 주입되지 않아 일시정지 팝업을 표시할 수 없습니다.");
+            }
+
+            // [수정]: 트윈 애니메이션 기동 프레임을 확보한 후 최종적으로 시간 스케일을 멈춤
+            Time.timeScale = 0f;
         }
         #endregion
 

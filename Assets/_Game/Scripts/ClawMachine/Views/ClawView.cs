@@ -332,6 +332,12 @@ namespace GameArifiction.ClawMachine
         #region 절차적 물리 엔진 (Procedural Physics Engine)
         private void UpdateCartMovement()
         {
+            // [추가]: 일시정지 시 물리 연동 조기 리턴
+            if (Time.deltaTime < 0.0001f)
+            {
+                return;
+            }
+
             if (m_isMoving && m_clawRoot != null)
             {
                 Vector3 pos = m_clawRoot.localPosition;
@@ -343,7 +349,16 @@ namespace GameArifiction.ClawMachine
 
         private void UpdatePendulumPhysics()
         {
-            if (m_clawRoot == null) return;
+            if (m_clawRoot == null)
+            {
+                return;
+            }
+
+            // [추가]: 일시정지(deltaTime = 0) 시 0으로 나누기(Division by Zero)에 의한 NaN 예방 가드
+            if (Time.deltaTime < 0.0001f)
+            {
+                return;
+            }
 
             // 1. 카트의 가속도 계산 (프레임 간 월드 좌표 차이)
             float currentCartX = m_clawRoot.position.x;
@@ -442,7 +457,14 @@ namespace GameArifiction.ClawMachine
             float currentElasticity = m_isMoving ? m_ropeLagElasticity : m_ropeRestoration;
             
             Vector3 prevLeader = startPos;
-            Vector3 normal = Vector3.Cross(direction.normalized, Vector3.forward).normalized;
+            
+            // [수정]: direction 크기가 비정상적으로 소실될 시 NaN 예방 가드
+            Vector3 normal = Vector3.right;
+            if (direction.sqrMagnitude > 0.0001f)
+            {
+                normal = Vector3.Cross(direction.normalized, Vector3.forward).normalized;
+            }
+
             float dt = Time.deltaTime;
             float tTime = Time.time;
 
@@ -475,14 +497,26 @@ namespace GameArifiction.ClawMachine
                 // 처짐 및 흔들림 파동 2차 결합
                 float sagAmount = 4.0f * t * (1.0f - t);
                 Vector3 sagOffset = Vector3.down * (m_wireSagIntensity * 0.5f * sagAmount);
-                float waveValue = Mathf.Sin(tTime * m_waveSpeed - t * m_waveFrequency) * (m_waveAmplitude * 0.375f) * sagAmount * Mathf.Clamp(m_angularVelocity, -2.5f, 2.5f);
+                
+                // [수정]: angularVelocity가 NaN 상태인 경우 연출 배제 가드 추가
+                float waveValue = 0f;
+                if (!float.IsNaN(m_angularVelocity))
+                {
+                    waveValue = Mathf.Sin(tTime * m_waveSpeed - t * m_waveFrequency) * (m_waveAmplitude * 0.375f) * sagAmount * Mathf.Clamp(m_angularVelocity, -2.5f, 2.5f);
+                }
                 Vector3 waveOffset = normal * waveValue;
 
                 Vector3 renderedPos = finalSegmentPos + sagOffset + waveOffset;
                 
                 // 파동 적용 후에도 시작점과 끝점은 100% 고정되도록 클램핑
-                if (i == 0) renderedPos = startPos;
-                else if (i == pointCount - 1) renderedPos = endPos;
+                if (i == 0)
+                {
+                    renderedPos = startPos;
+                }
+                else if (i == pointCount - 1)
+                {
+                    renderedPos = endPos;
+                }
                 
                 renderedPos.z = m_wireZDepth;
 

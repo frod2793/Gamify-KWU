@@ -161,23 +161,29 @@ namespace GameArifiction.UI.Common
         /// <summary>
         /// [기능]: 팝업을 연출 효과와 함께 화면에 표시합니다.
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-11
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: timeScale = 0f 상태에서도 팝업이 나타나도록 SetUpdate(true) 추가
         /// </summary>
         public void ShowPopup()
         {
             gameObject.SetActive(true);
             transform.DOKill();
             transform.localScale = Vector3.zero;
-            transform.DOScale(Vector3.one, 0.45f).SetEase(Ease.OutBack);
+            transform.DOScale(Vector3.one, 0.45f).SetEase(Ease.OutBack).SetUpdate(true);
         }
 
         /// <summary>
         /// [기능]: 팝업을 연출 효과와 함께 감춘 후 비활성화합니다.
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-11
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: timeScale = 0f 상태에서도 팝업이 닫히도록 SetUpdate(true) 추가
         /// </summary>
         public void func_HidePopup()
         {
             transform.DOKill();
-            transform.DOScale(Vector3.zero, 0.2f).SetEase(Ease.InBack).OnComplete(() =>
+            transform.DOScale(Vector3.zero, 0.2f).SetEase(Ease.InBack).SetUpdate(true).OnComplete(() =>
             {
                 gameObject.SetActive(false);
             });

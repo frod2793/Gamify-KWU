@@ -9,6 +9,17 @@ namespace GameArifiction.ClawMachine
     [RequireComponent(typeof(BoxCollider2D))]
     public class ClawMachineExitView : MonoBehaviour
     {
+        #region UI 참조 (Inspector)
+        [Header("캡슐 골인 이펙트 프리팹")]
+        [SerializeField]
+        [Tooltip("정답 캡슐 골인 시 월드 공간에 생성할 노란색 반짝이 이펙트 프리팹입니다.")]
+        private GameObject m_correctEffectPrefab;
+
+        [SerializeField]
+        [Tooltip("오답 캡슐 골인 시 월드 공간에 생성할 회색 연기 구름 이펙트 프리팹입니다.")]
+        private GameObject m_wrongEffectPrefab;
+        #endregion
+
         #region 내부 필드 (Private Fields)
         private ClawGameViewModel m_viewModel;
         #endregion
@@ -33,6 +44,13 @@ namespace GameArifiction.ClawMachine
         #endregion
 
         #region 유니티 물리 트리거 감지 (Unity Physics Lifecycle)
+        /// <summary>
+        /// [기능]: 캡슐이 골인 영역에 닿으면 정답/오답 여부를 식별하여 해당 이펙트를 재생한 후 제출 처리합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-11
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 캡슐의 정오답(IsCorrect) 여부에 따른 반짝이/연기 이펙트 동적 스폰 및 소멸 처리 추가
+        /// </summary>
         private void OnTriggerEnter2D(Collider2D collision)
         {
             if (m_viewModel == null || collision == null)
@@ -49,7 +67,35 @@ namespace GameArifiction.ClawMachine
                 {
                     Debug.Log($"[ClawMachineExitView] 퇴출구 캡슐 골인 감지 완료. DollId: {dollView.DollId}");
 
-                    // 뷰모델로 정답 체킹 이벤트 전송
+                    // 1. 골인 캡슐의 정오답 판정 및 월드 공간 이펙트 스폰 연출
+                    Vector3 spawnPosition = dollView.transform.position;
+
+                    if (dollView.IsCorrect)
+                    {
+                        if (m_correctEffectPrefab != null)
+                        {
+                            GameObject correctEffectInstance = Instantiate(m_correctEffectPrefab, spawnPosition, Quaternion.identity);
+                            Destroy(correctEffectInstance, 1.5f);
+                        }
+                        else
+                        {
+                            Debug.LogWarning("[ClawMachineExitView] m_correctEffectPrefab이 인스펙터에 할당되어 있지 않습니다.");
+                        }
+                    }
+                    else
+                    {
+                        if (m_wrongEffectPrefab != null)
+                        {
+                            GameObject wrongEffectInstance = Instantiate(m_wrongEffectPrefab, spawnPosition, Quaternion.identity);
+                            Destroy(wrongEffectInstance, 1.5f);
+                        }
+                        else
+                        {
+                            Debug.LogWarning("[ClawMachineExitView] m_wrongEffectPrefab이 인스펙터에 할당되어 있지 않습니다.");
+                        }
+                    }
+
+                    // 2. 뷰모델로 정답 체킹 이벤트 전송
                     m_viewModel.func_SubmitAnswer(dollView.DollId);
 
                     // 연출을 위해 골인된 캡슐은 0.3초 후 안전하게 소멸시킵니다.

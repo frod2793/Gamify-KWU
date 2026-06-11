@@ -105,6 +105,13 @@ namespace GameArifiction.ClawMachine
         #endregion
 
         #region 내부 헬퍼 메서드 (Private Methods)
+        /// <summary>
+        /// [기능]: 씬 내 하이어라키에서 뷰 컴포넌트들을 찾아 VContainer에 등록합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-11
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: CommonPausePopupView 수동 탐색 등록 로직 제거 (인스펙터 직접 바인딩 전환)
+        /// </summary>
         private void ConfigureViews(IContainerBuilder builder)
         {
             // 인형뽑기(ClawMachine) 뷰
