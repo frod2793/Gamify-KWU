@@ -178,6 +178,11 @@ MonoBehaviour:
     \uACB0\uACFC \uD31D\uC5C5 \uD14C\uC2A4\uD2B8 \uBA58\uD2B8\uC785\uB2C8\uB2E4.
     \uD0C0\uC774\uD551 \uC5F0\uCD9C \uBC0F \uC2A4\uD0B5 \uAE30\uB2A5\uC774 \uC815\uC0C1
     \uC791\uB3D9\uD569\uB2C8\uAE4C?"
+  m_targetKiosk: {fileID: 1513845336}
+  m_playerSO: {fileID: 11400000, guid: b0718fcbf5b323844b90327f2c1fb228, type: 2}
+  m_clearCardMatch: 0
+  m_clearCraneGame: 0
+  m_clearGradeRunner: 0
 --- !u!114 &53043606
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3626,7 +3631,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1350048679
 Transform:
   m_ObjectHideFlags: 0
@@ -4103,7 +4108,7 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
@@ -5976,7 +5981,7 @@ MonoBehaviour:
   m_bubblePivot: {x: 0, y: 0}
   m_worldOffsetY: 0.8
   m_typingSpeed: 0.1
-  m_forcePlayIntro: 1
+  m_forcePlayIntro: 0
 --- !u!1 &2039423983
 GameObject:
   m_ObjectHideFlags: 0

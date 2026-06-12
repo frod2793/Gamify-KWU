@@ -12,6 +12,9 @@ namespace GameArifiction.Map
     /// <summary>
     /// [기능]: 포탈의 충돌 범위를 통해 플레이어의 진입을 허용하고, 이지 트랜지션 연동을 통해 연출과 함께 씬 전환을 실행하는 뷰 클래스 (최초 플레이 유도용 느낌표 이미지 노출 기능 포함)
     /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-06-12
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: ClawMachine 대상 씬 성적을 CraneGame 키로 맵핑 보정하도록 수정
     /// </summary>
     [RequireComponent(typeof(Collider2D))]
     public class PortalView : MonoBehaviour, IInteractable
@@ -243,8 +246,15 @@ namespace GameArifiction.Map
                 return;
             }
 
-            // 캐싱된 미니게임 ID를 활용해 성적을 조회합니다.
-            MinigameGrade grade = m_playerSO.GetMinigameGrade(m_cachedMinigameId);
+            // 캐싱된 미니게임 ID를 결정 및 보정합니다.
+            string targetId = m_cachedMinigameId;
+            if (string.Equals(targetId, "ClawMachine", StringComparison.OrdinalIgnoreCase))
+            {
+                targetId = "CraneGame";
+            }
+
+            // 보정된 미니게임 ID를 활용해 성적을 조회합니다.
+            MinigameGrade grade = m_playerSO.GetMinigameGrade(targetId);
 
             if (m_cachedGradeSpriteRenderer != null)
             {

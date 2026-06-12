@@ -246,6 +246,20 @@ namespace GameArifiction.QuizClassic
         }
 
         /// <summary>
+        /// [기능]: 인형뽑기(CraneGame) 단계에서 최종 기록된 성적 등급을 조회합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// </summary>
+        public MinigameGrade GetClawGameGrade()
+        {
+            if (m_playerSO != null)
+            {
+                return m_playerSO.GetMinigameGrade("CraneGame");
+            }
+            return MinigameGrade.None;
+        }
+
+        /// <summary>
         /// [기능]: 메인 로비로 복귀할 때 플레이어의 좌표 보존 플래그를 세팅합니다.
         /// [작성자]: 윤승종
         /// [수정 날짜]: 2026-06-10

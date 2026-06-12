@@ -56,13 +56,23 @@ namespace GameArifiction.UI.FinalResult
         /// </summary>
         private void Start()
         {
+            RefreshKioskState();
+        }
+        #endregion
+
+        #region 공개 메서드 (Public Methods)
+        /// <summary>
+        /// [기능]: 외부(디버그 트리거 등)에서 성적이 강제 갱신되었을 때, 키오스크 활성화 여부 및 말풍선 하이라이트 상태를 실시간 동기화합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 키오스크 상태 새로고침 기능 퍼블릭 분리 구현
+        /// </summary>
+        public void RefreshKioskState()
+        {
             if (m_playerSO != null)
             {
-                bool isCardMatchCleared = m_playerSO.GetMinigameGrade("CardMatch") != MinigameGrade.None;
-                bool isCraneGameCleared = m_playerSO.GetMinigameGrade("CraneGame") != MinigameGrade.None;
-                bool isGradeRunnerCleared = m_playerSO.GetMinigameGrade("GradeRunner") != MinigameGrade.None;
-
-                m_isActive = isCardMatchCleared && isCraneGameCleared && isGradeRunnerCleared;
+                m_isActive = m_playerSO.IsAllMinigamesCleared;
             }
             else
             {
@@ -74,20 +84,25 @@ namespace GameArifiction.UI.FinalResult
             {
                 m_activeHighlightObject.SetActive(m_isActive);
             }
+            Debug.Log($"[FinalResultInteractableView] 키오스크 활성화 상태 새로고침 완료: {m_isActive}");
         }
-        #endregion
 
-        #region 공개 메서드 (Public Methods)
         /// <summary>
         /// [기능]: 플레이어가 상호작용을 시도했을 때 호출되며, 활성화 상태일 경우 결과 팝업을 표시합니다.
         /// [작성자]: 윤승종
         /// [수정 날짜]: 2026-06-12
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 활성화(모든 게임 클리어) 상태가 아닐 시 작동하지 않도록 방어 로직 추가
+        /// [수정 내용]: 상호작용 시점에 실시간으로 최종 클리어 여부를 재검증하여 동기화 오류 방지
         /// </summary>
         /// <param name="user">상호작용을 발생시킨 플레이어 오브젝트</param>
         public void Interact(GameObject user)
         {
+            // 상호작용 시점에도 최신 성적 기반으로 활성화 상태를 한 번 더 재검증하여 동기화 오류를 방지합니다.
+            if (m_playerSO != null)
+            {
+                m_isActive = m_playerSO.IsAllMinigamesCleared;
+            }
+
             if (m_isActive == false)
             {
                 Debug.Log("[FinalResultInteractableView] 아직 모든 미니게임을 완료하지 않아 결과 확인이 불가능합니다.");

@@ -103,6 +103,21 @@ namespace GameArifiction.Player
             }
         }
 
+        /// <summary>
+        /// [기능]: 등록된 유효한 3개 미니게임("CardMatch", "CraneGame", "GradeRunner")이 모두 클리어(None이 아님)되었는지 여부를 반환합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public bool IsAllMinigamesCleared
+        {
+            get
+            {
+                bool isCardMatchCleared = GetMinigameGrade("CardMatch") != MinigameGrade.None;
+                bool isCraneGameCleared = GetMinigameGrade("CraneGame") != MinigameGrade.None;
+                bool isGradeRunnerCleared = GetMinigameGrade("GradeRunner") != MinigameGrade.None;
+                return isCardMatchCleared && isCraneGameCleared && isGradeRunnerCleared;
+            }
+        }
+
         public IReadOnlyList<MinigameRecord> MinigameRecords => m_minigameRecords;
         #endregion
 

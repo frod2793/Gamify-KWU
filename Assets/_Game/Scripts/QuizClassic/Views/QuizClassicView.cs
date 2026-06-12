@@ -15,9 +15,9 @@ namespace GameArifiction.QuizClassic
     /// <summary>
     /// [기능]: 4지선다 객관식 버튼 조작과 문제 출제 시 시각 피드백 연출을 전담하는 클래식 퀴즈 뷰 컴포넌트
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-06-06
+    /// [수정 날짜]: 2026-06-12
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 타이머 미사용 요구 사항에 따른 타이머 텍스트 비활성화 및 이벤트 바인딩 해제
+    /// [수정 내용]: 미니게임 ID 키 "CraneGame" 일원화 및 인형뽑기 성적 데이터 보존 연동
     /// </summary>
     public class QuizClassicView : MonoBehaviour
     {
@@ -348,6 +348,8 @@ namespace GameArifiction.QuizClassic
                 }
 
                 // [리팩토링]: 뷰가 직접 저장하지 않고 뷰모델에 성적 기록 위임
+                // [수정]: 클래식 퀴즈 자체 성적 대신 기존 인형뽑기 성적을 가져옵니다.
+                calculatedGrade = m_viewModel.GetClawGameGrade();
                 m_viewModel.SaveFinalGrade(calculatedGrade);
 
                 targetGrade = calculatedGrade;
@@ -362,7 +364,8 @@ namespace GameArifiction.QuizClassic
                     "UX/UI개론",
                     targetGrade,
                     confirmText,
-                    confirmCallback
+                    confirmCallback,
+                    "CraneGame" // [수정]: ID를 CraneGame으로 일원화
                 );
 
                 m_resultPopup.Setup(popupData);
