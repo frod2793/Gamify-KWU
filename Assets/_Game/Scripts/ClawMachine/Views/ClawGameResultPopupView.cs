@@ -177,14 +177,7 @@ namespace GameArifiction.ClawMachine
                     PlayerSO.SetMinigameGrade("CraneGame", finalGrade);
                 }
 
-                // 뷰모델에서 플레이어가 빠뜨린 답안 텍스트 획득
-                string subAnswer = string.Empty;
-                if (clawVM != null)
-                {
-                    subAnswer = clawVM.SubmittedAnswer;
-                }
-
-                m_descriptionText.text = $"정답입니다!\n\n선택한 답안: {subAnswer}\n소요시간: {elapsedClawTime:F0}초";
+                m_descriptionText.text = "정답입니다!";
                 
                 if (m_confirmButtonText != null)
                 {
@@ -199,22 +192,7 @@ namespace GameArifiction.ClawMachine
                     m_confirmButton.gameObject.SetActive(true);
                 }
 
-                // 뷰모델에서 플레이어가 빠뜨린 답안 텍스트 획득
-                string subAnswer = string.Empty;
-                if (clawVM != null)
-                {
-                    subAnswer = clawVM.SubmittedAnswer;
-                }
-
-                // 시간 초과 vs 오답 판정 분리
-                if (m_viewModel.TimeLeft <= 0.001f)
-                {
-                    m_descriptionText.text = "시간 초과!\n다시 도전해보세요.";
-                }
-                else
-                {
-                    m_descriptionText.text = $"틀렸습니다!\n\n선택한 답안: {subAnswer}\n다시 도전해보세요.";
-                }
+                m_descriptionText.text = "틀렸습니다!";
 
                 if (m_confirmButtonText != null)
                 {
