@@ -659,11 +659,7 @@ MonoBehaviour:
   m_descriptionText: {fileID: 5305097297574505893}
   m_lectureNameText: {fileID: 7613563942292353612}
   m_resultGradeImage: {fileID: 6720694742795300895}
-  m_spriteA: {fileID: 21300000, guid: 7eeff75252ef9415cb71cd78e7c3d6c3, type: 3}
-  m_spriteB: {fileID: 21300000, guid: aa67765126c9a40dfabe4e3e6e8deec9, type: 3}
-  m_spriteC: {fileID: 21300000, guid: 73da32ee8c4284e1a9fc4b5f3a79a794, type: 3}
-  m_spriteD: {fileID: 21300000, guid: 5bf09f7303451462cbcce28a3d2ad687, type: 3}
-  m_spriteF: {fileID: 21300000, guid: b794fd167ecdc40f2b55117380b53de1, type: 3}
+  m_gradeSpritesSO: {fileID: 11400000, guid: 8c0a58bd190504b2394e8c411ca2fea1, type: 2}
   m_confirmButton: {fileID: 5798963842783439546}
   m_playerSO: {fileID: 11400000, guid: b0718fcbf5b323844b90327f2c1fb228, type: 2}
 --- !u!1 &5333190276176082449

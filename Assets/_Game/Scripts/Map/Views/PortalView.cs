@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using GameArifiction.Player;
 using GameArifiction.Interaction;
+using GameArifiction.UI.Common;
 using EasyTransition;
 using VContainer;
 
@@ -45,20 +46,16 @@ namespace GameArifiction.Map
         private string m_minigameId;
 
         [SerializeField]
-        [Tooltip("플레이 기록이 없을 때 포탈 오브젝트 자체를 비활성화할지 여부입니다. (다음 구역 해금용 포탈 등에 활용)")]
-        private bool m_deactivatePortalIfNoRecord = false;
+        [Tooltip("플레이 기록이 없을 때 특수 연출 스프라이트(느낌표)를 노출할지 여부입니다.")]
+        private bool m_showSpecialSpriteIfNoRecord = true;
 
         [SerializeField]
         [Tooltip("성적 이미지를 표시할 자식 SpriteRenderer입니다. 미지정 시 자식 오브젝트에서 자동으로 검색합니다.")]
         private SpriteRenderer m_gradeSpriteRenderer;
 
         [SerializeField]
-        [Tooltip("성적 등급별 스프라이트 배열입니다. (인덱스: 1=A, 2=B, 3=C, 4=D, 5=F)")]
-        private Sprite[] m_gradeSprites;
-
-        [SerializeField]
-        [Tooltip("최초 플레이 시 성적 대신 입구에 표시할 느낌표 스프라이트입니다.")]
-        private Sprite m_exclamationSprite;
+        [Tooltip("등급별 스프라이트 관리를 수행할 ScriptableObject 데이터 자산입니다.")]
+        private MinigameGradeSpritesSO m_gradeSpritesSO;
 
         #endregion
 
@@ -96,6 +93,13 @@ namespace GameArifiction.Map
         #endregion
 
         #region 유니티 생명주기
+        /// <summary>
+        /// [기능]: 컴포넌트 초기화 시 콜라이더 트리거 설정 및 자식 렌더러를 캐싱합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 문서화 주석 추가
+        /// </summary>
         private void Awake()
         {
             Collider2D portalCollider = GetComponent<Collider2D>();
@@ -124,23 +128,17 @@ namespace GameArifiction.Map
             }
         }
 
+        /// <summary>
+        /// [기능]: 포탈 활성화 시 미니게임 플레이 기록을 검사하여 성적 아이콘을 갱신합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 포탈 자체 비활성화 로직을 제거하고 항상 성적 및 특수 연출 스프라이트 갱신을 수행하도록 변경
+        /// </summary>
         private void Start()
         {
             // 미니게임 고유 ID 결정 및 캐싱
             m_cachedMinigameId = string.IsNullOrEmpty(m_minigameId) ? GetTargetSceneName() : m_minigameId;
-
-            // [추가] 플레이 기록 부재 시 포탈 자체를 비활성화하는 처리
-            if (m_deactivatePortalIfNoRecord)
-            {
-                MinigameGrade grade = m_playerSO != null ? m_playerSO.GetMinigameGrade(m_cachedMinigameId) : MinigameGrade.None;
-
-                if (grade == MinigameGrade.None)
-                {
-                    Debug.Log($"[PortalView] 미니게임 '{m_cachedMinigameId}' 플레이 기록이 없어 포탈 '{gameObject.name}'을 비활성화합니다.");
-                    gameObject.SetActive(false);
-                    return; // 비활성화되었으므로 성적 갱신 처리를 건너뜁니다.
-                }
-            }
 
             UpdateGradeDisplay();
         }
@@ -207,7 +205,7 @@ namespace GameArifiction.Map
         {
             if (m_targetMapIndex > 0)
             {
-                string scenePath = UnityEngine.SceneManagement.SceneUtility.GetScenePathByBuildIndex(m_targetMapIndex);
+                string scenePath = SceneUtility.GetScenePathByBuildIndex(m_targetMapIndex);
                 if (!string.IsNullOrEmpty(scenePath))
                 {
                     return System.IO.Path.GetFileNameWithoutExtension(scenePath);
@@ -221,13 +219,23 @@ namespace GameArifiction.Map
         /// [작성자]: 윤승종
         /// [수정 날짜]: 2026-06-12
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 매번 GetTargetSceneName()을 연산 호출하지 않고 Awake/Start에서 캐싱한 m_cachedMinigameId 값을 재사용하도록 연산 최적화
+        /// [수정 내용]: 플레이 기록이 없을 시(MinigameGrade.None) 신규 변수에 따른 느낌표 스프라이트 동적 출력 연동
         /// </summary>
         private void UpdateGradeDisplay()
         {
             if (m_playerSO == null)
             {
                 Debug.LogWarning($"[PortalView] '{gameObject.name}'에 PlayerSO 레퍼런스가 할당되지 않아 성적 표시를 생략합니다.");
+                if (m_cachedGradeSpriteRenderer != null)
+                {
+                    m_cachedGradeSpriteRenderer.gameObject.SetActive(false);
+                }
+                return;
+            }
+
+            if (m_gradeSpritesSO == null)
+            {
+                Debug.LogWarning($"[PortalView] '{gameObject.name}'에 MinigameGradeSpritesSO 레퍼런스가 할당되지 않아 성적 표시를 생략합니다.");
                 if (m_cachedGradeSpriteRenderer != null)
                 {
                     m_cachedGradeSpriteRenderer.gameObject.SetActive(false);
@@ -242,11 +250,19 @@ namespace GameArifiction.Map
             {
                 if (grade == MinigameGrade.None)
                 {
-                    if (m_exclamationSprite != null)
+                    if (m_showSpecialSpriteIfNoRecord)
                     {
-                        m_cachedGradeSpriteRenderer.sprite = m_exclamationSprite;
-                        m_cachedGradeSpriteRenderer.gameObject.SetActive(true);
-                        Debug.Log($"[PortalView] '{gameObject.name}' 문앞에 최초 플레이 유도를 위한 느낌표 이미지를 표시했습니다.");
+                        Sprite exclamation = m_gradeSpritesSO.ExclamationSprite;
+                        if (exclamation != null)
+                        {
+                            m_cachedGradeSpriteRenderer.sprite = exclamation;
+                            m_cachedGradeSpriteRenderer.gameObject.SetActive(true);
+                            Debug.Log($"[PortalView] '{gameObject.name}' 문앞에 최초 플레이 유도를 위한 느낌표 이미지를 표시했습니다.");
+                        }
+                        else
+                        {
+                            m_cachedGradeSpriteRenderer.gameObject.SetActive(false);
+                        }
                     }
                     else
                     {
@@ -255,11 +271,10 @@ namespace GameArifiction.Map
                 }
                 else
                 {
-                    // None(0)을 제외한 A(1)~F(5) 값을 인스펙터 스프라이트 배열 0~4번 인덱스에 매치하도록 1을 감산합니다.
-                    int index = (int)grade - 1;
-                    if (index >= 0 && m_gradeSprites != null && index < m_gradeSprites.Length && m_gradeSprites[index] != null)
+                    Sprite targetSprite = m_gradeSpritesSO.GetSprite(grade);
+                    if (targetSprite != null)
                     {
-                        m_cachedGradeSpriteRenderer.sprite = m_gradeSprites[index];
+                        m_cachedGradeSpriteRenderer.sprite = targetSprite;
                         m_cachedGradeSpriteRenderer.gameObject.SetActive(true);
                         Debug.Log($"[PortalView] '{gameObject.name}' 문앞에 미니게임 '{m_cachedMinigameId}' 성적 이미지({grade})를 갱신 표시했습니다.");
                     }

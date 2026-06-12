@@ -1,6 +1,6 @@
 {
     "name": "GamifyKWU.Runtime",
-    "rootNamespace": "",
+    "rootNamespace": "", 
     "references": [
         "UniTask",
         "Unity.TextMeshPro",

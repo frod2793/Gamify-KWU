@@ -8,6 +8,7 @@ using GameArifiction.Map;
 using GamifyKWU.UI.Dashboard.Models;
 using GamifyKWU.UI.Dashboard.ViewModels;
 using GamifyKWU.UI.Dashboard.Views;
+using GameArifiction.UI.FinalResult;
 
 /// <summary>
 /// [기능]: 로비 씬의 모든 의존성(PlayerSO, UIManager, TitleView, IntroCutsceneController, PlayerView 등)을 VContainer 컨테이너에 자동 추출 및 등록하는 수명주기 스코프 클래스
@@ -20,6 +21,9 @@ public class LobbyLifetimeScope : LifetimeScope
     /// <summary>
     /// [기능]: 씬 컴포넌트 및 비즈니스 로직 클래스들의 의존성 바인딩을 수행합니다.
     /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-06-12
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: 씬 내의 모든 PortalView 컴포넌트에 PlayerSO가 자동으로 주입되도록 수동 의존성 주입 콜백 추가
     /// </summary>
     /// <param name="builder">VContainer 빌더 컨테이너</param>
     protected override void Configure(IContainerBuilder builder)
@@ -78,6 +82,14 @@ public class LobbyLifetimeScope : LifetimeScope
         }, Lifetime.Scoped);
         builder.Register<DashboardViewModel>(Lifetime.Scoped);
 
+        // 추가 등록: FinalResult 도메인
+        builder.Register<FinalResultModel>(Lifetime.Scoped);
+        builder.Register<FinalResultViewModel>(Lifetime.Scoped);
+        builder.Register<GameEndingViewModel>(Lifetime.Scoped);
+        SafeRegisterComponent<FinalResultPopupView>(builder);
+        SafeRegisterComponent<GameEndingView>(builder);
+        SafeRegisterComponent<FinalResultInteractableView>(builder);
+
         // 추가 등록: Interaction 도메인
         builder.Register<InteractionUI_Model>(Lifetime.Scoped);
         builder.Register<InteractionUI_ViewModel>(Lifetime.Scoped);
@@ -92,8 +104,24 @@ public class LobbyLifetimeScope : LifetimeScope
         builder.RegisterComponent(soundView);
         builder.Register<GameArifiction.Core.Audio.SoundService>(Lifetime.Scoped).AsImplementedInterfaces().AsSelf();
         
-        // 씬 생성/전환 시 SoundPlayerView에 의존성을 수동 주입하여 구독 갱신
-        builder.RegisterBuildCallback(container => container.Inject(soundView));
+        // 씬 생성/전환 시 의존성을 수동 주입하여 갱신
+        builder.RegisterBuildCallback(container =>
+        {
+            if (soundView != null)
+            {
+                container.Inject(soundView);
+            }
+
+            // 씬 내의 모든 PortalView 인스턴스를 탐색하여 수동으로 의존성 주입 실행
+            PortalView[] portals = UnityEngine.Object.FindObjectsByType<PortalView>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < portals.Length; i++)
+            {
+                if (portals[i] != null)
+                {
+                    container.Inject(portals[i]);
+                }
+            }
+        });
     }
 
     #endregion

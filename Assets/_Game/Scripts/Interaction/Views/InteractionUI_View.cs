@@ -2,6 +2,7 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using GameArifiction.Player;
+using GameArifiction.UI.Common;
 using VContainer;
 
 namespace GameArifiction.Interaction
@@ -28,7 +29,7 @@ namespace GameArifiction.Interaction
 
         [SerializeField]
         [Tooltip("세팅 버튼 클릭 시 활성화될 공통 설정 팝업 뷰 컴포넌트입니다.")]
-        private GameArifiction.UI.Common.CommonSettingsPopupView m_settingsPopup;
+        private CommonSettingsPopupView m_settingsPopup;
         #endregion
 
         #region 내부 필드
@@ -36,6 +37,13 @@ namespace GameArifiction.Interaction
         #endregion
 
         #region 의존성 주입
+        /// <summary>
+        /// [기능]: VContainer로부터 ViewModel 의존성을 주입받습니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 문서화 주석 추가
+        /// </summary>
         [Inject]
         public void Construct(InteractionUI_ViewModel viewModel)
         {
@@ -44,11 +52,25 @@ namespace GameArifiction.Interaction
         #endregion
 
         #region 유니티 생명주기
+        /// <summary>
+        /// [기능]: 초기화 작업을 수행합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 문서화 주석 추가
+        /// </summary>
         private void Awake()
         {
             // VContainer를 통해 m_viewModel이 주입됨
         }
 
+        /// <summary>
+        /// [기능]: 플레이어 및 ViewModel과의 이벤트를 구독하고 UI 초기 상태를 설정합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 문서화 주석 추가
+        /// </summary>
         private void Start()
         {
             // [Zero Singleton]: 플레이어와의 결합을 낮추기 위해 시작 시 동적 바인딩을 주입합니다.
@@ -86,6 +108,13 @@ namespace GameArifiction.Interaction
             UpdateUI(false, string.Empty);
         }
 
+        /// <summary>
+        /// [기능]: 오브젝트 파괴 시 등록된 이벤트를 해제합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 문서화 주석 추가
+        /// </summary>
         private void OnDestroy()
         {
             UnsubscribeEvents();
@@ -93,6 +122,13 @@ namespace GameArifiction.Interaction
         #endregion
 
         #region 초기화
+        /// <summary>
+        /// [기능]: 등록된 모든 이벤트를 일괄적으로 해제합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 문서화 주석 추가
+        /// </summary>
         private void UnsubscribeEvents()
         {
             if (m_viewModel != null)
@@ -154,6 +190,13 @@ namespace GameArifiction.Interaction
             }
         }
 
+        /// <summary>
+        /// [기능]: 상호작용 가능한 대상이 감지되었을 때 ViewModel에 상태 업데이트를 요청합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 문서화 주석 추가
+        /// </summary>
         private void HandleTargetDetected(IInteractable interactable)
         {
             if (m_viewModel != null && interactable != null)
@@ -162,6 +205,13 @@ namespace GameArifiction.Interaction
             }
         }
 
+        /// <summary>
+        /// [기능]: 상호작용 대상이 범위를 벗어났을 때 ViewModel에 상태 해제를 요청합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 문서화 주석 추가
+        /// </summary>
         private void HandleTargetLost()
         {
             if (m_viewModel != null)
@@ -179,6 +229,13 @@ namespace GameArifiction.Interaction
         #endregion
 
         #region 내부 메서드
+        /// <summary>
+        /// [기능]: ViewModel의 상태 변화에 따라 버튼 활성화 및 안내 문구를 갱신합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 문서화 주석 추가
+        /// </summary>
         private void UpdateUI(bool isInteractable, string promptText)
         {
             if (m_interactionButton != null)

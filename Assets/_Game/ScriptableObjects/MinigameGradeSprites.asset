@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6dcb5531987f844f5bd846665e9b0d04, type: 3}
+  m_Name: MinigameGradeSprites
+  m_EditorClassIdentifier: GamifyKWU.Runtime::GameArifiction.UI.Common.MinigameGradeSpritesSO
+  m_spriteA: {fileID: 21300000, guid: 34cb2aa2b95ac414c9f22305ce599ad5, type: 3}
+  m_spriteB: {fileID: 21300000, guid: cd3994fcb89304dde9475db60bf2de5d, type: 3}
+  m_spriteC: {fileID: 21300000, guid: eba79878516af4d6e9da7051bd423268, type: 3}
+  m_spriteD: {fileID: 21300000, guid: b183d2173011946dd806a5e31ef7c767, type: 3}
+  m_spriteF: {fileID: 21300000, guid: 5bf4a2b89df3146639e00915c98e7f82, type: 3}
+  m_exclamationSprite: {fileID: 21300000, guid: 8fa8a409fadfc48329d13ee2952a25c6, type: 3}

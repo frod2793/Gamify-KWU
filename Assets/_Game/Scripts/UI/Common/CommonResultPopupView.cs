@@ -3,6 +3,7 @@ using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using GameArifiction.Player;
 
 namespace GameArifiction.UI.Common
@@ -37,24 +38,8 @@ namespace GameArifiction.UI.Common
         private Image m_resultGradeImage;
 
         [SerializeField]
-        [Tooltip("A 등급 스프라이트입니다.")]
-        private Sprite m_spriteA;
-
-        [SerializeField]
-        [Tooltip("B 등급 스프라이트입니다.")]
-        private Sprite m_spriteB;
-
-        [SerializeField]
-        [Tooltip("C 등급 스프라이트입니다.")]
-        private Sprite m_spriteC;
-
-        [SerializeField]
-        [Tooltip("D 등급 스프라이트입니다.")]
-        private Sprite m_spriteD;
-
-        [SerializeField]
-        [Tooltip("F 등급 스프라이트입니다.")]
-        private Sprite m_spriteF;
+        [Tooltip("등급별 스프라이트 관리를 수행할 ScriptableObject 데이터 자산입니다.")]
+        private MinigameGradeSpritesSO m_gradeSpritesSO;
 
         [Header("조작 버튼")]
         [SerializeField]
@@ -77,6 +62,13 @@ namespace GameArifiction.UI.Common
 
         #region 유니티 생명주기 (Unity Lifecycle)
 
+        /// <summary>
+        /// [기능]: 컴포넌트 초기화 시 버튼 이벤트 등 필요한 리스너를 등록합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 문서화 주석 추가
+        /// </summary>
         private void Start()
         {
             if (m_confirmButton != null)
@@ -88,6 +80,13 @@ namespace GameArifiction.UI.Common
             // Debug.Log("[CommonResultPopupView] 공통 결과 팝업 뷰 초기화 완료.");
         }
 
+        /// <summary>
+        /// [기능]: 오브젝트가 파괴될 때 메모리 누수 방지를 위해 이벤트 리스너를 해제합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 문서화 주석 추가
+        /// </summary>
         private void OnDestroy()
         {
             if (m_confirmButton != null)
@@ -116,7 +115,7 @@ namespace GameArifiction.UI.Common
             {
                 // DTO에 명시적인 ID가 지정되어 있다면 이를 사용하고, 없으면 현재 활성화된 씬 이름 사용
                 string minigameId = string.IsNullOrEmpty(data.MinigameId)
-                    ? UnityEngine.SceneManagement.SceneManager.GetActiveScene().name
+                    ? SceneManager.GetActiveScene().name
                     : data.MinigameId;
 
                 m_playerSO.SetMinigameGrade(minigameId, data.Grade.Value);
@@ -227,21 +226,11 @@ namespace GameArifiction.UI.Common
         /// </summary>
         private Sprite GetGradeSprite(MinigameGrade grade)
         {
-            switch (grade)
+            if (m_gradeSpritesSO != null)
             {
-                case MinigameGrade.A:
-                    return m_spriteA;
-                case MinigameGrade.B:
-                    return m_spriteB;
-                case MinigameGrade.C:
-                    return m_spriteC;
-                case MinigameGrade.D:
-                    return m_spriteD;
-                case MinigameGrade.F:
-                    return m_spriteF;
-                default:
-                    return null;
+                return m_gradeSpritesSO.GetSprite(grade);
             }
+            return null;
         }
 
         #endregion
