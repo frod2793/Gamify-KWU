@@ -401,6 +401,7 @@ namespace GameArifiction.GradeRunner
                 if (m_currentPhase == GradeRunnerPhase.Phase1 && m_model.RemainingTime <= m_config.Phase2TransitionTime)
                 {
                     m_model.RemainingTime = m_config.Phase2TransitionTime;
+                    OnTimeChanged?.Invoke(m_model.RemainingTime); // 타이머 텍스트 10초 동기화 추가
                     m_currentPhase = GradeRunnerPhase.Phase2;
                     OnPhaseChanged?.Invoke(m_currentPhase);
 

@@ -706,39 +706,8 @@ namespace GameArifiction.ClawMachine
                 m_clawView.ResetClawToInitialState();
             }
 
-            ClawMachineDollView[] dolls = FindObjectsByType<ClawMachineDollView>(FindObjectsSortMode.None);
-            if (dolls == null || dolls.Length == 0)
-            {
-                Debug.LogWarning("[ClawGameView] 씬에 인형이 존재하지 않아 난이도 완화 혜택을 적용할 수 없습니다.");
-                return;
-            }
-
-            // [오답 캡슐 수집]: IsCorrect가 false인 방해 캡슐들만 모아 혜택 타겟으로 적용합니다.
-            System.Collections.Generic.List<ClawMachineDollView> wrongDolls = new System.Collections.Generic.List<ClawMachineDollView>();
-            for (int i = 0; i < dolls.Length; i++)
-            {
-                ClawMachineDollView doll = dolls[i];
-                if (doll != null && !doll.IsCorrect)
-                {
-                    wrongDolls.Add(doll);
-                }
-            }
-
-            if (wrongDolls.Count > 0)
-            {
-                int randomIndex = UnityEngine.Random.Range(0, wrongDolls.Count);
-                ClawMachineDollView targetDoll = wrongDolls[randomIndex];
-                if (targetDoll != null)
-                {
-                    string targetId = targetDoll.DollId;
-                    Destroy(targetDoll.gameObject);
-                    Debug.Log($"[ClawGameView] 재수강 난이도 완화 적용 완료: 방해(오답) 캡슐({targetId}) 1개를 제거했습니다.");
-                }
-            }
-            else
-            {
-                Debug.Log("[ClawGameView] 제거할 방해(오답) 캡슐이 씬에 더 이상 존재하지 않습니다.");
-            }
+            // [수정]: 기존의 재수강 시 오답 캡슐 1개 무작위 삭제(난이도 완화) 로직을 전면 제거합니다.
+            Debug.Log("[ClawGameView] 재수강 난이도 완화 캡슐 제거 기능이 생략되었습니다.");
         }
 
 
