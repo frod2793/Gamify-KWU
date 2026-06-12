@@ -139,7 +139,7 @@ namespace GameArifiction.CardMatch
             if (m_resultPopupView != null)
             {
                 string titleText = "게임 결과";
-                string descriptionText = $"뒤집기 횟수: {flipCount}회\n\n{message}";
+                string descriptionText = $"횟수: {flipCount}회";
                 string lectureName = m_settings != null ? m_settings.LectureName : "게임학의이해";
 
                 CommonPopupDataDTO popupData = new CommonPopupDataDTO(
