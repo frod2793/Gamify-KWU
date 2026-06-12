@@ -80,7 +80,11 @@ namespace GameArifiction.GradeRunner
         private GradeRunnerViewModel m_viewModel;
         private ISoundService m_soundService;
         private float m_startPositionX; // 게임 시작 시점의 최초 X좌표
+        private float m_startPositionY; // 게임 시작 시점의 최초 Y좌표
         private AudioSource m_audioSource;
+
+        private AudioClip m_shortImpactSound;
+        private AudioClip m_longImpactSound;
 
         #endregion
 
@@ -89,8 +93,9 @@ namespace GameArifiction.GradeRunner
         private void Start()
         {
             m_startPositionX = transform.position.x; // 최초 스폰 당시 시작 X좌표 기록
+            m_startPositionY = transform.position.y; // 최초 스폰 당시 시작 Y좌표 기록
 
-            // 초기 비주얼 세팅: 말풍선 숨김 및 1페이즈 기본 상태 준비 (도입부에서 페이드인 예정이므로 일단 꺼두거나 투명하게 대기)
+            // 초기 비주얼 세팅: 말풍선 숨김 및 빈 화면으로 대기
             if (m_dialogueBubble != null)
             {
                 m_dialogueBubble.gameObject.SetActive(false);
@@ -109,7 +114,12 @@ namespace GameArifiction.GradeRunner
             // 초기 볼륨 동기화
             UpdateAudioSourceVolume();
 
-            SetVisualActiveOnly(m_phase1Visual);
+            // 사운드 리소스 로드 (사용자 지정 경로)
+            m_shortImpactSound = Resources.Load<AudioClip>("코드 피하기 게임 브금, 효과음/쿠궁 짧음");
+            m_longImpactSound = Resources.Load<AudioClip>("코드 피하기 게임 브금, 효과음/쿠궁 긺");
+
+            // 시작 직후에는 빈 화면 대기 (IntroCutscene 진입 시 페이드인 등 연출 예정)
+            SetVisualActiveOnly(null);
             Debug.Log("[ProfessorView] 교수님 공격 캐릭터 뷰 초기화 성공.");
         }
 
@@ -117,6 +127,10 @@ namespace GameArifiction.GradeRunner
         {
             UnsubscribeEvents();
             transform.DOKill();
+            if (UnityEngine.Camera.main != null)
+            {
+                UnityEngine.Camera.main.DOKill();
+            }
         }
 
         #endregion
@@ -138,6 +152,7 @@ namespace GameArifiction.GradeRunner
                 m_viewModel.OnPhaseChanged += HandlePhaseChanged;
                 m_viewModel.OnIntroCutsceneStarted += HandleIntroCutscene;
                 m_viewModel.OnPhase2CutsceneStarted += HandlePhase2Cutscene;
+                m_viewModel.OnGameEndCutsceneStarted += HandleGameEndCutscene;
             }
 
             if (m_soundService != null)
@@ -153,6 +168,7 @@ namespace GameArifiction.GradeRunner
                 m_viewModel.OnPhaseChanged -= HandlePhaseChanged;
                 m_viewModel.OnIntroCutsceneStarted -= HandleIntroCutscene;
                 m_viewModel.OnPhase2CutsceneStarted -= HandlePhase2Cutscene;
+                m_viewModel.OnGameEndCutsceneStarted -= HandleGameEndCutscene;
             }
 
             if (m_soundService != null)
@@ -166,11 +182,17 @@ namespace GameArifiction.GradeRunner
         #region 공개 연출 메서드 (Public Methods)
 
         /// <summary>
-        /// [기능]: 스포너가 특정 X좌표에서 코드 장애물을 스폰하려 할 때, 설정된 X 범위 내로 한계를 보장(Clamping)하며 신속하게 이동시킵니다.
+        /// [기능]: 스포너가 특정 X좌표에서 코드 장애물을 스폰하려 할 때 호출되며, 2페이즈에서만 작동하여 1페이즈의 무한대 무빙을 방해하지 않습니다.
         /// [작성자]: 윤승종
         /// </summary>
         public void func_MoveTo(float targetX, float duration = 0.2f)
         {
+            // 1페이즈 중에는 무한대 무빙을 방해하지 않기 위해 무시
+            if (m_viewModel != null && m_viewModel.CurrentPhase == GradeRunnerPhase.Phase1)
+            {
+                return;
+            }
+
             // 인스펙터의 좌우 X이동 한계 범위를 명확히 적용
             float clampedX = Mathf.Clamp(targetX, m_movementRangeX.x, m_movementRangeX.y);
 
@@ -183,18 +205,42 @@ namespace GameArifiction.GradeRunner
         #region 이벤트 핸들러 및 내부 메서드 (Private Methods)
 
         /// <summary>
-        /// [기능]: 도입부 컷씬 트리거 시 호출되며, 교수님이 서서히 등장(Fade-In) 후 첫 대사를 타이핑합니다.
+        /// [기능]: 도입부 컷씬 트리거 시 호출되며, 화면 흔들림과 시간 지연 후 교수가 위에서 등장(Fade-In)하며 대사를 출력합니다.
         /// [작성자]: 윤승종
         /// </summary>
         private void HandleIntroCutscene()
         {
-            SetVisualActiveOnly(m_phase1Visual);
+            HandleIntroCutsceneAsync(this.GetCancellationTokenOnDestroy()).Forget();
+        }
 
-            // 교수님 비주얼의 모든 스프라이트 렌더러를 0 alpha로 리셋 후 서서히 페이드인
-            GameObject activeVis = m_phase1Visual;
-            if (activeVis != null)
+        private async UniTaskVoid HandleIntroCutsceneAsync(CancellationToken token)
+        {
+            // 1. 빈 화면 대기 보장
+            SetVisualActiveOnly(null);
+
+            // 2. 화면 흔들림(1초) + 짧은 쿠궁음
+            if (m_shortImpactSound != null && m_audioSource != null)
             {
-                SpriteRenderer[] sprites = activeVis.GetComponentsInChildren<SpriteRenderer>();
+                m_audioSource.PlayOneShot(m_shortImpactSound, m_soundService?.Settings?.SfxVolume ?? 1f);
+            }
+            if (UnityEngine.Camera.main != null)
+            {
+                UnityEngine.Camera.main.transform.DOShakePosition(1.0f, 0.5f, 10, 90f, false, true).ToUniTask().Forget();
+            }
+
+            // 3. 1초 흔들림 진행 + 1.5초 흔들림 멈춤 대기 = 총 2.5초 대기
+            await UniTask.Delay(System.TimeSpan.FromSeconds(2.5f), cancellationToken: token);
+
+            // 4. 교수 페이드 인 + 상단에서 하강 연출
+            SetVisualActiveOnly(m_phase1Visual);
+            
+            // Y축 상단(+5)에서 기존 Y로 떨어짐
+            transform.position = new Vector3(m_startPositionX, m_startPositionY + 5f, transform.position.z);
+            var moveTween = transform.DOMoveY(m_startPositionY, 0.5f).SetEase(Ease.OutQuad);
+
+            if (m_phase1Visual != null)
+            {
+                SpriteRenderer[] sprites = m_phase1Visual.GetComponentsInChildren<SpriteRenderer>();
                 for (int i = 0; i < sprites.Length; i++)
                 {
                     if (sprites[i] != null)
@@ -202,25 +248,37 @@ namespace GameArifiction.GradeRunner
                         Color c = sprites[i].color;
                         c.a = 0f;
                         sprites[i].color = c;
-                        sprites[i].DOFade(1f, 1.0f);
+                        sprites[i].DOFade(1f, 0.5f);
                     }
                 }
             }
 
-            // 등장 페이드인이 끝날 즈음 말풍선 대사 연출 시작
-            DOVirtual.DelayedCall(1.0f, () =>
+            // 하강 완료 대기
+            await moveTween.ToUniTask(cancellationToken: token);
+
+            // 5. 착지 직후 흔들림(2초) + 긴 쿠궁음
+            if (m_longImpactSound != null && m_audioSource != null)
             {
-                if (m_viewModel != null)
+                m_audioSource.PlayOneShot(m_longImpactSound, m_soundService?.Settings?.SfxVolume ?? 1f);
+            }
+            if (UnityEngine.Camera.main != null)
+            {
+                UnityEngine.Camera.main.transform.DOShakePosition(2.0f, 0.5f, 10, 90f, false, true).ToUniTask().Forget();
+            }
+
+            await UniTask.Delay(System.TimeSpan.FromSeconds(2.0f), cancellationToken: token);
+
+            // 6. 대사 출력
+            if (m_viewModel != null)
+            {
+                TypeDialogue(m_viewModel.IntroDialogue, () =>
                 {
-                    TypeDialogue(m_viewModel.IntroDialogue, () =>
+                    if (m_viewModel != null)
                     {
-                        if (m_viewModel != null)
-                        {
-                            m_viewModel.CompleteIntroCutscene();
-                        }
-                    });
-                }
-            });
+                        m_viewModel.CompleteIntroCutscene();
+                    }
+                });
+            }
         }
 
         /// <summary>
@@ -270,6 +328,45 @@ namespace GameArifiction.GradeRunner
                 // 변신 전환 효과 증대 Punch 연출
                 transform.DOPunchScale(new Vector3(0.2f, 0.2f, 0f), 0.5f, 6, 1f);
             }
+        }
+
+        /// <summary>
+        /// [기능]: 0초 도달 시 게임 종료 컷씬을 진행합니다. (분노 진동 -> 대사 출력 -> 위로 사라짐)
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void HandleGameEndCutscene()
+        {
+            transform.DOKill();
+            
+            // 마지막 대사 때 연출용 변신 비주얼(Phase 2 Start)로 스위칭
+            SetVisualActiveOnly(m_phase2StartVisual);
+
+            // 위압감 넘치는 분노 진동 연출 (2페이즈 시작과 동일)
+            transform.DOShakePosition(0.6f, 0.4f, 15);
+            transform.DOPunchScale(new Vector3(0.15f, 0.15f, 0f), 0.5f, 8, 1.0f);
+
+            DOVirtual.DelayedCall(0.7f, () =>
+            {
+                if (m_viewModel != null)
+                {
+                    TypeDialogue(m_viewModel.GameEndDialogue, () =>
+                    {
+                        // 대사 종료 후 위로 사라질 때 카메라 쉐이크 추가
+                        if (UnityEngine.Camera.main != null)
+                        {
+                            UnityEngine.Camera.main.transform.DOShakePosition(1.0f, 0.3f, 10, 90f, false, true).ToUniTask().Forget();
+                        }
+
+                        transform.DOMoveY(m_startPositionY + 15f, 1.0f).SetEase(Ease.InQuad).OnComplete(() =>
+                        {
+                            if (m_viewModel != null)
+                            {
+                                m_viewModel.CompleteGameEndCutscene();
+                            }
+                        });
+                    });
+                }
+            });
         }
 
         /// <summary>
@@ -426,6 +523,26 @@ namespace GameArifiction.GradeRunner
             else
             {
                 m_audioSource.volume = 1f;
+            }
+        }
+
+        private void Update()
+        {
+            // 1페이즈 중 상단 무한대(∞) 궤도 무빙 처리
+            if (m_viewModel != null && m_viewModel.CurrentState == GradeRunnerState.Playing && m_viewModel.CurrentPhase == GradeRunnerPhase.Phase1)
+            {
+                // 2초당 1회전 (t = Time.time * PI)
+                float t = Time.time * Mathf.PI;
+                
+                // 가로 진폭 (좌우 이동 범위의 절반가량)
+                float amplitudeX = (m_movementRangeX.y - m_movementRangeX.x) * 0.45f;
+                // 세로 진폭
+                float amplitudeY = 0.5f;
+
+                float x = m_startPositionX + Mathf.Sin(t) * amplitudeX;
+                float y = m_startPositionY + Mathf.Sin(t * 2f) * amplitudeY;
+
+                transform.position = new Vector3(x, y, transform.position.z);
             }
         }
 

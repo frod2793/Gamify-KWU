@@ -23,12 +23,19 @@ namespace GameArifiction.GradeRunner
         [Tooltip("2페이즈 전환 시 출력될 타이핑 대사입니다.")]
         private string m_phase2Dialogue = "아직 끝나지 않았다! 진정한 매운맛을 보여주지!";
 
+        [Header("교수 게임 종료 대사 설정")]
+        [SerializeField]
+        [TextArea(2, 5)]
+        [Tooltip("시간 종료 시 출력될 타이핑 대사입니다.")]
+        private string m_gameEndDialogue = "만족스럽군요!!";
+
         #endregion
 
         #region 공개 프로퍼티 (Public Properties)
 
         public string IntroDialogue => m_introDialogue;
         public string Phase2Dialogue => m_phase2Dialogue;
+        public string GameEndDialogue => m_gameEndDialogue;
 
         #endregion
     }

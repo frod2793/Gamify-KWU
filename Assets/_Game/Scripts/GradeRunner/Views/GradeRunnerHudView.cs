@@ -109,11 +109,23 @@ namespace GameArifiction.GradeRunner
             {
                 m_originalTimeColor = m_timeText.color;
                 m_originalTimeStyle = m_timeText.fontStyle;
+
+                // [기획]: 씬 시작하자마자 남은 시간을 30초("TIME 30:00")로 즉시 초기화
+                m_timerBuffer[5] = '3';
+                m_timerBuffer[6] = '0';
+                m_timerBuffer[8] = '0';
+                m_timerBuffer[9] = '0';
+                m_timeText.SetCharArray(m_timerBuffer, 0, 10);
             }
 
             if (m_timeFillImage != null)
             {
                 m_originalTimeFillColor = m_timeFillImage.color;
+            }
+
+            if (m_timeSlider != null)
+            {
+                m_timeSlider.value = 1.0f;
             }
         }
 

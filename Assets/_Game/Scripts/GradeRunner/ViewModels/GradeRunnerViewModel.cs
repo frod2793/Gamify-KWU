@@ -21,6 +21,7 @@ namespace GameArifiction.GradeRunner
         IntroCutscene,
         Playing,
         Phase2Cutscene,
+        GameEndCutscene,
         Result
     }
 
@@ -74,6 +75,7 @@ namespace GameArifiction.GradeRunner
 
         public event Action OnIntroCutsceneStarted; // 도입부 교수님 등장 대사 이벤트
         public event Action OnPhase2CutsceneStarted; // 2페이즈 돌입 교수님 분노 대사 이벤트
+        public event Action OnGameEndCutsceneStarted; // 게임 종료 교수님 연출 이벤트
         public event Action<bool> OnPauseStateChanged; // 일시정지 상태 변경 알림 이벤트
 
         #endregion
@@ -94,6 +96,7 @@ namespace GameArifiction.GradeRunner
 
         public string IntroDialogue => m_dialogueSO != null ? m_dialogueSO.IntroDialogue : "자, 지금부터 코딩 테스트를 시작하겠다!";
         public string Phase2Dialogue => m_dialogueSO != null ? m_dialogueSO.Phase2Dialogue : "아직 끝나지 않았다! 진정한 매운맛을 보여주지!";
+        public string GameEndDialogue => m_dialogueSO != null ? m_dialogueSO.GameEndDialogue : "만족스럽군요!!";
 
         public float MobileInputX
         {
@@ -214,6 +217,21 @@ namespace GameArifiction.GradeRunner
             ChangeState(GradeRunnerState.Playing);
 
             Debug.Log("[GradeRunnerViewModel] 2페이즈 전환 컷씬 완료. 게임플레이 재개.");
+        }
+
+        /// <summary>
+        /// [기능]: 0초 종료 연출 컷씬이 끝났을 때 뷰에서 호출하여 최종 결과를 집계하고 결과 팝업을 띄웁니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public void CompleteGameEndCutscene()
+        {
+            if (m_currentState != GradeRunnerState.GameEndCutscene)
+            {
+                return;
+            }
+
+            Debug.Log("[GradeRunnerViewModel] 게임 종료 컷씬 완료. 결과 화면으로 진입합니다.");
+            FinishGame();
         }
 
         /// <summary>
@@ -401,7 +419,13 @@ namespace GameArifiction.GradeRunner
                 return;
             }
 
-            FinishGame();
+            // 0초 도달 시 즉시 FinishGame을 하지 않고, 컷씬 상태로 넘긴 후 일시정지 처리
+            m_model.RemainingTime = 0f;
+            m_isPaused = true;
+            OnPauseStateChanged?.Invoke(true);
+            ChangeState(GradeRunnerState.GameEndCutscene);
+            OnGameEndCutsceneStarted?.Invoke();
+            Debug.Log("[GradeRunnerViewModel] 타이머 0초 도달. 게임 종료 연출을 시작합니다.");
         }
 
         /// <summary>

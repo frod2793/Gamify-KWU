@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ae4250497dd471d41a464982b3eb89d4, type: 3}
   m_Name: PlayerSO
   m_EditorClassIdentifier: GamifyKWU.Runtime::GameArifiction.Player.PlayerSO
-  m_lastPosition: {x: -6.0263357, y: 2.0348501}
+  m_lastPosition: {x: 0, y: 0}
   m_hasSavedPosition: 0
   m_minigameRecords:
   - MinigameId: GradeRunner
-    Grade: 1
-  m_totalMinigamePlayTime: 0
+    Grade: 2
+  m_totalMinigamePlayTime: 30.017597
   m_isIntroPlayed: 1
