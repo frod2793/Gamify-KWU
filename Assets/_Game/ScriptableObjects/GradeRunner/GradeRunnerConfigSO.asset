@@ -12,21 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bfbde03c2418f5641ac31ebef70a545e, type: 3}
   m_Name: GradeRunnerConfigSO
   m_EditorClassIdentifier: GamifyKWU.Runtime::GameArifiction.GradeRunner.GradeRunnerConfigSO
-  m_spriteA: {fileID: 21300000, guid: 7eeff75252ef9415cb71cd78e7c3d6c3, type: 3}
-  m_spriteB: {fileID: 21300000, guid: aa67765126c9a40dfabe4e3e6e8deec9, type: 3}
-  m_spriteC: {fileID: 21300000, guid: d2c6c095c151945db8fc6a3aed7776a2, type: 3}
-  m_spriteD: {fileID: 21300000, guid: 5bf09f7303451462cbcce28a3d2ad687, type: 3}
-  m_spriteF: {fileID: 21300000, guid: 10d725d38fc0b416ebcd2ef04fc159c5, type: 3}
   m_gameDuration: 40
   m_phase2TransitionTime: 20
   m_maxGradePoint: 5
   m_startGradePoint: 2.5
   m_codePenalty: 0.5
   m_cheatSheetBonus: 1
-  m_codeSpawnIntervalMinP1: 0.5
-  m_codeSpawnIntervalMaxP1: 0.7
-  m_codeSpawnIntervalMinP2: 0.3
-  m_codeSpawnIntervalMaxP2: 0.5
+  m_codeSpawnIntervalMinP1: 0.7
+  m_codeSpawnIntervalMaxP1: 1
+  m_codeSpawnIntervalMinP2: 0.4
+  m_codeSpawnIntervalMaxP2: 0.7
   m_fallDurationMin: 6
   m_fallDurationMax: 8
   m_playerTraverseDurationMin: 4
