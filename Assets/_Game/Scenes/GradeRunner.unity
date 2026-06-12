@@ -248,6 +248,9 @@ MonoBehaviour:
   m_dialogueText: {fileID: 669000406}
   m_typingSpeed: 0.1
   m_dialogueHoldDuration: 1.5
+  m_typewriterSound: {fileID: 8300000, guid: cedd13a59fd14456c8e1e6e1013eb069, type: 3}
+  m_minPitch: 0.95
+  m_maxPitch: 1.05
   m_moveEase: 6
   m_movementRangeX: {x: -2, y: 2.5}
 --- !u!1 &59707450

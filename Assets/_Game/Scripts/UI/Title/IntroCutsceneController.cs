@@ -7,6 +7,7 @@ using GameArifiction.Player;
 using GameArifiction.Interaction;
 using TMPro;
 using VContainer;
+using GameArifiction.Core.Audio;
 
 /// <summary>
 /// [기능]: 최초 플레이 시 플레이어가 입구에서 시작 지점까지 걷고 말풍선 튜토리얼을 띄우는 인트로 연출 제어기입니다.
@@ -74,6 +75,21 @@ namespace GamifyKWU.UI.Title
         [Tooltip("텍스트 한 글자당 찍히는 타자 지연 속도(초)입니다.")]
         private float m_typingSpeed = 0.05f;
 
+        [Header("대사 사운드 설정")]
+        [SerializeField]
+        [Tooltip("튜토리얼 타이핑 대사 시 출력될 효과음 클립입니다.")]
+        private AudioClip m_typewriterSound;
+
+        [SerializeField]
+        [Range(0.8f, 1.2f)]
+        [Tooltip("타이핑 소리 재생 시의 최소 피치 범위입니다.")]
+        private float m_minPitch = 0.95f;
+
+        [SerializeField]
+        [Range(0.8f, 1.2f)]
+        [Tooltip("타이핑 소리 재생 시의 최대 피치 범위입니다.")]
+        private float m_maxPitch = 1.05f;
+
         [Header("디버그 옵션")]
         [SerializeField]
         [Tooltip("활성화 시, 시청 완료 기록 및 세션 복원 여부를 강제 우회하여 항상 인트로를 구동합니다.")]
@@ -97,6 +113,8 @@ namespace GamifyKWU.UI.Title
         private string m_fullTextOfCurrentPage = string.Empty;
         private GameArifiction.Camera.CameraFollow m_cameraFollow;
         private RectTransform m_canvasRect;
+        private AudioSource m_audioSource;
+        private ISoundService m_soundService;
 
         #endregion
 
@@ -124,6 +142,19 @@ namespace GamifyKWU.UI.Title
                     m_cameraFollow = mainCam.GetComponent<GameArifiction.Camera.CameraFollow>();
                 }
             }
+
+            // 오디오 소스 컴포넌트 자동 캐싱 및 기본 2D 오디오 재생 옵션 설정
+            m_audioSource = GetComponent<AudioSource>();
+            if (m_audioSource == null)
+            {
+                m_audioSource = gameObject.AddComponent<AudioSource>();
+            }
+            m_audioSource.playOnAwake = false;
+            m_audioSource.loop = false;
+            m_audioSource.spatialBlend = 0f;
+
+            // 초기 볼륨 동기화
+            UpdateAudioSourceVolume();
 
 #if UNITY_EDITOR
             if (m_playerSO != null && m_forcePlayIntro)
@@ -172,11 +203,29 @@ namespace GamifyKWU.UI.Title
                 m_typingCts.Cancel();
                 m_typingCts.Dispose();
             }
+            if (m_soundService != null)
+            {
+                m_soundService.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
+            }
         }
 
         #endregion
 
         #region 초기화 및 실행 (Initialization & Execution)
+
+        /// <summary>
+        /// [기능]: VContainer를 통해 전역 사운드 제어 서비스를 주입합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        [Inject]
+        public void Construct(ISoundService soundService)
+        {
+            m_soundService = soundService;
+            if (m_soundService != null)
+            {
+                m_soundService.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+            }
+        }
 
         /// <summary>
         /// [기능]: 타이틀 뷰의 이지 트랜지션 페이드 아웃(페이드 차단 완료) 시점에 호출되어 인트로 컷씬을 비동기 구동합니다.
@@ -378,6 +427,13 @@ namespace GamifyKWU.UI.Title
                 builder.Append(fullText[i]);
                 m_speechText.text = builder.ToString();
 
+                // 타이핑 소리 재생: 공백이 아닐 때만 유효 글자로 판단하여 박자 맞춰 1:1로 재생
+                char currentChar = fullText[i];
+                if (!char.IsWhiteSpace(currentChar))
+                {
+                    PlayTypewriterSound();
+                }
+
                 await UniTask.Delay(System.TimeSpan.FromSeconds(m_typingSpeed), cancellationToken: token);
             }
 
@@ -463,6 +519,67 @@ namespace GamifyKWU.UI.Title
             SetInteractionUIActiveState(true);
 
             Debug.Log("[IntroCutsceneController] 인트로 연출이 완전히 완료되었습니다. 플레이어 자유 조작 모드 개시.");
+        }
+
+        #endregion
+
+        #region 내부 헬퍼 및 사운드 제어 (Private Helpers & Sound Control)
+
+        /// <summary>
+        /// [기능]: 타이핑 효과음 클립을 미세한 피치 변조와 함께 즉시 재생합니다.
+        ///         (PlayOneShot 대신 Play를 사용하여 이전 재생음을 끊고 1:1 박자를 맞춥니다)
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 인트로 튜토리얼 텍스트 타이핑 효과음 1:1 박자 동기화 재생 적용
+        /// </summary>
+        private void PlayTypewriterSound()
+        {
+            if (m_audioSource != null && m_typewriterSound != null)
+            {
+                m_audioSource.pitch = UnityEngine.Random.Range(m_minPitch, m_maxPitch);
+                m_audioSource.clip = m_typewriterSound;
+                m_audioSource.Play();
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 전역 SFX 볼륨 변경 시 로컬 오디오 소스의 볼륨을 즉각 갱신합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 볼륨 실시간 변경 핸들링 구현
+        /// </summary>
+        private void HandleSfxVolumeChanged(float volume)
+        {
+            if (m_audioSource != null)
+            {
+                m_audioSource.volume = volume;
+            }
+        }
+
+        /// <summary>
+        /// [기능]: SoundSettingsDTO의 초기 설정을 기반으로 로컬 오디오 소스의 볼륨을 동기화합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 초기 볼륨 및 Mute 여부 값 동기화 로직 구현
+        /// </summary>
+        private void UpdateAudioSourceVolume()
+        {
+            if (m_audioSource == null)
+            {
+                return;
+            }
+
+            if (m_soundService != null && m_soundService.Settings != null)
+            {
+                m_audioSource.volume = m_soundService.Settings.IsSfxMuted ? 0f : m_soundService.Settings.SfxVolume;
+            }
+            else
+            {
+                m_audioSource.volume = 1f;
+            }
         }
 
         #endregion

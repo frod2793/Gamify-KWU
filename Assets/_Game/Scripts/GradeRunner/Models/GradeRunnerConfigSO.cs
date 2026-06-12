@@ -5,7 +5,7 @@ using UnityEngine;
 /// [작성자]: 윤승종
 /// [수정 날짜]: 2026-06-13
 /// [마지막 수정 작성자]: 윤승종
-/// [수정 내용]: 2페이즈 전환 임계 시간을 10초로 복원
+/// [수정 내용]: 기본 게임 전체 제한시간을 30초로 기본값 변경 (1페이즈 20초, 2페이즈 10초 밸런싱)
 /// </summary>
 namespace GameArifiction.GradeRunner
 {
@@ -17,7 +17,7 @@ namespace GameArifiction.GradeRunner
         [Header("게임 제한 시간")]
         [SerializeField]
         [Tooltip("미니게임 전체 제한시간(초)입니다. 기본값 30초.")]
-        private float m_gameDuration = 40f;
+        private float m_gameDuration = 30f;
 
         [Header("페이즈 2 전환 시간")]
         [SerializeField]

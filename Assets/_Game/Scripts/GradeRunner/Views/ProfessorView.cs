@@ -3,6 +3,7 @@ using UnityEngine;
 using Cysharp.Threading.Tasks;
 using System.Threading;
 using VContainer;
+using GameArifiction.Core.Audio;
 
 /// <summary>
 /// [기능]: 2D 피하기 미니게임(GradeRunner)에서 플레이어를 향해 코드를 떨어뜨리는 교수 캐릭터의 뷰(View) 컴포넌트.
@@ -48,6 +49,21 @@ namespace GameArifiction.GradeRunner
         [Tooltip("타이핑 완료 후 말풍선이 화면에 완전히 머무르는 시간(초)입니다. 기본값 1.5초.")]
         private float m_dialogueHoldDuration = 1.5f;
 
+        [Header("대사 사운드 설정")]
+        [SerializeField]
+        [Tooltip("교수님 타이핑 대사 시 출력될 효과음 클립입니다.")]
+        private AudioClip m_typewriterSound;
+
+        [SerializeField]
+        [Range(0.8f, 1.2f)]
+        [Tooltip("타이핑 소리 재생 시의 최소 피치 범위입니다.")]
+        private float m_minPitch = 0.95f;
+
+        [SerializeField]
+        [Range(0.8f, 1.2f)]
+        [Tooltip("타이핑 소리 재생 시의 최대 피치 범위입니다.")]
+        private float m_maxPitch = 1.05f;
+
         [Header("이동 연출 설정")]
         [SerializeField]
         [Tooltip("공격 지점으로 이동할 때의 도트윈 이징 방식입니다.")]
@@ -62,7 +78,9 @@ namespace GameArifiction.GradeRunner
         #region 내부 필드 (Private Fields)
 
         private GradeRunnerViewModel m_viewModel;
+        private ISoundService m_soundService;
         private float m_startPositionX; // 게임 시작 시점의 최초 X좌표
+        private AudioSource m_audioSource;
 
         #endregion
 
@@ -77,6 +95,19 @@ namespace GameArifiction.GradeRunner
             {
                 m_dialogueBubble.gameObject.SetActive(false);
             }
+
+            // 오디오 소스 컴포넌트 자동 바인딩 및 기본 옵션 설정
+            m_audioSource = GetComponent<AudioSource>();
+            if (m_audioSource == null)
+            {
+                m_audioSource = gameObject.AddComponent<AudioSource>();
+            }
+            m_audioSource.playOnAwake = false;
+            m_audioSource.loop = false;
+            m_audioSource.spatialBlend = 0f; // 2D 오디오 재생
+
+            // 초기 볼륨 동기화
+            UpdateAudioSourceVolume();
 
             SetVisualActiveOnly(m_phase1Visual);
             Debug.Log("[ProfessorView] 교수님 공격 캐릭터 뷰 초기화 성공.");
@@ -93,18 +124,25 @@ namespace GameArifiction.GradeRunner
         #region 초기화 (Initialization)
 
         /// <summary>
-        /// [기능]: VContainer를 통해 뷰모델 의존성을 주입합니다.
+        /// [기능]: VContainer를 통해 뷰모델 및 사운드 서비스 의존성을 주입합니다.
         /// [작성자]: 윤승종
         /// </summary>
         [Inject]
-        public void Construct(GradeRunnerViewModel viewModel)
+        public void Construct(GradeRunnerViewModel viewModel, ISoundService soundService)
         {
             m_viewModel = viewModel;
+            m_soundService = soundService;
+
             if (m_viewModel != null)
             {
                 m_viewModel.OnPhaseChanged += HandlePhaseChanged;
                 m_viewModel.OnIntroCutsceneStarted += HandleIntroCutscene;
                 m_viewModel.OnPhase2CutsceneStarted += HandlePhase2Cutscene;
+            }
+
+            if (m_soundService != null)
+            {
+                m_soundService.OnSfxVolumeChanged += HandleSfxVolumeChanged;
             }
         }
 
@@ -115,6 +153,11 @@ namespace GameArifiction.GradeRunner
                 m_viewModel.OnPhaseChanged -= HandlePhaseChanged;
                 m_viewModel.OnIntroCutsceneStarted -= HandleIntroCutscene;
                 m_viewModel.OnPhase2CutsceneStarted -= HandlePhase2Cutscene;
+            }
+
+            if (m_soundService != null)
+            {
+                m_soundService.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
             }
         }
 
@@ -279,6 +322,17 @@ namespace GameArifiction.GradeRunner
                         return;
                     }
                     m_dialogueText.text = text.Substring(0, i);
+
+                    // 타이핑 소리 재생: 공백이 아닐 때만 유효 글자로 판단하여 박자 맞춰 1:1로 재생
+                    if (i > 0 && i <= text.Length)
+                    {
+                        char currentChar = text[i - 1];
+                        if (!char.IsWhiteSpace(currentChar))
+                        {
+                            PlayTypewriterSound();
+                        }
+                    }
+
                     await UniTask.Delay(System.TimeSpan.FromSeconds(m_typingSpeed), cancellationToken: cancellationToken).SuppressCancellationThrow();
                 }
 
@@ -315,6 +369,63 @@ namespace GameArifiction.GradeRunner
                 {
                     onComplete.Invoke();
                 }
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 타이핑 효과음 클립을 미세한 피치 변조와 함께 즉시 재생합니다.
+        ///         (PlayOneShot 대신 Play를 사용하여 이전 재생음을 끊고 1:1 박자를 맞춥니다)
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 타이핑 연출 비트음 1:1 박자 동기화 재생 적용
+        /// </summary>
+        private void PlayTypewriterSound()
+        {
+            if (m_audioSource != null && m_typewriterSound != null)
+            {
+                m_audioSource.pitch = UnityEngine.Random.Range(m_minPitch, m_maxPitch);
+                m_audioSource.clip = m_typewriterSound;
+                m_audioSource.Play();
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 전역 SFX 볼륨 변경 시 로컬 오디오 소스의 볼륨을 즉각 갱신합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 볼륨 실시간 변경 핸들링 구현
+        /// </summary>
+        private void HandleSfxVolumeChanged(float volume)
+        {
+            if (m_audioSource != null)
+            {
+                m_audioSource.volume = volume;
+            }
+        }
+
+        /// <summary>
+        /// [기능]: SoundSettingsDTO의 초기 설정을 기반으로 로컬 오디오 소스의 볼륨을 동기화합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 초기 볼륨 및 Mute 여부 값 동기화 로직 구현
+        /// </summary>
+        private void UpdateAudioSourceVolume()
+        {
+            if (m_audioSource == null)
+            {
+                return;
+            }
+
+            if (m_soundService != null && m_soundService.Settings != null)
+            {
+                m_audioSource.volume = m_soundService.Settings.IsSfxMuted ? 0f : m_soundService.Settings.SfxVolume;
+            }
+            else
+            {
+                m_audioSource.volume = 1f;
             }
         }
 

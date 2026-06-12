@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 935e387edc97a0f4799277609ecdc20b, type: 3}
   m_Name: GradeRunnerDialogueSO
   m_EditorClassIdentifier: GamifyKWU.Runtime::GameArifiction.GradeRunner.GradeRunnerDialogueSO
-  m_introDialogue: "\uC790, \uC9C0\uAE08\uBD80\uD130 \uCF54\uB529 \uD14C\uC2A4\uD2B8\uB97C
-    \uC2DC\uC791\uD558\uACA0\uB2E4!"
-  m_phase2Dialogue: "\uC544\uC9C1 \uB05D\uB098\uC9C0 \uC54A\uC558\uB2E4! \uC9C4\uC815\uD55C
-    \uB9E4\uC6B4\uB9DB\uC744 \uBCF4\uC5EC\uC8FC\uC9C0!"
+  m_introDialogue: "\uBC18\uAC00\uC6CC\uC694 \uC6B0\uB2C8\uAD70, \uC9C0\uAE08\uBD80\uD130
+    \uCF54\uB529 \uD14C\uC2A4\uD2B8\uB97C \uC2DC\uC791\uD558\uACA0\uC5B4\uC694."
+  m_phase2Dialogue: "\uD06C\uD559\uD559\uD559\uD559! \uC6B0\uB2C8\uAD70 \uC2E4\uB825\uC774
+    \uC88B\uC73C\uC2DC\uAD70\uC694 \uC774\uAC83\uB3C4 \uD53C\uD560 \uC218 \uC788\uC744\uAE4C\uC694?"
