@@ -13,9 +13,9 @@ namespace GameArifiction.GradeRunner
     /// [기능]: GradeRunner 게임 결과를 수신하여 공통 결과 팝업(CommonResultPopupView)에 전달하고 씬 전이를 처리하는 순수 C# 중개 프레젠터 클래스입니다.
     ///         씬 하이어라키 배치가 필요 없도록 VContainer EntryPoint(IStartable) 모델로 설계되었습니다.
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-06-08
+    /// [수정 날짜]: 2026-06-13
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 불필요한 단순 확인용 디버그 로그(Debug.Log) 제거/주석화 및 마감 처리
+    /// [수정 내용]: 결과 팝업 스코어 문구를 '현재 스코어'에서 '스코어'로 수정
     /// </summary>
     public class GradeRunnerResultPresenter : IStartable, IDisposable
     {
@@ -101,7 +101,7 @@ namespace GameArifiction.GradeRunner
             
             CommonPopupDataDTO popupData = new CommonPopupDataDTO(
                 titleText,
-                $"현재 스코어: {result.FinalGradePoint:F1}",
+                $"스코어: {result.FinalGradePoint:F1}",
                 "게임엔진S/W",
                 result.MinigameGrade,
                 "로비로 이동",

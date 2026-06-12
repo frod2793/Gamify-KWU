@@ -12,9 +12,9 @@ namespace GameArifiction.Map
     /// <summary>
     /// [기능]: 포탈의 충돌 범위를 통해 플레이어의 진입을 허용하고, 이지 트랜지션 연동을 통해 연출과 함께 씬 전환을 실행하는 뷰 클래스 (최초 플레이 유도용 느낌표 이미지 노출 기능 포함)
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-06-12
+    /// [수정 날짜]: 2026-06-13
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: ClawMachine 대상 씬 성적을 CraneGame 키로 맵핑 보정하도록 수정
+    /// [수정 내용]: MVVM 패턴 준수를 위해 PlayerSO 직접 참조 제거 및 MapViewModel 우회 연동, OnEnable 시각적 갱신 적용
     /// </summary>
     [RequireComponent(typeof(Collider2D))]
     public class PortalView : MonoBehaviour, IInteractable
@@ -64,20 +64,20 @@ namespace GameArifiction.Map
 
         #region 내부 필드 (Private Fields)
         private SpriteRenderer m_cachedGradeSpriteRenderer;
-        private PlayerSO m_playerSO;
+        private MapViewModel m_mapViewModel;
         private string m_cachedMinigameId;
         #endregion
 
         #region 의존성 주입
         /// <summary>
-        /// [기능]: VContainer 수명주기 컨테이너로부터 PlayerSO 인스턴스를 주입받습니다.
+        /// [기능]: VContainer 수명주기 컨테이너로부터 MapViewModel 인스턴스를 주입받습니다.
         /// [작성자]: 윤승종
         /// </summary>
         [Inject]
-        public void Construct(PlayerSO playerSO)
+        public void Construct(MapViewModel mapViewModel)
         {
-            m_playerSO = playerSO;
-            Debug.Log("[PortalView] VContainer를 통해 PlayerSO 의존성이 자동으로 주입되었습니다.");
+            m_mapViewModel = mapViewModel;
+            Debug.Log("[PortalView] VContainer를 통해 MapViewModel 의존성이 자동으로 주입되었습니다.");
         }
         #endregion
 
@@ -97,11 +97,11 @@ namespace GameArifiction.Map
 
         #region 유니티 생명주기
         /// <summary>
-        /// [기능]: 컴포넌트 초기화 시 콜라이더 트리거 설정 및 자식 렌더러를 캐싱합니다.
+        /// [기능]: 컴포넌트 초기화 시 콜라이더 트리거 설정, 자식 렌더러 캐싱 및 타겟 미니게임 ID를 조기에 분석합니다.
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-06-12
+        /// [수정 날짜]: 2026-06-13
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 문서화 주석 추가
+        /// [수정 내용]: 미니게임 ID 캐싱 로직을 Awake로 이관
         /// </summary>
         private void Awake()
         {
@@ -129,20 +129,20 @@ namespace GameArifiction.Map
                     }
                 }
             }
+
+            // 미니게임 고유 ID 결정 및 캐싱
+            m_cachedMinigameId = string.IsNullOrEmpty(m_minigameId) ? GetTargetSceneName() : m_minigameId;
         }
 
         /// <summary>
-        /// [기능]: 포탈 활성화 시 미니게임 플레이 기록을 검사하여 성적 아이콘을 갱신합니다.
+        /// [기능]: 포탈 오브젝트 활성화 시점에 최신 플레이 데이터를 뷰모델로부터 실시간으로 반영합니다.
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-06-12
+        /// [수정 날짜]: 2026-06-13
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 포탈 자체 비활성화 로직을 제거하고 항상 성적 및 특수 연출 스프라이트 갱신을 수행하도록 변경
+        /// [수정 내용]: Start 대신 OnEnable 갱신 연동
         /// </summary>
-        private void Start()
+        private void OnEnable()
         {
-            // 미니게임 고유 ID 결정 및 캐싱
-            m_cachedMinigameId = string.IsNullOrEmpty(m_minigameId) ? GetTargetSceneName() : m_minigameId;
-
             UpdateGradeDisplay();
         }
         #endregion
@@ -218,17 +218,17 @@ namespace GameArifiction.Map
         }
 
         /// <summary>
-        /// [기능]: PlayerSO의 성적 기록을 확인하여 포탈 앞에 성적 이미지를 갱신 표시합니다. 최초 플레이 시에는 느낌표 이미지를 띄웁니다.
+        /// [기능]: MapViewModel을 통해 성적 기록을 확인하여 포탈 앞에 성적 이미지를 갱신 표시합니다. 최초 플레이 시에는 느낌표 이미지를 띄웁니다.
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-06-12
+        /// [수정 날짜]: 2026-06-13
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 플레이 기록이 없을 시(MinigameGrade.None) 신규 변수에 따른 느낌표 스프라이트 동적 출력 연동
+        /// [수정 내용]: PlayerSO 의존성을 배제하고 MapViewModel로부터 갱신 상태 획득하도록 개선
         /// </summary>
         private void UpdateGradeDisplay()
         {
-            if (m_playerSO == null)
+            if (m_mapViewModel == null)
             {
-                Debug.LogWarning($"[PortalView] '{gameObject.name}'에 PlayerSO 레퍼런스가 할당되지 않아 성적 표시를 생략합니다.");
+                Debug.LogWarning($"[PortalView] '{gameObject.name}'에 MapViewModel 레퍼런스가 할당되지 않아 성적 표시를 생략합니다.");
                 if (m_cachedGradeSpriteRenderer != null)
                 {
                     m_cachedGradeSpriteRenderer.gameObject.SetActive(false);
@@ -246,15 +246,8 @@ namespace GameArifiction.Map
                 return;
             }
 
-            // 캐싱된 미니게임 ID를 결정 및 보정합니다.
-            string targetId = m_cachedMinigameId;
-            if (string.Equals(targetId, "ClawMachine", StringComparison.OrdinalIgnoreCase))
-            {
-                targetId = "CraneGame";
-            }
-
-            // 보정된 미니게임 ID를 활용해 성적을 조회합니다.
-            MinigameGrade grade = m_playerSO.GetMinigameGrade(targetId);
+            // 보정 및 데이터 획득은 뷰모델에서 캡슐화 처리
+            MinigameGrade grade = m_mapViewModel.GetMinigameGrade(m_cachedMinigameId);
 
             if (m_cachedGradeSpriteRenderer != null)
             {

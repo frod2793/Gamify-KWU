@@ -8,6 +8,9 @@ using VContainer.Unity;
 /// <summary>
 /// [기능]: 2D 피하기 미니게임(GradeRunner)의 핵심 타이머 루프, 장애물/아이템 스폰 주기 통제, 충돌 연산 및 점수/등급 판정을 수행하는 ViewModel (POCO)
 /// [작성자]: 윤승종
+/// [수정 날짜]: 2026-06-13
+/// [마지막 수정 작성자]: 윤승종
+/// [수정 내용]: 2페이즈 전환 시점에 남은 시간 소수점 오차 정밀 클램핑 추가
 /// </summary>
 namespace GameArifiction.GradeRunner
 {
@@ -379,6 +382,7 @@ namespace GameArifiction.GradeRunner
                 // [신규 페이즈 체크]: 남은 시간 10초 이하로 떨어지면 2페이즈로 돌입
                 if (m_currentPhase == GradeRunnerPhase.Phase1 && m_model.RemainingTime <= m_config.Phase2TransitionTime)
                 {
+                    m_model.RemainingTime = m_config.Phase2TransitionTime;
                     m_currentPhase = GradeRunnerPhase.Phase2;
                     OnPhaseChanged?.Invoke(m_currentPhase);
 

@@ -3,9 +3,9 @@ using UnityEngine;
 /// <summary>
 /// [기능]: 2D 피하기 미니게임(GradeRunner)의 속도, 스폰 주기, 보너스/패널티 등 주요 밸런스 설정치를 총괄하는 ScriptableObject
 /// [작성자]: 윤승종
-/// [수정 날짜]: 2026-06-12
+/// [수정 날짜]: 2026-06-13
 /// [마지막 수정 작성자]: 윤승종
-/// [수정 내용]: 1페이즈 20초, 2페이즈 20초(전체 40초) 밸런스 시간 변경
+/// [수정 내용]: 2페이즈 전환 임계 시간을 10초로 복원
 /// </summary>
 namespace GameArifiction.GradeRunner
 {
@@ -22,7 +22,7 @@ namespace GameArifiction.GradeRunner
         [Header("페이즈 2 전환 시간")]
         [SerializeField]
         [Tooltip("2페이즈(남은시간 10초 이하) 전환 시점(초)입니다. 기본값 10초.")]
-        private float m_phase2TransitionTime = 20f;
+        private float m_phase2TransitionTime = 10f;
 
         [Header("학점 밸런스")]
         [SerializeField]
