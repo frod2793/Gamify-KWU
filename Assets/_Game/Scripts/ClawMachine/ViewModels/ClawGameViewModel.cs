@@ -238,14 +238,20 @@ namespace GameArifiction.ClawMachine
 
         public void StartMoveLeft()
         {
-            if (m_currentState != ClawStateType.Idle && m_currentState != ClawStateType.MovingRight) return;
+            if (m_currentState != ClawStateType.Idle && m_currentState != ClawStateType.MovingRight)
+            {
+                return;
+            }
             ChangeState(ClawStateType.MovingLeft);
             OnMoveRequested?.Invoke(false);
         }
 
         public void StartMoveRight()
         {
-            if (m_currentState != ClawStateType.Idle && m_currentState != ClawStateType.MovingLeft) return;
+            if (m_currentState != ClawStateType.Idle && m_currentState != ClawStateType.MovingLeft)
+            {
+                return;
+            }
             ChangeState(ClawStateType.MovingRight);
             OnMoveRequested?.Invoke(true);
         }
@@ -327,7 +333,10 @@ namespace GameArifiction.ClawMachine
         // View에서 각 연출(트윈)이 끝났을 때 호출하여 상태 전환
         public void NotifyDescendCompleted()
         {
-            if (m_currentState == ClawStateType.ReTakeRequest || m_currentState == ClawStateType.Result) return;
+            if (m_currentState == ClawStateType.ReTakeRequest || m_currentState == ClawStateType.Result)
+            {
+                return;
+            }
             ChangeState(ClawStateType.Grabbing);
         }
 
@@ -342,7 +351,10 @@ namespace GameArifiction.ClawMachine
         {
             IsHoldingDoll = isGrabbed;
             IsClawClosed = true;
-            if (m_currentState == ClawStateType.ReTakeRequest || m_currentState == ClawStateType.Result) return;
+            if (m_currentState == ClawStateType.ReTakeRequest || m_currentState == ClawStateType.Result)
+            {
+                return;
+            }
 
             // 인형 획득 성공 시 Catch 효과음 재생
             if (isGrabbed && m_soundService != null)
@@ -361,7 +373,10 @@ namespace GameArifiction.ClawMachine
 /// </summary>
 public void NotifyAscendCompleted()
 {
-    if (m_currentState == ClawStateType.ReTakeRequest || m_currentState == ClawStateType.Result) return;
+    if (m_currentState == ClawStateType.ReTakeRequest || m_currentState == ClawStateType.Result)
+    {
+        return;
+    }
     // [규칙 변경]: 자동 복귀 없이 제자리에서 정지하여 사용자의 추가 이동 및 릴리즈 입력을 대기함
     ChangeState(ClawStateType.Idle);
 }
@@ -376,7 +391,10 @@ public void NotifyAscendCompleted()
         public void NotifyReturnCompleted()
         {
             IsClawClosed = false;
-            if (m_currentState == ClawStateType.ReTakeRequest || m_currentState == ClawStateType.Result) return;
+            if (m_currentState == ClawStateType.ReTakeRequest || m_currentState == ClawStateType.Result)
+            {
+                return;
+            }
             ChangeState(ClawStateType.Result);
         }
 
@@ -604,7 +622,10 @@ public void NotifyAscendCompleted()
             while (remainingSeconds > 0f)
             {
                 bool isCanceled = await UniTask.Yield(PlayerLoopTiming.Update, token).SuppressCancellationThrow();
-                if (isCanceled) return;
+                if (isCanceled)
+                {
+                    return;
+                }
 
                 float dt = Time.deltaTime;
                 remainingSeconds -= dt;

@@ -25,7 +25,7 @@ namespace GameArifiction.ClawMachine
         [Tooltip("절차적 제어를 받는 실제 집게 헤드 View 객체입니다.")]
         private ClawBodyView m_clawBody;
 
-        [Header("와이어 다관절 설정 (Wire Segments)")]
+        [Header("와이어 다관절 설정")]
         [SerializeField]
         [Tooltip("와이어의 마디로 사용할 스프라이트 텍스처입니다.")]
         private Sprite m_wireSegmentSprite;
@@ -50,7 +50,7 @@ namespace GameArifiction.ClawMachine
         [Tooltip("와이어 마디 스프라이트의 Sorting Order 값입니다.")]
         private int m_sortingOrder = 5;
 
-        [Header("와이어 출렁임 및 처짐 설정 (Wire Sag & Wave)")]
+        [Header("와이어 출렁임 및 처짐 설정")]
         [SerializeField]
         [Tooltip("와이어의 처짐 강도 (중력에 의한 아래 처짐 정도)")]
         private float m_wireSagIntensity = 0.12f;
@@ -80,7 +80,7 @@ namespace GameArifiction.ClawMachine
         [Tooltip("집게가 바닥/인형에 안착한 후, 실제로 오므리기까지 대기하는 시간(초)입니다.")]
         private float m_grabDelay = 0.2f;
 
-        [Header("와이어 미세 위치 보정 설정 (Wire Offset)")]
+        [Header("와이어 미세 위치 보정 설정")]
         [SerializeField]
         [Tooltip("와이어의 월드 Z축 깊이 값입니다. 2D 표준은 0입니다.")]
         private float m_wireZDepth = 0f;
@@ -93,7 +93,7 @@ namespace GameArifiction.ClawMachine
         [Tooltip("집게 헤드(ClawBody) 기준 와이어 끝점의 로컬 미세 보정 좌표(Offset)입니다.")]
         private Vector3 m_wireEndOffset = Vector3.zero;
 
-        [Header("밧줄 다관절 지연 시뮬레이터 (Rope Lag Settings)")]
+        [Header("밧줄 다관절 지연 시뮬레이터")]
         [SerializeField]
         [Tooltip("카트 주행 시 밧줄 마디가 상위 마디를 추종하는 지연 속도(유연도)입니다. 낮을수록 활처럼 크게 휩니다.")]
         private float m_ropeLagElasticity = 10.0f;
@@ -104,17 +104,17 @@ namespace GameArifiction.ClawMachine
 
         private Vector3[] m_segmentWorldPositions;
 
-        [Header("애니메이션 (Animation)")]
+        [Header("애니메이션")]
         [SerializeField] private float m_descendDuration = 0.8f;
         [SerializeField] private float m_ascendDuration = 0.8f;
 
-        [Header("절차적 흔들림 설정 (Procedural Swing)")]
+        [Header("절차적 흔들림 설정")]
         [SerializeField][Tooltip("흔들림의 강도 (카트 가속도 영향력)")] private float m_swingSensitivity = 0.5f;
         [SerializeField][Tooltip("중력 복원력 (0으로 돌아오려는 힘)")] private float m_swingGravity = 9.8f;
         [SerializeField][Tooltip("흔들림 감쇄 저항")] private float m_swingDamping = 0.98f;
         [SerializeField][Tooltip("최대 흔들림 각도")] private float m_maxSwingAngle = 45f;
 
-        [Header("주행 한계 설정 (Cart Boundaries)")]
+        [Header("주행 한계 설정")]
         [SerializeField][Tooltip("카트가 좌측으로 갈 수 있는 최소 로컬 X 좌표입니다.")] private float m_minCartX = -4.0f;
         [SerializeField][Tooltip("카트가 우측으로 갈 수 있는 최대 로컬 X 좌표입니다.")] private float m_maxCartX = 4.0f;
         #endregion
@@ -220,8 +220,11 @@ namespace GameArifiction.ClawMachine
         /// <summary>
         /// [기능]: 재수강(재시도) 시 카트(ClawRoot)의 위치를 시작 원점 좌표로 원복하고 줄 길이 및 집게 상태를 완전 리셋합니다.
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 코딩 표준에 맞춰 일반 퍼블릭 메서드의 func_ 접두사 제거
         /// </summary>
-        public void func_ResetClawToInitialState()
+        public void ResetClawToInitialState()
         {
             CancelAnimations();
 
@@ -433,7 +436,10 @@ namespace GameArifiction.ClawMachine
             {
                 for (int i = 0; i < m_wireSegments.Count; i++)
                 {
-                    if (m_wireSegments[i].activeSelf) m_wireSegments[i].SetActive(false);
+                    if (m_wireSegments[i].activeSelf)
+                    {
+                        m_wireSegments[i].SetActive(false);
+                    }
                 }
                 return;
             }
@@ -729,7 +735,10 @@ namespace GameArifiction.ClawMachine
 
             await UniTask.Delay(System.TimeSpan.FromSeconds(m_grabDelay), cancellationToken: token);
 
-            if (m_viewModel != null) m_viewModel.NotifyDescendCompleted();
+            if (m_viewModel != null)
+            {
+                m_viewModel.NotifyDescendCompleted();
+            }
         }
 
         private async UniTaskVoid PlayGrabAnimation(System.Threading.CancellationToken token)
@@ -740,7 +749,10 @@ namespace GameArifiction.ClawMachine
             }
             else
             {
-                if (m_viewModel != null) m_viewModel.NotifyGrabCompleted(false);
+                if (m_viewModel != null)
+                {
+                    m_viewModel.NotifyGrabCompleted(false);
+                }
             }
         }
 
@@ -779,21 +791,33 @@ namespace GameArifiction.ClawMachine
 
         private async UniTaskVoid PlayReturnAnimation(System.Threading.CancellationToken token)
         {
-            if (m_clawRoot == null) return;
+            if (m_clawRoot == null)
+            {
+                return;
+            }
 
             await m_clawRoot.DOLocalMoveX(m_initialPosition.x, 1.5f)
                 .SetEase(Ease.OutQuad)
                 .ToUniTask(cancellationToken: token);
 
-            if (m_clawBody != null) m_clawBody.ReleaseDoll();
+            if (m_clawBody != null)
+            {
+                m_clawBody.ReleaseDoll();
+            }
 
             await UniTask.Delay(500, cancellationToken: token);
-            if (m_viewModel != null) m_viewModel.NotifyReturnCompleted();
+            if (m_viewModel != null)
+            {
+                m_viewModel.NotifyReturnCompleted();
+            }
         }
 
         private void CheckResult()
         {
-            if (m_viewModel != null) m_viewModel.NotifyResultCompleted();
+            if (m_viewModel != null)
+            {
+                m_viewModel.NotifyResultCompleted();
+            }
         }
 
         /// <summary>

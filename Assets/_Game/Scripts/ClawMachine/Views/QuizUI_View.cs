@@ -97,13 +97,22 @@ namespace GameArifiction.ClawMachine
         }
         #endregion
 
+        #region 이벤트 (Events)
+        /// <summary>
+        /// [기능]: 퀴즈 문제 다시보기 팝업이 닫힐 때 발생하는 이벤트입니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public event System.Action OnQuizClosed;
+        #endregion
+
         #region UI 이벤트 콜백 (Public Methods)
         /// <summary>
         /// [기능]: 퀴즈 문제 확인(시작) 버튼 클릭 시 호출되어 뷰모델의 퀴즈 종료 및 카운트다운을 트리거합니다.
         ///         (에디터 상에서 Button.OnClick 이벤트에 직접 등록하여 사용합니다.)
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-06-06
+        /// [수정 날짜]: 2026-06-12
         /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 퀴즈 팝업 닫힘 이벤트 트리거 추가
         /// </summary>
         public void func_OnStartButtonClicked()
         {
@@ -120,6 +129,11 @@ namespace GameArifiction.ClawMachine
             if (m_quizPopupPanel != null)
             {
                 m_quizPopupPanel.SetActive(false);
+            }
+
+            if (OnQuizClosed != null)
+            {
+                OnQuizClosed.Invoke();
             }
         }
 

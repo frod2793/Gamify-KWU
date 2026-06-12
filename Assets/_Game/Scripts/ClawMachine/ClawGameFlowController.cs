@@ -13,9 +13,9 @@ namespace GameArifiction.ClawMachine
     /// <summary>
     /// [기능]: 인형뽑기(ClawMachine) 씬의 초기화 및 흐름을 제어하는 순수 C# EntryPoint 클래스입니다.
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-06-06
+    /// [수정 날짜]: 2026-06-12
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: ISoundService 주입을 통한 BGM 재생 및 해제 시 BGM 정지(IDisposable 구현) 추가
+    /// [수정 내용]: ClawGameView.Initialize 호출 시 의존성 주입 최적화에 맞추어 단일 매개변수(viewModel)만 전달하도록 수정
     /// </summary>
     public class ClawGameFlowController : IStartable, System.IDisposable
     {
@@ -143,10 +143,10 @@ namespace GameArifiction.ClawMachine
                 Debug.Log("[ClawGameFlowController] ClawGameResultPopupView 초기화 완료.");
             }
 
-            // 5. 최상위 UI 게임 뷰 초기화 (튜토리얼 및 결과 팝업 연결)
+            // 5. 최상위 UI 게임 뷰 초기화 (단일 뷰모델 바인딩으로 최적화)
             if (m_gameView != null)
             {
-                m_gameView.Initialize(m_viewModel, m_resultPopupView, m_tutorialPopupView);
+                m_gameView.Initialize(m_viewModel);
                 Debug.Log("[ClawGameFlowController] ClawGameView 초기화 완료.");
             }
 
@@ -319,7 +319,15 @@ namespace GameArifiction.ClawMachine
         /// </summary>
         private Vector3 GetRandomNonOverlappingPosition(List<Vector2> existingPositions)
         {
-            Vector3 defaultPos = m_sceneReferences != null && m_sceneReferences.DollsContainer != null ? m_sceneReferences.DollsContainer.position : Vector3.zero;
+            Vector3 defaultPos = Vector3.zero;
+            if (m_sceneReferences != null)
+            {
+                if (m_sceneReferences.DollsContainer != null)
+                {
+                    defaultPos = m_sceneReferences.DollsContainer.position;
+                }
+            }
+
             if (m_sceneReferences == null || m_sceneReferences.SpawnAreaCollider == null)
             {
                 Debug.LogWarning("[ClawGameFlowController] SpawnAreaCollider DTO 참조가 설정되지 않아 기본 위치에 스폰합니다.");

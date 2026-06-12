@@ -19,18 +19,7 @@ namespace GameArifiction.ClawMachine
     public class ClawGameView : MonoBehaviour
     {
         #region UI 참조 (Inspector)
-        [SerializeField]
-        [Tooltip("좌우 주행과 와이어 길이를 제어하는 천장 카트 View 객체입니다.")]
-        private ClawView m_clawView;
-
-
-
-        [SerializeField]
-        [Tooltip("최종 정답/실패 결과를 처리할 팝업 View 컴포넌트입니다.")]
-        private ClawGameResultPopupView m_resultPopup;
-
-
-        [Header("UI Controls (Inspector)")]
+        [Header("UI 제어 (Inspector)")]
         [SerializeField]
         [Tooltip("좌측 주행 제어 UI 버튼입니다.")]
         private Button m_leftButton;
@@ -52,22 +41,23 @@ namespace GameArifiction.ClawMachine
         private Button m_showTutorialButton;
 
         [SerializeField]
+        [Tooltip("공용 설정 팝업을 띄우는 UI 버튼입니다.")]
+        private Button m_settingsButton;
+
+        [SerializeField]
         [Tooltip("게임 일시정지를 제어하는 UI 버튼입니다.")]
         private Button m_pauseButton;
-
-        [SerializeField]
-        [Tooltip("시작 카운트다운 숫자를 표시할 TextMeshProUGUI 컴포넌트입니다.")]
-        private TMPro.TextMeshProUGUI m_countdownText;
-
-        [SerializeField]
-        [Tooltip("게임 일시정지 시 표시될 공통 일시정지 팝업 View입니다.")]
-        private CommonPausePopupView m_pausePopupView;
         #endregion
 
-
         #region 내부 필드 (Private Fields)
+        private ClawView m_clawView;
+        private ClawGameResultPopupView m_resultPopup;
+        private CommonPausePopupView m_pausePopupView;
+
         private ClawGameViewModel m_viewModel;
         private ClawGameTutorialPopupView m_tutorialPopupView;
+        private QuizUI_View m_quizUIView;
+        private CommonSettingsPopupView m_settingsPopupView;
         private ISoundService m_soundService;
         private float m_prevHorizontalInput;
         private bool m_isKeyboardControlling;
@@ -75,16 +65,29 @@ namespace GameArifiction.ClawMachine
 
         #region 의존성 주입 (Dependency Injection)
         /// <summary>
-        /// [기능]: VContainer를 통해 공통 사운드 서비스를 주입받습니다.
+        /// [기능]: VContainer를 통해 공통 사운드 서비스 및 씬 내 주요 하이어라키 뷰 의존성들을 일괄 주입받습니다.
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-06-11
+        /// [수정 날짜]: 2026-06-12
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: CommonPausePopupView를 인스펙터 바인딩으로 전환하여 주입 매개변수 제거
+        /// [수정 내용]: 하이어라키 자동 등록 기법을 적용하여 인스펙터 결합도 제거 및 로직 간소화
         /// </summary>
         [Inject]
-        public void Construct(ISoundService soundService)
+        public void Construct(
+            ISoundService soundService, 
+            CommonSettingsPopupView settingsPopupView,
+            CommonPausePopupView pausePopupView,
+            ClawView clawView,
+            ClawGameResultPopupView resultPopup,
+            ClawGameTutorialPopupView tutorialPopup,
+            QuizUI_View quizUIView)
         {
             m_soundService = soundService;
+            m_settingsPopupView = settingsPopupView;
+            m_pausePopupView = pausePopupView;
+            m_clawView = clawView;
+            m_resultPopup = resultPopup;
+            m_tutorialPopupView = tutorialPopup;
+            m_quizUIView = quizUIView;
         }
         #endregion
 
@@ -96,15 +99,33 @@ namespace GameArifiction.ClawMachine
         #endregion
 
         #region 초기화 (Initialization)
-        public void Initialize(ClawGameViewModel viewModel, ClawGameResultPopupView resultPopup, ClawGameTutorialPopupView tutorialPopup)
+        /// <summary>
+        /// [기능]: 뷰모델을 초기화하고 조작 버튼과 일시정지 팝업 상태 및 이벤트를 제어합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 의존성들이 VContainer에 의해 자동 주입되므로 뷰모델 매개변수만 전달받도록 최적화
+        /// </summary>
+        public void Initialize(ClawGameViewModel viewModel)
         {
             m_viewModel = viewModel;
-            m_resultPopup = resultPopup;
-            m_tutorialPopupView = tutorialPopup;
             
             // 이벤트 구독
             m_viewModel.OnRemoveDisagreeDollRequested += HandleRemoveDisagreeDoll;
             m_viewModel.OnStateChanged += UpdateButtonInteractions;
+
+            if (m_tutorialPopupView != null)
+            {
+                m_tutorialPopupView.OnTutorialClosed += HandleTutorialClosed;
+            }
+            if (m_quizUIView != null)
+            {
+                m_quizUIView.OnQuizClosed += HandleQuizClosed;
+            }
+            if (m_resultPopup != null)
+            {
+                m_resultPopup.OnConfirmClicked += HandleConfirmClicked;
+            }
 
             // [신규]: UI 버튼 클릭 이벤트 코드 바인딩 주입
             if (m_descendButton != null)
@@ -123,6 +144,10 @@ namespace GameArifiction.ClawMachine
             {
                 m_pauseButton.onClick.AddListener(func_OnPauseButtonClick);
             }
+            if (m_settingsButton != null)
+            {
+                m_settingsButton.onClick.AddListener(func_OnSettingsButtonClick);
+            }
 
             // [신규]: UI 좌우 이동 버튼 EventTrigger 기반 PointerDown/Up 동적 바인딩 주입 (타입 세이프 가동 보장)
             RegisterPointerEvent(m_leftButton, EventTriggerType.PointerDown, (data) => func_OnLeftButtonDown());
@@ -134,6 +159,19 @@ namespace GameArifiction.ClawMachine
             if (m_clawView != null)
             {
                 m_clawView.Initialize(m_viewModel);
+            }
+
+            // 초기 일시정지 팝업 강제 비활성화 (Late Awake 방지)
+            if (m_pausePopupView != null)
+            {
+                m_pausePopupView.gameObject.SetActive(false);
+            }
+
+            // 초기 설정 팝업 강제 비활성화 및 닫기 이벤트 구독
+            if (m_settingsPopupView != null)
+            {
+                m_settingsPopupView.OnClosePopup += func_OnSettingsClose;
+                m_settingsPopupView.gameObject.SetActive(false);
             }
 
             // 초기 버튼 상호작용 상태 동기화
@@ -159,10 +197,31 @@ namespace GameArifiction.ClawMachine
             {
                 m_pauseButton.onClick.RemoveListener(func_OnPauseButtonClick);
             }
+            if (m_settingsButton != null)
+            {
+                m_settingsButton.onClick.RemoveListener(func_OnSettingsButtonClick);
+            }
+            if (m_settingsPopupView != null)
+            {
+                m_settingsPopupView.OnClosePopup -= func_OnSettingsClose;
+            }
 
             // EventTrigger 동적 바인딩 해제 (메모리 누수 차단)
             UnregisterPointerEvents(m_leftButton);
             UnregisterPointerEvents(m_rightButton);
+
+            if (m_tutorialPopupView != null)
+            {
+                m_tutorialPopupView.OnTutorialClosed -= HandleTutorialClosed;
+            }
+            if (m_quizUIView != null)
+            {
+                m_quizUIView.OnQuizClosed -= HandleQuizClosed;
+            }
+            if (m_resultPopup != null)
+            {
+                m_resultPopup.OnConfirmClicked -= HandleConfirmClicked;
+            }
 
             if (m_viewModel != null)
             {
@@ -171,11 +230,6 @@ namespace GameArifiction.ClawMachine
                 m_viewModel.Dispose();
             }
 
-            if (m_countdownText != null)
-            {
-                DOTween.Kill(m_countdownText.transform);
-                DOTween.Kill(m_countdownText);
-            }
         }
 
         private void RegisterPointerEvent(Button button, EventTriggerType type, UnityEngine.Events.UnityAction<BaseEventData> action)
@@ -259,6 +313,12 @@ namespace GameArifiction.ClawMachine
         private void HandleKeyboardInput()
         {
             if (m_viewModel == null)
+            {
+                return;
+            }
+
+            // 일시정지 중(Time.timeScale == 0)일 때는 키보드 입력을 차단하여 오작동을 방지합니다.
+            if (Mathf.Approximately(Time.timeScale, 0f))
             {
                 return;
             }
@@ -460,21 +520,27 @@ namespace GameArifiction.ClawMachine
             if (m_soundService != null)
             {
                 m_soundService.PlaySFX(SoundDefine.Sfx_claw_touch);
-                m_soundService.PauseBGM();
             }
 
             if (m_pausePopupView != null)
             {
-                // [부모 레이어 렌더 가드]: 부모 노드 중 비활성화된 패널이나 캔버스가 있다면 강제로 켬
+                // [부모 레이어 렌더 가드 최적화]: 비활성 상태인 최상위 부모 노드 단 1개만 활성화하여 렉 방지
                 Transform parentNode = m_pausePopupView.transform.parent;
+                Transform deepestInactiveParent = null;
+
                 while (parentNode != null)
                 {
                     if (!parentNode.gameObject.activeSelf)
                     {
-                        parentNode.gameObject.SetActive(true);
-                        Debug.Log($"[ClawGameView] 비활성 상태인 부모 UI 오브젝트를 강제 활성화하였습니다: {parentNode.name}");
+                        deepestInactiveParent = parentNode;
                     }
                     parentNode = parentNode.parent;
+                }
+
+                if (deepestInactiveParent != null)
+                {
+                    deepestInactiveParent.gameObject.SetActive(true);
+                    Debug.Log($"[ClawGameView] 가장 상위의 비활성 부모 UI 오브젝트를 활성화하여 계층 구조를 켰습니다: {deepestInactiveParent.name}");
                 }
 
                 CommonPausePopupDataDTO pauseData = new CommonPausePopupDataDTO
@@ -482,41 +548,152 @@ namespace GameArifiction.ClawMachine
                     OnResume = () =>
                     {
                         Time.timeScale = 1f;
-                        if (m_soundService != null)
-                        {
-                            m_soundService.ResumeBGM();
-                        }
                     },
                     OnReplayTutorial = () =>
                     {
-                        Time.timeScale = 1f;
-                        if (m_soundService != null)
-                        {
-                            m_soundService.ResumeBGM();
-                        }
                         if (m_tutorialPopupView != null)
                         {
                             m_tutorialPopupView.func_ShowTutorial();
                         }
                     },
-                    OnReplayQuiz = null // 인형뽑기는 단독 퀴즈 재노출이 없으므로 null 설정으로 버튼 숨김
+                    OnReplayQuiz = () =>
+                    {
+                        if (m_quizUIView != null)
+                        {
+                            m_quizUIView.func_OnShowQuizButtonClick();
+                        }
+                    }
                 };
 
                 m_pausePopupView.Setup(pauseData);
                 m_pausePopupView.ShowPopup();
-                Debug.Log("[ClawGameView] 게임을 일시정지하고 일시정지 팝업을 활성화했습니다.");
+
+                // [핵심 해결책]: 팝업이 활성화된 즉시 UI 레이아웃과 캔버스 버퍼의 강제 업데이트 동기화 수행
+                Canvas.ForceUpdateCanvases();
+
+                Debug.Log("[ClawGameView] 게임을 일시정지하고 일시정지 팝업을 즉시 동기화하여 활성화했습니다.");
             }
             else
             {
                 Debug.LogWarning("[ClawGameView] CommonPausePopupView 의존성이 주입되지 않아 일시정지 팝업을 표시할 수 없습니다.");
             }
 
-            // [수정]: 트윈 애니메이션 기동 프레임을 확보한 후 최종적으로 시간 스케일을 멈춤
+            // 타임 스케일을 최종 정지
             Time.timeScale = 0f;
+        }
+
+        /// <summary>
+        /// [기능]: 설정 버튼 클릭 시 호출되는 콜백으로, 게임을 정지하고 공통 설정 팝업을 표시합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 초기 구현
+        /// </summary>
+        public void func_OnSettingsButtonClick()
+        {
+            if (m_soundService != null)
+            {
+                m_soundService.PlaySFX(SoundDefine.Sfx_claw_touch);
+            }
+
+            if (m_settingsPopupView != null)
+            {
+                // [부모 레이어 렌더 가드 최적화]: 비활성 상태인 최상위 부모 노드 단 1개만 활성화하여 렉 방지
+                Transform parentNode = m_settingsPopupView.transform.parent;
+                Transform deepestInactiveParent = null;
+
+                while (parentNode != null)
+                {
+                    if (!parentNode.gameObject.activeSelf)
+                    {
+                        deepestInactiveParent = parentNode;
+                    }
+                    parentNode = parentNode.parent;
+                }
+
+                if (deepestInactiveParent != null)
+                {
+                    deepestInactiveParent.gameObject.SetActive(true);
+                    Debug.Log($"[ClawGameView] 가장 상위의 비활성 부모 UI 오브젝트를 활성화하여 계층 구조를 켰습니다: {deepestInactiveParent.name}");
+                }
+
+                m_settingsPopupView.ShowPopup();
+
+                // 팝업이 활성화된 즉시 UI 레이아웃과 캔버스 버퍼의 강제 업데이트 동기화 수행
+                Canvas.ForceUpdateCanvases();
+
+                Debug.Log("[ClawGameView] 게임을 일시정지하고 공통 설정 팝업을 즉시 동기화하여 활성화했습니다.");
+            }
+            else
+            {
+                Debug.LogWarning("[ClawGameView] CommonSettingsPopupView 의존성이 주입되지 않아 설정 팝업을 표시할 수 없습니다.");
+            }
+
+            // 타임 스케일을 최종 정지
+            Time.timeScale = 0f;
+        }
+
+        /// <summary>
+        /// [기능]: 설정 팝업이 닫힐 때 호출되며, 게임 일시정지를 해제합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 초기 구현
+        /// </summary>
+        private void func_OnSettingsClose()
+        {
+            Time.timeScale = 1f;
+            Debug.Log("[ClawGameView] 공통 설정 팝업이 닫혀 게임 일시정지를 해제했습니다.");
         }
         #endregion
 
         #region 이벤트 핸들러 (Event Handlers)
+        /// <summary>
+        /// [기능]: 결과 팝업에서 확인 완료가 감지되었을 때 호출되며, 인형뽑기 뷰 화면을 스스로 비활성화합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void HandleConfirmClicked()
+        {
+            gameObject.SetActive(false);
+            Debug.Log("[ClawGameView] 결과 확인 완료 이벤트를 수신하여 화면을 자가 비활성화했습니다.");
+        }
+
+        /// <summary>
+        /// [기능]: 튜토리얼 팝업이 닫힐 때 호출되며, 게임 상태를 체크하여 일시정지를 해제합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void HandleTutorialClosed()
+        {
+            if (m_viewModel == null)
+            {
+                return;
+            }
+
+            if (m_viewModel.CurrentState != ClawStateType.Tutorial && m_viewModel.CurrentState != ClawStateType.QuizReveal)
+            {
+                Time.timeScale = 1f;
+                Debug.Log("[ClawGameView] 튜토리얼 다시보기가 닫혀 게임 일시정지를 해제했습니다.");
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 퀴즈 팝업이 닫힐 때 호출되며, 게임 상태를 체크하여 일시정지를 해제합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void HandleQuizClosed()
+        {
+            if (m_viewModel == null)
+            {
+                return;
+            }
+
+            if (m_viewModel.CurrentState != ClawStateType.Tutorial && m_viewModel.CurrentState != ClawStateType.QuizReveal)
+            {
+                Time.timeScale = 1f;
+                Debug.Log("[ClawGameView] 퀴즈 다시보기가 닫혀 게임 일시정지를 해제했습니다.");
+            }
+        }
+
         /// <summary>
         /// [기능]: 재수강 수락 시 뷰모델로부터 이벤트를 수신하여 집게 위치를 원복하고 오답 캡슐 1개를 무작위 제거합니다.
         /// [작성자]: 윤승종
@@ -526,7 +703,7 @@ namespace GameArifiction.ClawMachine
             // [집게 위치 초기화]: 재시도가 트리거되었으므로 카트와 집게의 물리 상태를 원점 복원시킵니다.
             if (m_clawView != null)
             {
-                m_clawView.func_ResetClawToInitialState();
+                m_clawView.ResetClawToInitialState();
             }
 
             ClawMachineDollView[] dolls = FindObjectsByType<ClawMachineDollView>(FindObjectsSortMode.None);

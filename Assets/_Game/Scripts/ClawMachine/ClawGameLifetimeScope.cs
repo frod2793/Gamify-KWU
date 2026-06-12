@@ -12,6 +12,9 @@ namespace GameArifiction.ClawMachine
     /// <summary>
     /// [기능]: 인형뽑기(ClawMachine) 및 연계 클래식 퀴즈(QuizClassic) 통합 미니게임 씬의 VContainer 의존성 설정 스코프 클래스입니다.
     /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-06-12
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: 비활성화된 CommonSettingsPopupView 및 CommonPausePopupView 뷰 컴포넌트를 FindFirstObjectByType(FindObjectsInactive.Include)로 안전하게 탐색 등록하도록 보완
     /// </summary>
     public class ClawGameLifetimeScope : LifetimeScope
     {
@@ -81,9 +84,11 @@ namespace GameArifiction.ClawMachine
 
             builder.Register<ClawGameViewModel>(Lifetime.Scoped).AsImplementedInterfaces().AsSelf();
 
+            // 공용 설정 뷰모델 등록
+            builder.Register<CommonSettingsViewModel>(Lifetime.Scoped);
+
             // B. [뷰 레이어 자동 감지 및 등록 (수동 직렬화 배제 - 규칙 9번 준수)]
             ConfigureViews(builder);
-
             // C. [C# EntryPoint 진입점 제어 등록]
             builder.RegisterEntryPoint<ClawGameFlowController>();
             builder.Register<QuizClassicFlowController>(Lifetime.Scoped);
@@ -108,18 +113,40 @@ namespace GameArifiction.ClawMachine
         /// <summary>
         /// [기능]: 씬 내 하이어라키에서 뷰 컴포넌트들을 찾아 VContainer에 등록합니다.
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-06-11
+        /// [수정 날짜]: 2026-06-12
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: CommonPausePopupView 수동 탐색 등록 로직 제거 (인스펙터 직접 바인딩 전환)
+        /// [수정 내용]: CommonSettingsPopupView 자동 탐색 등록 로직 추가
         /// </summary>
         private void ConfigureViews(IContainerBuilder builder)
         {
-            // 인형뽑기(ClawMachine) 뷰
+            // 인형뽑기(ClawMachine) 뷰 및 주요 컴포넌트 등록
             builder.RegisterComponentInHierarchy<ClawGameView>();
             builder.RegisterComponentInHierarchy<QuizUI_View>();
             builder.RegisterComponentInHierarchy<ClawMachineExitView>();
             builder.RegisterComponentInHierarchy<ClawGameResultPopupView>();
             builder.RegisterComponentInHierarchy<ClawGameTutorialPopupView>();
+            builder.RegisterComponentInHierarchy<ClawView>();
+
+            // 비활성 상태의 설정 및 일시정지 팝업을 씬 내에서 누락 없이 탐색하여 주입하는 방어 코드 적용
+            var settingsPopup = FindFirstObjectByType<CommonSettingsPopupView>(FindObjectsInactive.Include);
+            if (settingsPopup != null)
+            {
+                builder.RegisterComponent(settingsPopup);
+            }
+            else
+            {
+                builder.RegisterComponentInHierarchy<CommonSettingsPopupView>();
+            }
+
+            var pausePopup = FindFirstObjectByType<CommonPausePopupView>(FindObjectsInactive.Include);
+            if (pausePopup != null)
+            {
+                builder.RegisterComponent(pausePopup);
+            }
+            else
+            {
+                builder.RegisterComponentInHierarchy<CommonPausePopupView>();
+            }
 
             // 클래식 퀴즈(QuizClassic) 뷰
             builder.RegisterComponentInHierarchy<QuizClassicView>();

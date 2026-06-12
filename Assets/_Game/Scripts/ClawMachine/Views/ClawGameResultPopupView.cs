@@ -51,9 +51,6 @@ namespace GameArifiction.ClawMachine
         public QuizClassicView QuizClassicViewInstance { get; set; }
 
         [Inject]
-        public ClawGameView ClawGameViewInstance { get; set; }
-
-        [Inject]
         public ClawSceneReferencesDTO SceneReferences { get; set; }
 
         [Inject]
@@ -62,6 +59,14 @@ namespace GameArifiction.ClawMachine
         private IQuizGameViewModel m_viewModel;
         private TextMeshProUGUI m_confirmButtonText;
         private bool m_isSuccessState;
+        #endregion
+
+        #region 이벤트 (Events)
+        /// <summary>
+        /// [기능]: 결과 확인 완료 버튼을 눌렀을 때 발생하는 이벤트입니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public event System.Action OnConfirmClicked;
         #endregion
 
         #region 초기화 (Initialization)
@@ -273,14 +278,10 @@ namespace GameArifiction.ClawMachine
                         Debug.LogError("[ClawGameResultPopupView] QuizClassicFlowController 의존성이 주입되지 않았습니다.");
                     }
 
-                    // 2. 현재 인형뽑기 메인 뷰 비활성화
-                    if (ClawGameViewInstance != null)
+                    // 2. 현재 인형뽑기 메인 뷰 비활성화를 위한 이벤트 트리거
+                    if (OnConfirmClicked != null)
                     {
-                        ClawGameViewInstance.gameObject.SetActive(false);
-                    }
-                    else
-                    {
-                        Debug.LogWarning("[ClawGameResultPopupView] 주입받은 ClawGameViewInstance가 null입니다.");
+                        OnConfirmClicked.Invoke();
                     }
 
                     // 3. 인형뽑기 3D 물리 공간 기기 오브젝트 비활성화

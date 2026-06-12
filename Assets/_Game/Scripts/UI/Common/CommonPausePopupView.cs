@@ -36,11 +36,15 @@ namespace GameArifiction.UI.Common
 
         #region 유니티 생명주기
 
+        /// <summary>
+        /// [기능]: 팝업 조작 버튼 리스너 바인딩을 수행합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: Late Awake 자가 꺼짐 버그 제거를 위해 Awake 내 SetActive(false) 구문 삭제
+        /// </summary>
         private void Awake()
         {
-            // 씬 시작 시 팝업을 자동으로 감춥니다.
-            gameObject.SetActive(false);
-
             // UI 버튼 리스너 바인딩
             if (m_resumeButton != null)
             {

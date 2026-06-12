@@ -132,8 +132,11 @@ namespace GameArifiction.GradeRunner
         #region 초기화 (Initialization)
 
         /// <summary>
-        /// [기능]: VContainer를 통해 뷰모델 및 관련 팝업 뷰 의존성을 주입합니다.
+        /// [기능]: VContainer를 통해 뷰모델 및 관련 팝업 뷰 의존성을 주입하고 초기 비활성화를 보장합니다.
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 공통 일시정지 팝업의 Late Awake 버그 회피를 위해 초기 비활성화 가드 삽입
         /// </summary>
         [Inject]
         public void Construct(
@@ -168,6 +171,12 @@ namespace GameArifiction.GradeRunner
             if (m_settingsPopupView != null)
             {
                 m_settingsPopupView.OnClosePopup += func_OnSettingsClose;
+            }
+
+            // 초기 일시정지 팝업 강제 비활성화 (Late Awake 방지)
+            if (m_pausePopupView != null)
+            {
+                m_pausePopupView.gameObject.SetActive(false);
             }
 
             SetupMobileButtonEvents();

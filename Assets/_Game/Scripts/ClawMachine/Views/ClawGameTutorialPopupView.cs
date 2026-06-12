@@ -45,11 +45,22 @@ namespace GameArifiction.ClawMachine
         }
         #endregion
 
+        #region 이벤트 (Events)
+        /// <summary>
+        /// [기능]: 튜토리얼 팝업이 닫힐 때 발생하는 이벤트입니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public event System.Action OnTutorialClosed;
+        #endregion
+
         #region UI 이벤트 콜백 (Public Methods)
         /// <summary>
         /// [기능]: 시작하기 버튼 클릭 시 뷰모델에 튜토리얼 종료를 알리고 팝업을 닫습니다.
         ///         (유니티 인스펙터 버튼 OnClick 이벤트에 직접 연결하여 사용하는 콜백 메서드)
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 튜토리얼 종료 이벤트 트리거 추가
         /// </summary>
         public void func_OnStartButtonClick()
         {
@@ -65,6 +76,11 @@ namespace GameArifiction.ClawMachine
             }
 
             func_HideTutorial();
+
+            if (OnTutorialClosed != null)
+            {
+                OnTutorialClosed.Invoke();
+            }
         }
         #endregion
 
