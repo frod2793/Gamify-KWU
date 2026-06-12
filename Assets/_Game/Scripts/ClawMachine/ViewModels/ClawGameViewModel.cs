@@ -178,9 +178,8 @@ namespace GameArifiction.ClawMachine
                     StopTimer();
 
                     // [학점 판별]
-                    float totalTimeLimit = m_model != null ? m_model.GetTimeLimitForCurrentPlay() : 120f;
-                    float remainingTime = m_model != null ? m_model.RemainingTime : 0f;
-                    float elapsedClawTime = Mathf.Max(0f, totalTimeLimit - remainingTime);
+                    // 재수강을 모두 포함하여 순수하게 누적된 전체 플레이 시간을 적용합니다.
+                    float elapsedClawTime = m_playerSO != null ? m_playerSO.TotalMinigamePlayTime : 120f;
                     ElapsedClawTime = elapsedClawTime;
 
                     if (elapsedClawTime <= 60f)
