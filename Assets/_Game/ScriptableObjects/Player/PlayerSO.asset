@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: GamifyKWU.Runtime::GameArifiction.Player.PlayerSO
   m_lastPosition: {x: 0, y: 0}
   m_hasSavedPosition: 0
-  m_minigameRecords: []
+  m_minigameRecords:
+  - MinigameId: CardMatch
+    Grade: 4
   m_totalMinigamePlayTime: 0
-  m_isIntroPlayed: 1
+  m_isIntroPlayed: 0

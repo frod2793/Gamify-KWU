@@ -273,7 +273,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &214492830
 RectTransform:
   m_ObjectHideFlags: 0
@@ -688,9 +688,33 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1652625417}
     m_Modifications:
+    - target: {fileID: 508139225760447987, guid: cca563f0760764ec5b8cfd3d62525379, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 614215467895293913, guid: cca563f0760764ec5b8cfd3d62525379, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1865493070877385938, guid: cca563f0760764ec5b8cfd3d62525379, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2932988054546192795, guid: cca563f0760764ec5b8cfd3d62525379, type: 3}
       propertyPath: m_Name
       value: CommonResultPopupView_Panel
+      objectReference: {fileID: 0}
+    - target: {fileID: 2932988054546192795, guid: cca563f0760764ec5b8cfd3d62525379, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5333190276176082449, guid: cca563f0760764ec5b8cfd3d62525379, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8416279816782484909, guid: cca563f0760764ec5b8cfd3d62525379, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 9051398386446979362, guid: cca563f0760764ec5b8cfd3d62525379, type: 3}
       propertyPath: m_Pivot.x

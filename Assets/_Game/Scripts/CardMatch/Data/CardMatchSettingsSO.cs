@@ -32,7 +32,7 @@ namespace GameArifiction.CardMatch
 
         [Header("강의 정보 설정")]
         [Tooltip("공용 결과 팝업에 표시될 이 미니게임의 담당 교과목명입니다.")]
-        [SerializeField] private string m_lectureName = "카드 맞추기";
+        [SerializeField] private string m_lectureName = "게임학의이해";
         #endregion
 
         #region 학점 판정 기준 (Grade Thresholds)

@@ -40,13 +40,18 @@ namespace GameArifiction.CardMatch
             CommonResultPopupView resultPopupView,
             CardMatchSettingsSO settings,
             PlayerSO playerSO,
-            EasyTransition.TransitionSettings transitionSettings = null)
+            IObjectResolver resolver)
         {
             m_gameView = gameView;
             m_resultPopupView = resultPopupView;
             m_settings = settings;
             m_playerSO = playerSO;
-            m_transitionSettings = transitionSettings;
+
+            // Optional injection for TransitionSettings
+            if (resolver.TryResolve<EasyTransition.TransitionSettings>(out var ts))
+            {
+                m_transitionSettings = ts;
+            }
         }
         #endregion
 
@@ -133,9 +138,9 @@ namespace GameArifiction.CardMatch
 
             if (m_resultPopupView != null)
             {
-                string titleText = "카드 맞추기 결과";
+                string titleText = "게임 결과";
                 string descriptionText = $"뒤집기 횟수: {flipCount}회\n\n{message}";
-                string lectureName = m_settings != null ? m_settings.LectureName : "카드 맞추기";
+                string lectureName = m_settings != null ? m_settings.LectureName : "게임학의이해";
 
                 CommonPopupDataDTO popupData = new CommonPopupDataDTO(
                     titleText,
