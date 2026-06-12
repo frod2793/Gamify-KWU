@@ -101,7 +101,7 @@ namespace GameArifiction.GradeRunner
             
             CommonPopupDataDTO popupData = new CommonPopupDataDTO(
                 titleText,
-                "남은 생명",
+                $"현재 스코어: {result.FinalGradePoint:F1}",
                 "게임엔진S/W",
                 result.MinigameGrade,
                 "로비로 이동",

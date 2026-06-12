@@ -402,11 +402,13 @@ namespace GameArifiction.QuizClassic
 
             CommonPopupDataDTO popupData = new CommonPopupDataDTO(
                 "★ 틀린 오답입니다! ★",
-                "아쉽게도 틀렸습니다. 다시 한번 기회를 드릴 테니 올바른 정답을 골라 보세요!",
+                null,
                 null,
                 null,
                 "계속하기",
-                () => m_viewModel.ContinueAfterWrongAnswer()
+                () => m_viewModel.ContinueAfterWrongAnswer(),
+                null,
+                "아쉽게도 틀렸습니다.\n다시 한번 기회를 드릴 테니 올바른 정답을 골라 보세요!"
             );
 
             m_resultPopup.Setup(popupData);

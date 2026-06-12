@@ -9,6 +9,7 @@ using GamifyKWU.UI.Dashboard.Models;
 using GamifyKWU.UI.Dashboard.ViewModels;
 using GamifyKWU.UI.Dashboard.Views;
 using GameArifiction.UI.FinalResult;
+using GameArifiction.UI.Common;
 
 /// <summary>
 /// [기능]: 로비 씬의 모든 의존성(PlayerSO, UIManager, TitleView, IntroCutsceneController, PlayerView 등)을 VContainer 컨테이너에 자동 추출 및 등록하는 수명주기 스코프 클래스
@@ -60,6 +61,7 @@ public class LobbyLifetimeScope : LifetimeScope
         SafeRegisterComponent<MapView>(builder);
         SafeRegisterComponent<DashboardView>(builder);
         SafeRegisterComponent<InteractionUI_View>(builder);
+        SafeRegisterComponent<CommonSettingsPopupView>(builder);
 
         // 4. 로비 씬 중앙 진입점 (LobbyFlowController) 엔트리포인트 등록
         builder.RegisterEntryPoint<GamifyKWU.Lobby.LobbyFlowController>(Lifetime.Scoped);
@@ -93,6 +95,9 @@ public class LobbyLifetimeScope : LifetimeScope
         // 추가 등록: Interaction 도메인
         builder.Register<InteractionUI_Model>(Lifetime.Scoped);
         builder.Register<InteractionUI_ViewModel>(Lifetime.Scoped);
+
+        // 추가 등록: 공통 설정 도메인
+        builder.Register<CommonSettingsViewModel>(Lifetime.Scoped);
 
         // 5. 공통 사운드 시스템 등록 (전역 유지)
         var soundView = FindFirstObjectByType<GameArifiction.Core.Audio.SoundPlayerView>();

@@ -47,6 +47,11 @@ namespace GameArifiction.UI.Common
         /// </summary>
         public string MinigameId { get; set; }
 
+        /// <summary>
+        /// 뽑기 게임 틀린 오답 텍스트입니다. (오답 시에만 활성화)
+        /// </summary>
+        public string WrongAnswer { get; set; }
+
         #endregion
 
         #region 초기화 (Initialization)
@@ -62,7 +67,8 @@ namespace GameArifiction.UI.Common
             MinigameGrade? grade,
             string confirmButtonText,
             Action onConfirm,
-            string minigameId = null)
+            string minigameId = null,
+            string wrongAnswer = null)
         {
             Title = title;
             Description = description;
@@ -71,6 +77,7 @@ namespace GameArifiction.UI.Common
             ConfirmButtonText = confirmButtonText;
             OnConfirm = onConfirm;
             MinigameId = minigameId;
+            WrongAnswer = wrongAnswer;
         }
 
         #endregion

@@ -32,6 +32,10 @@ namespace GameArifiction.UI.Common
         [Tooltip("강의명을 표시할 텍스트 컴포넌트입니다.")]
         private TextMeshProUGUI m_lectureNameText;
 
+        [SerializeField]
+        [Tooltip("뽑기게임 등에서 틀린 오답을 표시할 텍스트 컴포넌트입니다.")]
+        private TextMeshProUGUI m_wrongAnswerText;
+
         [Header("등급 이미지 설정")]
         [SerializeField]
         [Tooltip("학점 등급 이미지를 표시할 Image 컴포넌트입니다.")]
@@ -145,12 +149,26 @@ namespace GameArifiction.UI.Common
             {
                 if (!string.IsNullOrEmpty(data.LectureName))
                 {
-                    m_lectureNameText.text = $"강의명[{data.LectureName}]";
+                    m_lectureNameText.text = data.LectureName;
                     m_lectureNameText.gameObject.SetActive(true);
                 }
                 else
                 {
                     m_lectureNameText.gameObject.SetActive(false);
+                }
+            }
+
+            // 3. 뽑기게임 틀린 오답 텍스트 설정 (오답 시에만 활성화)
+            if (m_wrongAnswerText != null)
+            {
+                if (!string.IsNullOrEmpty(data.WrongAnswer))
+                {
+                    m_wrongAnswerText.text = data.WrongAnswer;
+                    m_wrongAnswerText.gameObject.SetActive(true);
+                }
+                else
+                {
+                    m_wrongAnswerText.gameObject.SetActive(false);
                 }
             }
 
