@@ -6,9 +6,9 @@ namespace GameArifiction.Player
     /// <summary>
     /// [기능]: 플레이어의 세션 데이터(마지막 위치 등)를 유지하고 공유하기 위한 ScriptableObject 데이터 에셋 클래스
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-05-28
+    /// [수정 날짜]: 2026-06-12
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 인트로 연출 시청 여부 플래그 추가
+    /// [수정 내용]: PlayerPrefs 영구 저장 입출력 로직 전면 배제 및 성적 갱신 방어 코드 적용
     /// </summary>
     public enum MinigameGrade
     {
@@ -60,7 +60,6 @@ namespace GameArifiction.Player
             set
             {
                 m_totalMinigamePlayTime = value;
-                SaveToLocal();
 #if UNITY_EDITOR
                 UnityEditor.EditorUtility.SetDirty(this);
 #endif
@@ -74,7 +73,6 @@ namespace GameArifiction.Player
             {
                 m_lastPosition = value;
                 m_hasSavedPosition = true;
-                SaveToLocal();
 #if UNITY_EDITOR
                 UnityEditor.EditorUtility.SetDirty(this);
 #endif
@@ -87,7 +85,6 @@ namespace GameArifiction.Player
             set
             {
                 m_hasSavedPosition = value;
-                SaveToLocal();
 #if UNITY_EDITOR
                 UnityEditor.EditorUtility.SetDirty(this);
 #endif
@@ -100,7 +97,6 @@ namespace GameArifiction.Player
             set
             {
                 m_isIntroPlayed = value;
-                SaveToLocal();
 #if UNITY_EDITOR
                 UnityEditor.EditorUtility.SetDirty(this);
 #endif
@@ -112,22 +108,20 @@ namespace GameArifiction.Player
 
         #region 유니티 생명주기 (Unity Lifecycle)
         /// <summary>
-        /// [기능]: 오브젝트 로딩 시 로컬 저장소로부터 데이터를 자동으로 로드합니다.
+        /// [기능]: 오브젝트 로딩 시 로직 (더 이상 로컬 디스크 복구를 실행하지 않음)
         /// [작성자]: 윤승종
         /// </summary>
         private void OnEnable()
         {
-            LoadFromLocal();
+            // [삭제]: LoadFromLocal() 영구 불러오기 배제
         }
         #endregion
 
         #region 공개 메서드 (Public Methods)
         /// <summary>
-        /// [기능]: 플레이어 데이터를 모두 초기화하고 로컬 스토리지 데이터도 삭제합니다.
+        /// [기능]: 플레이어 데이터를 모두 초기화하고 메모리 데이터를 리셋합니다.
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-06-10
-        /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 초기화 시 로컬 저장소(PlayerPrefs) 데이터도 함께 삭제하도록 수정
+        /// [수정 날짜]: 2026-06-12
         /// </summary>
         public void ResetData()
         {
@@ -137,9 +131,6 @@ namespace GameArifiction.Player
             m_totalMinigamePlayTime = 0f;
             m_isIntroPlayed = false;
 
-            PlayerPrefs.DeleteKey("GamifyKWU_PlayerSOData");
-            PlayerPrefs.Save();
-            Debug.Log("[PlayerSO] 로컬 저장소 데이터를 초기화하고 메모리 데이터를 리셋했습니다.");
 #if UNITY_EDITOR
             UnityEditor.EditorUtility.SetDirty(this);
 #endif
@@ -148,62 +139,89 @@ namespace GameArifiction.Player
         /// <summary>
         /// [기능]: 미니게임 성적을 저장합니다. 기존 기록이 있고 새 성적이 더 높은 경우에만 갱신됩니다.
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-06-10
+        /// [수정 날짜]: 2026-06-12
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 성적 갱신 시 로컬 스토리지(PlayerPrefs)에 영구 저장 연동
+        /// [수정 내용]: 대소문자 구분 없는 비교 및 중복 제거 적용하되 영구 저장(Prefs) 배제
         /// </summary>
         public void SetMinigameGrade(string minigameId, MinigameGrade grade)
         {
+            if (string.IsNullOrEmpty(minigameId) || grade == MinigameGrade.None)
+            {
+                return;
+            }
+
+            MinigameRecord targetRecord = default;
+            bool hasRecord = false;
+            int targetIndex = -1;
+
+            // 1. 대소문자 무시 비교 및 중복 레코드 제거 (방어적 설계)
             for (int i = 0; i < m_minigameRecords.Count; i++)
             {
-                if (m_minigameRecords[i].MinigameId == minigameId)
+                if (string.Equals(m_minigameRecords[i].MinigameId, minigameId, System.StringComparison.OrdinalIgnoreCase))
                 {
-                    MinigameGrade currentGrade = m_minigameRecords[i].Grade;
-                    bool isNewGradeBetter = false;
-
-                    // 기존 성적이 없는 상태(None)이면 어떤 유효 성적이든 즉각 갱신
-                    if (currentGrade == MinigameGrade.None)
+                    if (!hasRecord)
                     {
-                        isNewGradeBetter = (grade != MinigameGrade.None);
-                    }
-                    // 기존 성적과 새 성적이 둘 다 존재하면 등급 수치 비교 (A=1이 F=5보다 크므로 정수값이 작을수록 우수)
-                    else if (grade != MinigameGrade.None)
-                    {
-                        isNewGradeBetter = ((int)grade < (int)currentGrade);
-                    }
-
-                    if (isNewGradeBetter)
-                    {
-                        MinigameRecord record = m_minigameRecords[i];
-                        record.Grade = grade;
-                        m_minigameRecords[i] = record;
-                        Debug.Log($"[PlayerSO] 미니게임 '{minigameId}' 성적이 더 높은 성적으로 갱신되었습니다: {currentGrade} -> {grade}");
-                        SaveToLocal();
-#if UNITY_EDITOR
-                        UnityEditor.EditorUtility.SetDirty(this);
-#endif
+                        targetRecord = m_minigameRecords[i];
+                        hasRecord = true;
+                        targetIndex = i;
                     }
                     else
                     {
-                        Debug.Log($"[PlayerSO] 미니게임 '{minigameId}' 기존 성적({currentGrade})이 새 성적({grade})보다 높거나 같아 갱신을 생략합니다.");
+                        m_minigameRecords.RemoveAt(i);
+                        i--;
                     }
-                    return;
                 }
             }
 
-            m_minigameRecords.Add(new MinigameRecord { MinigameId = minigameId, Grade = grade });
-            Debug.Log($"[PlayerSO] 미니게임 '{minigameId}'의 첫 성적이 기록되었습니다: {grade}");
-            SaveToLocal();
+            // 2. 최고 학점 보존 여부 판단
+            if (hasRecord)
+            {
+                MinigameGrade currentGrade = targetRecord.Grade;
+                bool isNewGradeBetter = false;
+
+                if (currentGrade == MinigameGrade.None)
+                {
+                    isNewGradeBetter = true;
+                }
+                else
+                {
+                    isNewGradeBetter = ((int)grade < (int)currentGrade);
+                }
+
+                if (isNewGradeBetter)
+                {
+                    targetRecord.Grade = grade;
+                    m_minigameRecords[targetIndex] = targetRecord;
+                    Debug.Log($"[PlayerSO] 미니게임 '{minigameId}' 성적이 더 높은 성적으로 갱신되었습니다: {currentGrade} -> {grade}");
 #if UNITY_EDITOR
-            UnityEditor.EditorUtility.SetDirty(this);
+                    UnityEditor.EditorUtility.SetDirty(this);
 #endif
+                }
+                else
+                {
+                    Debug.Log($"[PlayerSO] 미니게임 '{minigameId}' 기존 성적({currentGrade})이 새 성적({grade})보다 높거나 같아 갱신을 생략합니다.");
+                }
+            }
+            else
+            {
+                m_minigameRecords.Add(new MinigameRecord { MinigameId = minigameId, Grade = grade });
+                Debug.Log($"[PlayerSO] 미니게임 '{minigameId}'의 첫 성적이 기록되었습니다: {grade}");
+#if UNITY_EDITOR
+                UnityEditor.EditorUtility.SetDirty(this);
+#endif
+            }
         }
 
+        /// <summary>
+        /// [기능]: 특정 미니게임의 성적을 조회합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// </summary>
         public MinigameGrade GetMinigameGrade(string minigameId)
         {
             for (int i = 0; i < m_minigameRecords.Count; i++)
             {
-                if (m_minigameRecords[i].MinigameId == minigameId)
+                if (string.Equals(m_minigameRecords[i].MinigameId, minigameId, System.StringComparison.OrdinalIgnoreCase))
                 {
                     return m_minigameRecords[i].Grade;
                 }
@@ -212,58 +230,21 @@ namespace GameArifiction.Player
         }
 
         /// <summary>
-        /// [기능]: 현재 플레이어 세션 데이터를 로컬 저장소(PlayerPrefs)에 JSON 직렬화하여 영구 저장합니다.
+        /// [기능]: 로컬 저장소 세이브 기능 무력화 (더는 사용하지 않음)
         /// [작성자]: 윤승종
         /// </summary>
         public void SaveToLocal()
         {
-            PlayerSODataWrapper wrapper = new PlayerSODataWrapper();
-            wrapper.MinigameRecords = m_minigameRecords;
-            wrapper.TotalMinigamePlayTime = m_totalMinigamePlayTime;
-            wrapper.IsIntroPlayed = m_isIntroPlayed;
-            wrapper.LastPosition = m_lastPosition;
-            wrapper.HasSavedPosition = m_hasSavedPosition;
-
-            string json = JsonUtility.ToJson(wrapper);
-            PlayerPrefs.SetString("GamifyKWU_PlayerSOData", json);
-            PlayerPrefs.Save();
-            Debug.Log($"[PlayerSO] 로컬 저장소(PlayerPrefs)에 세션 데이터 세이브 완료: {json}");
+            // [삭제]: 로컬 저장 기능 배제
         }
 
         /// <summary>
-        /// [기능]: 로컬 저장소(PlayerPrefs)에 저장된 플레이어 JSON 데이터를 로드하여 세션을 완벽히 복원합니다.
+        /// [기능]: 로컬 저장소 로드 기능 무력화 (더는 사용하지 않음)
         /// [작성자]: 윤승종
         /// </summary>
         public void LoadFromLocal()
         {
-            if (PlayerPrefs.HasKey("GamifyKWU_PlayerSOData"))
-            {
-                string json = PlayerPrefs.GetString("GamifyKWU_PlayerSOData");
-                try
-                {
-                    PlayerSODataWrapper wrapper = JsonUtility.FromJson<PlayerSODataWrapper>(json);
-                    if (wrapper != null)
-                    {
-                        m_minigameRecords = wrapper.MinigameRecords ?? new List<MinigameRecord>();
-                        m_totalMinigamePlayTime = wrapper.TotalMinigamePlayTime;
-                        m_isIntroPlayed = wrapper.IsIntroPlayed;
-                        m_lastPosition = wrapper.LastPosition;
-                        m_hasSavedPosition = wrapper.HasSavedPosition;
-                        Debug.Log($"[PlayerSO] 로컬 저장소(PlayerPrefs)로부터 세션 데이터 로드 완료: {json}");
-#if UNITY_EDITOR
-                        UnityEditor.EditorUtility.SetDirty(this);
-#endif
-                    }
-                }
-                catch (System.Exception ex)
-                {
-                    Debug.LogError($"[PlayerSO] 로컬 데이터 파싱 실패: {ex.Message}");
-                }
-            }
-            else
-            {
-                Debug.Log("[PlayerSO] 로컬 저장소에 기존 세션 데이터가 존재하지 않아 기본값 에셋 데이터를 유지합니다.");
-            }
+            // [삭제]: 로컬 불러오기 기능 배제
         }
         #endregion
 
