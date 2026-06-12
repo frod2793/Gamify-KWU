@@ -4,11 +4,12 @@ using UnityEngine.SceneManagement;
 using GameArifiction.Player;
 using GameArifiction.Interaction;
 using EasyTransition;
+using VContainer;
 
 namespace GameArifiction.Map
 {
     /// <summary>
-    /// [기능]: 포탈의 충돌 범위를 통해 플레이어의 진입을 허용하고, 이지 트랜지션 연동을 통해 연출과 함께 씬 전환을 실행하는 뷰 클래스
+    /// [기능]: 포탈의 충돌 범위를 통해 플레이어의 진입을 허용하고, 이지 트랜지션 연동을 통해 연출과 함께 씬 전환을 실행하는 뷰 클래스 (최초 플레이 유도용 느낌표 이미지 노출 기능 포함)
     /// [작성자]: 윤승종
     /// </summary>
     [RequireComponent(typeof(Collider2D))]
@@ -23,7 +24,6 @@ namespace GameArifiction.Map
         [Tooltip("포탈 진입 시 플레이어가 새롭게 스폰될 월드 트랜스폼 좌표 포인트입니다.")]
         private Transform m_spawnPoint;
 
-        // [삭제] m_targetSceneName 필드는 중복을 방지하기 위해 제거되었습니다.
 
         [Header("상호작용 설정")]
         [SerializeField]
@@ -41,10 +41,6 @@ namespace GameArifiction.Map
 
         [Header("미니게임 성적 연동")]
         [SerializeField]
-        [Tooltip("연동할 플레이어 데이터 에셋입니다.")]
-        private PlayerSO m_playerSO;
-
-        [SerializeField]
         [Tooltip("연동할 미니게임 ID입니다. 비워둘 경우 타겟 씬 이름을 ID로 사용합니다.")]
         private string m_minigameId;
 
@@ -60,12 +56,30 @@ namespace GameArifiction.Map
         [Tooltip("성적 등급별 스프라이트 배열입니다. (인덱스: 1=A, 2=B, 3=C, 4=D, 5=F)")]
         private Sprite[] m_gradeSprites;
 
+        [SerializeField]
+        [Tooltip("최초 플레이 시 성적 대신 입구에 표시할 느낌표 스프라이트입니다.")]
+        private Sprite m_exclamationSprite;
+
         #endregion
 
         #region 내부 필드 (Private Fields)
         private SpriteRenderer m_cachedGradeSpriteRenderer;
+        private PlayerSO m_playerSO;
+        private string m_cachedMinigameId;
         #endregion
-        
+
+        #region 의존성 주입
+        /// <summary>
+        /// [기능]: VContainer 수명주기 컨테이너로부터 PlayerSO 인스턴스를 주입받습니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        [Inject]
+        public void Construct(PlayerSO playerSO)
+        {
+            m_playerSO = playerSO;
+            Debug.Log("[PortalView] VContainer를 통해 PlayerSO 의존성이 자동으로 주입되었습니다.");
+        }
+        #endregion
 
         #region 이벤트
         /// <summary>
@@ -98,11 +112,12 @@ namespace GameArifiction.Map
             }
             else
             {
-                foreach (Transform child in transform)
+                SpriteRenderer[] childRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+                for (int i = 0; i < childRenderers.Length; i++)
                 {
-                    m_cachedGradeSpriteRenderer = child.GetComponent<SpriteRenderer>();
-                    if (m_cachedGradeSpriteRenderer != null)
+                    if (childRenderers[i].gameObject != gameObject)
                     {
+                        m_cachedGradeSpriteRenderer = childRenderers[i];
                         break;
                     }
                 }
@@ -111,15 +126,17 @@ namespace GameArifiction.Map
 
         private void Start()
         {
+            // 미니게임 고유 ID 결정 및 캐싱
+            m_cachedMinigameId = string.IsNullOrEmpty(m_minigameId) ? GetTargetSceneName() : m_minigameId;
+
             // [추가] 플레이 기록 부재 시 포탈 자체를 비활성화하는 처리
             if (m_deactivatePortalIfNoRecord)
             {
-                string minigameId = string.IsNullOrEmpty(m_minigameId) ? GetTargetSceneName() : m_minigameId;
-                MinigameGrade grade = m_playerSO != null ? m_playerSO.GetMinigameGrade(minigameId) : MinigameGrade.None;
+                MinigameGrade grade = m_playerSO != null ? m_playerSO.GetMinigameGrade(m_cachedMinigameId) : MinigameGrade.None;
 
                 if (grade == MinigameGrade.None)
                 {
-                    Debug.Log($"[PortalView] 미니게임 '{minigameId}' 플레이 기록이 없어 포탈 '{gameObject.name}'을 비활성화합니다.");
+                    Debug.Log($"[PortalView] 미니게임 '{m_cachedMinigameId}' 플레이 기록이 없어 포탈 '{gameObject.name}'을 비활성화합니다.");
                     gameObject.SetActive(false);
                     return; // 비활성화되었으므로 성적 갱신 처리를 건너뜁니다.
                 }
@@ -133,9 +150,9 @@ namespace GameArifiction.Map
         /// <summary>
         /// [기능]: 상호작용 버튼 클릭 시 호출되며, 씬 이름이 있으면 씬 전환을, 없으면 동일 씬 내부 맵 전환을 실행합니다.
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-05-27
+        /// [수정 날짜]: 2026-06-12
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 포탈 진입 시 플레이어 현재 위치를 저장하여 로비 복귀 시 해당 위치로 복원되도록 설계 오류 수정
+        /// [수정 내용]: 포탈 이동 시 리플렉션 비용이 큰 FindFirstObjectByType 중복 조사를 배제하고 TransitionManager.Instance() 싱글톤 인터페이스로 구조화
         /// </summary>
         /// <param name="user">상호작용을 실행한 플레이어 오브젝트</param>
         public void Interact(GameObject user)
@@ -155,10 +172,10 @@ namespace GameArifiction.Map
                 // 이지 트랜지션 설정이 있고, 씬에 매니저가 유효한 경우 안전 연동
                 if (m_transitionSettings != null)
                 {
-                    TransitionManager manager = FindFirstObjectByType<TransitionManager>();
+                    TransitionManager manager = TransitionManager.Instance();
                     if (manager != null)
                     {
-                        TransitionManager.Instance().Transition(m_targetMapIndex, m_transitionSettings, m_startDelay);
+                        manager.Transition(m_targetMapIndex, m_transitionSettings, m_startDelay);
                     }
                     else
                     {
@@ -200,11 +217,11 @@ namespace GameArifiction.Map
         }
 
         /// <summary>
-        /// [기능]: PlayerSO의 성적 기록을 확인하여 포탈 앞에 성적 이미지를 갱신 표시합니다.
+        /// [기능]: PlayerSO의 성적 기록을 확인하여 포탈 앞에 성적 이미지를 갱신 표시합니다. 최초 플레이 시에는 느낌표 이미지를 띄웁니다.
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-06-10
+        /// [수정 날짜]: 2026-06-12
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 씬 이름 변수 대신 GetTargetSceneName() 헬퍼 함수를 호출하여 런타임 역추적 적용 및 Enum의 None(0)을 배제하고 A(1)~F(5) 등급을 0~4번 인덱스에 매핑하도록 -1 오프셋 보정 적용
+        /// [수정 내용]: 매번 GetTargetSceneName()을 연산 호출하지 않고 Awake/Start에서 캐싱한 m_cachedMinigameId 값을 재사용하도록 연산 최적화
         /// </summary>
         private void UpdateGradeDisplay()
         {
@@ -218,15 +235,23 @@ namespace GameArifiction.Map
                 return;
             }
 
-            // 고유 ID 결정 (입력값 없으면 빌드 인덱스 기반 씬 이름 역추적 활용)
-            string minigameId = string.IsNullOrEmpty(m_minigameId) ? GetTargetSceneName() : m_minigameId;
-            MinigameGrade grade = m_playerSO.GetMinigameGrade(minigameId);
+            // 캐싱된 미니게임 ID를 활용해 성적을 조회합니다.
+            MinigameGrade grade = m_playerSO.GetMinigameGrade(m_cachedMinigameId);
 
             if (m_cachedGradeSpriteRenderer != null)
             {
                 if (grade == MinigameGrade.None)
                 {
-                    m_cachedGradeSpriteRenderer.gameObject.SetActive(false);
+                    if (m_exclamationSprite != null)
+                    {
+                        m_cachedGradeSpriteRenderer.sprite = m_exclamationSprite;
+                        m_cachedGradeSpriteRenderer.gameObject.SetActive(true);
+                        Debug.Log($"[PortalView] '{gameObject.name}' 문앞에 최초 플레이 유도를 위한 느낌표 이미지를 표시했습니다.");
+                    }
+                    else
+                    {
+                        m_cachedGradeSpriteRenderer.gameObject.SetActive(false);
+                    }
                 }
                 else
                 {
@@ -236,7 +261,7 @@ namespace GameArifiction.Map
                     {
                         m_cachedGradeSpriteRenderer.sprite = m_gradeSprites[index];
                         m_cachedGradeSpriteRenderer.gameObject.SetActive(true);
-                        Debug.Log($"[PortalView] '{gameObject.name}' 문앞에 미니게임 '{minigameId}' 성적 이미지({grade})를 갱신 표시했습니다.");
+                        Debug.Log($"[PortalView] '{gameObject.name}' 문앞에 미니게임 '{m_cachedMinigameId}' 성적 이미지({grade})를 갱신 표시했습니다.");
                     }
                     else
                     {
