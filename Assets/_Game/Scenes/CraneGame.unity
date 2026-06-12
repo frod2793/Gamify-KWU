@@ -6801,7 +6801,7 @@ MonoBehaviour:
   m_waveSpeed: 12
   m_waveFrequency: 6
   m_minRopeDistance: 0.5
-  m_maxRopeDistance: 5
+  m_maxRopeDistance: 5.5
   m_grabDelay: 0.2
   m_wireZDepth: 0
   m_wireStartOffset: {x: 0, y: 2, z: 0}

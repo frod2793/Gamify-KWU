@@ -8,9 +8,9 @@ namespace GameArifiction.ClawMachine
     /// <summary>
     /// [기능]: 개별 인형의 물리 및 시각적 표현을 담당하는 View
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-05-31
+    /// [수정 날짜]: 2026-06-12
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 캡슐 답안(정답/오답)에 따른 스프라이트 매핑 설정 추가 및 유니티 안전성 규칙 전수 검증 보완
+    /// [수정 내용]: 인스펙터에 지정된 AnswerSpriteConfigs 데이터 노출을 위한 읽기 전용 프로퍼티 추가
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D), typeof(Collider2D))]
     public class ClawMachineDollView : MonoBehaviour
@@ -91,6 +91,18 @@ namespace GameArifiction.ClawMachine
         public bool IsGrabbed
         {
             get { return m_isGrabbed; }
+        }
+
+        /// <summary>
+        /// [기능]: 인스펙터에 지정된 답안지 텍스트별 캡슐 연출 구성 목록을 읽기 전용으로 노출합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public IReadOnlyList<AnswerSpriteConfig> AnswerSpriteConfigs
+        {
+            get
+            {
+                return m_answerSpriteConfigs;
+            }
         }
         #endregion
 

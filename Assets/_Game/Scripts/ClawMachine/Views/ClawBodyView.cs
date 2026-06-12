@@ -692,6 +692,81 @@ namespace GameArifiction.ClawMachine
                 m_rigidbody.simulated = true;
             }
         }
+
+        /// <summary>
+        /// [기능]: 왼쪽 집게발 콜라이더가 자기 자신을 제외한 외부 충돌체(인형, 바닥 등)와 충돌 중인지 여부를 반환합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// </summary>
+        public bool IsLeftTouchingSomething()
+        {
+            return CheckClawTouchingSomething(m_leftColliders);
+        }
+
+        /// <summary>
+        /// [기능]: 오른쪽 집게발 콜라이더가 자기 자신을 제외한 외부 충돌체(인형, 바닥 등)와 충돌 중인지 여부를 반환합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// </summary>
+        public bool IsRightTouchingSomething()
+        {
+            return CheckClawTouchingSomething(m_rightColliders);
+        }
+
+        /// <summary>
+        /// [기능]: 집게발 콜라이더 배열이 외부 충돌체(자기 자신을 제외한 인형 및 바닥 등)와 겹쳐 있는지 Non-Alloc으로 검사합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// </summary>
+        private bool CheckClawTouchingSomething(Collider2D[] clawColliders)
+        {
+            if (clawColliders == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < clawColliders.Length; i++)
+            {
+                Collider2D col = clawColliders[i];
+                if (col == null)
+                {
+                    continue;
+                }
+
+                int count = col.Overlap(m_dollContactFilter, m_overlapResults);
+                for (int j = 0; j < count; j++)
+                {
+                    Collider2D hit = m_overlapResults[j];
+                    if (hit == null)
+                    {
+                        continue;
+                    }
+
+                    // 1. 자기 자신이거나 하위 오브젝트인 경우 제외
+                    if (hit.transform.IsChildOf(transform))
+                    {
+                        continue;
+                    }
+
+                    // 2. 트리거 충돌체 중 인형이 아닌 단순 영역 센서 등은 제외
+                    if (hit.isTrigger)
+                    {
+                        ClawMachineDollView doll = hit.GetComponentInParent<ClawMachineDollView>();
+                        if (doll == null)
+                        {
+                            continue;
+                        }
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
         #endregion
     }
 }

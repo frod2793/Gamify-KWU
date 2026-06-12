@@ -10,9 +10,9 @@ namespace GameArifiction.ClawMachine
     /// <summary>
     /// [기능]: UI Canvas를 벗어나 2D World Space 상에서 집게의 이동과 흔들림을 제어
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-06-06
+    /// [수정 날짜]: 2026-06-12
     /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: 와이어 탑(m_clawRoot) 기준 물리 진자 수식 일원화 및 크레인 주행/동작 루프 사운드 로직 구현
+    /// [수정 내용]: 하강 중 양쪽 다리 충돌 시 하강 조기 완료 처리 및 밧줄 길이 동기화 구현
     /// </summary>
     public class ClawView : MonoBehaviour
     {
@@ -713,6 +713,13 @@ namespace GameArifiction.ClawMachine
         #endregion
 
         #region 절차적 애니메이션 시퀀스
+        /// <summary>
+        /// [기능]: 집게 하강 연출을 실행하며, 양쪽 다리에 물리적 충돌이 모두 감지되면 하강을 즉시 조기 중단하고 집기로 전이합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 양쪽 다리 동시 충돌 검사 및 조기 정지, 밧줄 길이 실제 물리 거리 동기화 처리
+        /// </summary>
         private async UniTaskVoid PlayDescendAnimation(System.Threading.CancellationToken token)
         {
             if (m_clawBody != null)
@@ -724,14 +731,29 @@ namespace GameArifiction.ClawMachine
 
             float elapsed = 0f;
             float startLen = m_currentRopeLength;
+            bool isEarlyStopped = false;
 
             while (elapsed < m_descendDuration)
             {
                 elapsed += Time.deltaTime;
                 m_currentRopeLength = Mathf.Lerp(startLen, m_maxRopeDistance, elapsed / m_descendDuration);
+
+                // 두 다리 충돌 검사 (양쪽 다리가 모두 외부 물체에 닿았을 때만 하강 즉시 중단)
+                if (m_clawBody != null && m_clawBody.IsLeftTouchingSomething() && m_clawBody.IsRightTouchingSomething())
+                {
+                    Debug.Log("[ClawView] 하강 중 집게의 양쪽 다리 충돌 감지 -> 하강 조기 중단 및 실제 물리 거리 동기화");
+                    UpdateRopeLengthToActualDistance();
+                    isEarlyStopped = true;
+                    break;
+                }
+
                 await UniTask.Yield(PlayerLoopTiming.Update, token);
             }
-            m_currentRopeLength = m_maxRopeDistance;
+
+            if (!isEarlyStopped)
+            {
+                m_currentRopeLength = m_maxRopeDistance;
+            }
 
             await UniTask.Delay(System.TimeSpan.FromSeconds(m_grabDelay), cancellationToken: token);
 

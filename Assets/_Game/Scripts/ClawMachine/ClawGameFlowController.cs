@@ -193,7 +193,7 @@ namespace GameArifiction.ClawMachine
         /// [작성자]: 윤승종
         /// [수정 날짜]: 2026-06-12
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 5지선다 요건 대응을 위한 오답 추출 상한선(4개) 및 색상 테이블 보완
+        /// [수정 내용]: 프리팹에 지정된 AnswerSpriteConfigs의 키워드만 사용하여 캡슐 선택지 구성하도록 제한
         /// </summary>
         private void SpawnQuizDolls(ClawGameViewModel viewModel, QuizData quiz)
         {
@@ -212,14 +212,25 @@ namespace GameArifiction.ClawMachine
             GameObject templateCapsule = m_sceneReferences.CapsulePrefab;
             templateCapsule.SetActive(false); // 원본 숨김
 
-            // 1. 선택지 리스트 조립 (정답 1개 + 오답 최대 4개)
+            // 1. 선택지 리스트 조립 (ClawMachineDollView에 구성된 AnswerSpriteConfigs의 키워드만 추출하여 사용)
             var choices = new List<string>();
-            choices.Add(quiz.CorrectAnswer);
-
-            int wrongCount = Mathf.Min(quiz.WrongAnswers.Count, 4);
-            for (int i = 0; i < wrongCount; i++)
+            ClawMachineDollView templateDollView = templateCapsule.GetComponent<ClawMachineDollView>();
+            if (templateDollView != null && templateDollView.AnswerSpriteConfigs != null && templateDollView.AnswerSpriteConfigs.Count > 0)
             {
-                choices.Add(quiz.WrongAnswers[i]);
+                for (int i = 0; i < templateDollView.AnswerSpriteConfigs.Count; i++)
+                {
+                    choices.Add(templateDollView.AnswerSpriteConfigs[i].AnswerTextKey);
+                }
+            }
+            else
+            {
+                // 폴백 방어 코드: 인스펙터 설정이 누락되어 비어있는 경우 기존 퀴즈 데이터를 토대로 추출
+                choices.Add(quiz.CorrectAnswer);
+                int wrongCount = Mathf.Min(quiz.WrongAnswers.Count, 4);
+                for (int i = 0; i < wrongCount; i++)
+                {
+                    choices.Add(quiz.WrongAnswers[i]);
+                }
             }
 
             // 2. 선택지 피셔-예이츠 셔플로 순서 무작위화

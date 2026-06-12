@@ -12,8 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ae4250497dd471d41a464982b3eb89d4, type: 3}
   m_Name: PlayerSO
   m_EditorClassIdentifier: GamifyKWU.Runtime::GameArifiction.Player.PlayerSO
-  m_lastPosition: {x: -5.8147073, y: 2.2249997}
-  m_hasSavedPosition: 1
-  m_minigameRecords: []
-  m_totalMinigamePlayTime: 0
+  m_lastPosition: {x: 0, y: 0}
+  m_hasSavedPosition: 0
+  m_minigameRecords:
+  - MinigameId: CraneGame
+    Grade: 1
+  m_totalMinigamePlayTime: 16.82231
   m_isIntroPlayed: 0
