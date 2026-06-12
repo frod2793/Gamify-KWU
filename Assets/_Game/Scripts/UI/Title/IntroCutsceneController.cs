@@ -11,6 +11,9 @@ using VContainer;
 /// <summary>
 /// [기능]: 최초 플레이 시 플레이어가 입구에서 시작 지점까지 걷고 말풍선 튜토리얼을 띄우는 인트로 연출 제어기입니다.
 /// [작성자]: 윤승종
+/// [수정 날짜]: 2026-06-12
+/// [마지막 수정 작성자]: 윤승종
+/// [수정 내용]: 로비 재진입 시 PlayerSO 데이터 강제 초기화 현상 방지를 위해 m_forcePlayIntro 디버그 기본값을 false로 변경
 /// </summary>
 namespace GamifyKWU.UI.Title
 {
@@ -74,7 +77,7 @@ namespace GamifyKWU.UI.Title
         [Header("디버그 옵션")]
         [SerializeField]
         [Tooltip("활성화 시, 시청 완료 기록 및 세션 복원 여부를 강제 우회하여 항상 인트로를 구동합니다.")]
-        private bool m_forcePlayIntro = true;
+        private bool m_forcePlayIntro = false;
 
         #endregion
 

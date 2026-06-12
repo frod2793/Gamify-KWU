@@ -11,9 +11,9 @@ using GameArifiction.Core.Audio;
 /// [기능]: 2D 피하기 미니게임(GradeRunner)의 VContainer 의존성 설정 스코프 클래스입니다.
 ///         싱글톤을 제거하고 LifetimeScope을 사용하여 Model, ViewModel, View 컴포넌트를 구성 및 바인딩합니다.
 /// [작성자]: 윤승종
-/// [수정 날짜]: 2026-06-08
+/// [수정 날짜]: 2026-06-12
 /// [마지막 수정 작성자]: 윤승종
-/// [수정 내용]: 불필요한 단순 확인용 디버그 로그(Debug.Log) 제거/주석화 및 마감 처리
+/// [수정 내용]: 비활성화된 공통 결과 팝업 뷰 탐색 방안 보완 (FindObjectsInactive.Include 추가)
 /// </summary>
 public class GradeRunnerLifetimeScope : LifetimeScope
 {
@@ -133,8 +133,8 @@ public class GradeRunnerLifetimeScope : LifetimeScope
         builder.RegisterComponentInHierarchy<CommonSettingsPopupView>();
         builder.RegisterComponentInHierarchy<CommonPausePopupView>();
 
-        // 공통 결과 팝업 뷰가 씬에 존재할 경우 찾아 컨테이너에 등록(캐싱) (비활성화 처리는 Presenter Start에서 수행)
-        var commonPopup = FindAnyObjectByType<CommonResultPopupView>();
+        // 공통 결과 팝업 뷰가 씬에 존재할 경우 찾아 컨테이너에 등록(캐싱) (비활성화 상태의 오브젝트도 포함하여 탐색하도록 방어 수정)
+        var commonPopup = FindFirstObjectByType<CommonResultPopupView>(FindObjectsInactive.Include);
         if (commonPopup != null)
         {
             builder.RegisterComponent(commonPopup);

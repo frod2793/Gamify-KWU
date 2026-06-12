@@ -189,8 +189,11 @@ namespace GameArifiction.ClawMachine
 
         #region 내부 헬퍼 메서드 (Private Methods)
         /// <summary>
-        /// [기능]: 출제된 퀴즈의 정답 1개와 오답 3개를 캡슐에 담아 물리 공간에 배치하고 뷰모델에 정답 테이블을 등록합니다.
+        /// [기능]: 출제된 퀴즈의 정답 1개와 오답 4개를 캡슐에 담아 물리 공간에 배치하고 뷰모델에 정답 테이블을 등록합니다.
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-12
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 5지선다 요건 대응을 위한 오답 추출 상한선(4개) 및 색상 테이블 보완
         /// </summary>
         private void SpawnQuizDolls(ClawGameViewModel viewModel, QuizData quiz)
         {
@@ -209,11 +212,11 @@ namespace GameArifiction.ClawMachine
             GameObject templateCapsule = m_sceneReferences.CapsulePrefab;
             templateCapsule.SetActive(false); // 원본 숨김
 
-            // 1. 선택지 리스트 조립 (정답 1개 + 오답 최대 3개)
+            // 1. 선택지 리스트 조립 (정답 1개 + 오답 최대 4개)
             var choices = new List<string>();
             choices.Add(quiz.CorrectAnswer);
 
-            int wrongCount = Mathf.Min(quiz.WrongAnswers.Count, 3);
+            int wrongCount = Mathf.Min(quiz.WrongAnswers.Count, 4);
             for (int i = 0; i < wrongCount; i++)
             {
                 choices.Add(quiz.WrongAnswers[i]);
@@ -230,13 +233,14 @@ namespace GameArifiction.ClawMachine
 
             viewModel.ClearDollAnswers();
 
-            // 3. 캡슐 4개 동적 스폰 및 시각적 HSL 컬러링
+            // 3. 캡슐 5개 동적 스폰 및 시각적 HSL 컬러링
             Color[] capsuleColors = new Color[]
             {
                 new Color(0.4f, 0.7f, 1.0f, 1.0f),
                 new Color(1.0f, 0.5f, 0.5f, 1.0f),
                 new Color(0.5f, 0.9f, 0.6f, 1.0f),
-                new Color(1.0f, 0.85f, 0.4f, 1.0f)
+                new Color(1.0f, 0.85f, 0.4f, 1.0f),
+                new Color(0.8f, 0.6f, 0.9f, 1.0f)
             };
 
             List<Vector2> spawnedPositions = new List<Vector2>(choices.Count);
