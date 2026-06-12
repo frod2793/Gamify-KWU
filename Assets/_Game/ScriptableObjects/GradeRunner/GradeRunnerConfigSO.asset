@@ -17,8 +17,8 @@ MonoBehaviour:
   m_spriteC: {fileID: 21300000, guid: d2c6c095c151945db8fc6a3aed7776a2, type: 3}
   m_spriteD: {fileID: 21300000, guid: 5bf09f7303451462cbcce28a3d2ad687, type: 3}
   m_spriteF: {fileID: 21300000, guid: 10d725d38fc0b416ebcd2ef04fc159c5, type: 3}
-  m_gameDuration: 30
-  m_phase2TransitionTime: 10
+  m_gameDuration: 40
+  m_phase2TransitionTime: 20
   m_maxGradePoint: 5
   m_startGradePoint: 2.5
   m_codePenalty: 0.5

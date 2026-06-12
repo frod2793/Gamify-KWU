@@ -13,7 +13,7 @@ using VContainer;
 /// [작성자]: 윤승종
 /// [수정 날짜]: 2026-06-12
 /// [마지막 수정 작성자]: 윤승종
-/// [수정 내용]: 로비 재진입 시 PlayerSO 데이터 강제 초기화 현상 방지를 위해 m_forcePlayIntro 디버그 기본값을 false로 변경
+/// [수정 내용]: 빌드 컴파일 단계에서 ResetData 디버그 로직이 제외되도록 UNITY_EDITOR 전처리기 지시문 적용
 /// </summary>
 namespace GamifyKWU.UI.Title
 {
@@ -125,11 +125,13 @@ namespace GamifyKWU.UI.Title
                 }
             }
 
+#if UNITY_EDITOR
             if (m_playerSO != null && m_forcePlayIntro)
             {
                 m_playerSO.ResetData();
                 Debug.Log("[IntroCutsceneController] 디버그 옵션 m_forcePlayIntro가 활성화되어 있어 플레이 기록(PlayerSO)을 초기화합니다.");
             }
+#endif
 
             if (m_playerSO != null && !m_forcePlayIntro)
             {
