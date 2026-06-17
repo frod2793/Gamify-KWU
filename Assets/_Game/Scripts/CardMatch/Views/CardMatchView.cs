@@ -4,6 +4,9 @@ using TMPro;
 using DG.Tweening;
 using System.Collections.Generic;
 using GameArifiction.Player;
+using GameArifiction.Core.Audio;
+using GameArifiction.UI.Common;
+using VContainer;
 
 namespace GameArifiction.CardMatch
 {
@@ -31,6 +34,9 @@ namespace GameArifiction.CardMatch
         [SerializeField] private Button m_pauseButton;
         [SerializeField] private GameObject m_howToPlayPopup;
         [SerializeField] private Button m_closePopupButton;
+
+        [Header("설정 UI 요소")]
+        [SerializeField] private Button m_settingsButton;
         #endregion
 
         #region Private Fields
@@ -40,29 +46,29 @@ namespace GameArifiction.CardMatch
         private System.Action m_onStartPopupClosed;
 
         // 사운드 관련 필드
-        private AudioSource m_bgmSource;
-        private AudioSource m_sfxSource;
-        private AudioClip m_bgmClip;
-        private AudioClip m_flipClip;
-        private AudioClip m_correctClip;
+        private ISoundService m_soundService;
+        private CommonSettingsPopupView m_settingsPopupView;
+        #endregion
+
+        #region 의존성 주입 (Dependency Injection)
+        /// <summary>
+        /// [기능]: VContainer를 통해 전역 사운드 서비스 및 설정 팝업 뷰를 주입받습니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 신규 의존성 주입 설정 및 설정 팝업 뷰 주입 추가
+        /// </summary>
+        [Inject]
+        public void Construct(ISoundService soundService, CommonSettingsPopupView settingsPopupView)
+        {
+            m_soundService = soundService;
+            m_settingsPopupView = settingsPopupView;
+        }
         #endregion
 
         #region MonoBehaviour
         private void Awake()
         {
-            m_bgmSource = gameObject.AddComponent<AudioSource>();
-            m_bgmSource.loop = true;
-            m_bgmSource.playOnAwake = false;
-            m_bgmSource.volume = 0.5f;
-
-            m_sfxSource = gameObject.AddComponent<AudioSource>();
-            m_sfxSource.loop = false;
-            m_sfxSource.playOnAwake = false;
-
-            m_bgmClip = Resources.Load<AudioClip>("Audio/CardMatch/Sound_Bgm");
-            m_flipClip = Resources.Load<AudioClip>("Audio/CardMatch/Sound_Flip");
-            m_correctClip = Resources.Load<AudioClip>("Audio/CardMatch/Sound_Correct");
-
             if (m_pauseButton != null)
             {
                 m_pauseButton.onClick.AddListener(func_OnPauseButtonClick);
@@ -85,6 +91,14 @@ namespace GameArifiction.CardMatch
             {
                 m_closePopupButton.onClick.RemoveListener(func_OnClosePopupButtonClick);
             }
+            if (m_settingsButton != null)
+            {
+                m_settingsButton.onClick.RemoveListener(func_OnSettingsButtonClick);
+            }
+            if (m_settingsPopupView != null)
+            {
+                m_settingsPopupView.OnClosePopup -= func_OnSettingsClose;
+            }
         }
         #endregion
 
@@ -92,6 +106,9 @@ namespace GameArifiction.CardMatch
         /// <summary>
         /// [기능]: 인게임 뷰를 초기화합니다. ViewModel 이벤트를 구독하고 카드 그리드를 생성합니다.
         /// [작성자]: 김지연
+        /// [수정 날짜]: 2026-06-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 공통 설정 팝업 버튼 및 이벤트 리스너 연동 추가
         /// </summary>
         /// <param name="viewModel">카드 맞추기 ViewModel</param>
         public void Initialize(CardMatchViewModel viewModel)
@@ -109,12 +126,26 @@ namespace GameArifiction.CardMatch
                 m_inGamePanel.SetActive(false);
             }
 
+            if (m_settingsButton != null)
+            {
+                m_settingsButton.onClick.AddListener(func_OnSettingsButtonClick);
+            }
+
+            if (m_settingsPopupView != null)
+            {
+                m_settingsPopupView.OnClosePopup += func_OnSettingsClose;
+                m_settingsPopupView.gameObject.SetActive(false);
+            }
+
             Debug.Log("[CardMatchView] 인게임 뷰 초기화 완료");
         }
 
         /// <summary>
-        /// [기능]: 인게임 패널을 표시합니다.
+        /// [기능]: 인게임 패널을 표시하고 게임 BGM을 재생합니다.
         /// [작성자]: 김지연
+        /// [수정 날짜]: 2026-06-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 로컬 오디오 소스 대신 전역 ISoundService를 활용하도록 수정
         /// </summary>
         public void ShowInGame()
         {
@@ -123,22 +154,29 @@ namespace GameArifiction.CardMatch
                 m_inGamePanel.SetActive(true);
             }
 
-            if (m_bgmSource != null && m_bgmClip != null)
+            if (m_soundService != null)
             {
-                m_bgmSource.clip = m_bgmClip;
-                m_bgmSource.Play();
+                m_soundService.PlayBGM(SoundDefine.Bgm_cardmatch);
             }
         }
 
         /// <summary>
-        /// [기능]: 인게임 패널을 숨깁니다.
+        /// [기능]: 인게임 패널을 숨기고 재생 중이던 BGM을 정지합니다.
         /// [작성자]: 김지연
+        /// [수정 날짜]: 2026-06-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: BGM 정지 로직 연동
         /// </summary>
         public void HideInGame()
         {
             if (m_inGamePanel != null)
             {
                 m_inGamePanel.SetActive(false);
+            }
+
+            if (m_soundService != null)
+            {
+                m_soundService.StopBGM();
             }
         }
 
@@ -255,6 +293,9 @@ namespace GameArifiction.CardMatch
         /// <summary>
         /// [기능]: 카드 뒤집힘 이벤트를 처리하여 해당 CardView의 뒤집기 연출을 실행합니다.
         /// [작성자]: 김지연
+        /// [수정 날짜]: 2026-06-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 전역 ISoundService를 활용한 카드 뒤집기 SFX 재생 연동
         /// </summary>
         private void HandleCardFlipped(int cardIndex, bool isFaceUp)
         {
@@ -268,9 +309,9 @@ namespace GameArifiction.CardMatch
                 m_cardViews[cardIndex].FlipToFront();
                 
                 // 카드 뒤집는 사운드 재생
-                if (m_sfxSource != null && m_flipClip != null)
+                if (m_soundService != null)
                 {
-                    m_sfxSource.PlayOneShot(m_flipClip, 0.7f);
+                    m_soundService.PlaySFX(SoundDefine.Sfx_cardmatch_flip);
                 }
             }
             else
@@ -282,6 +323,9 @@ namespace GameArifiction.CardMatch
         /// <summary>
         /// [기능]: 매칭 성공 시 두 카드에 성공 이펙트를 재생합니다.
         /// [작성자]: 김지연
+        /// [수정 날짜]: 2026-06-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 전역 ISoundService를 활용한 매칭 성공 SFX 재생 연동
         /// </summary>
         private void HandleMatchSuccess(int firstIndex, int secondIndex)
         {
@@ -291,9 +335,9 @@ namespace GameArifiction.CardMatch
             DOVirtual.DelayedCall(0.3f, () => 
             {
                 // 매칭 성공 사운드 재생
-                if (m_sfxSource != null && m_correctClip != null)
+                if (m_soundService != null)
                 {
-                    m_sfxSource.PlayOneShot(m_correctClip);
+                    m_soundService.PlaySFX(SoundDefine.Sfx_cardmatch_correct);
                 }
 
                 if (firstIndex >= 0 && firstIndex < m_cardViews.Count)
@@ -440,6 +484,72 @@ namespace GameArifiction.CardMatch
                         });
                 }
             }
+        }
+
+        /// <summary>
+        /// [기능]: [설정] 버튼 클릭 시 호출됩니다. 게임을 일시정지하고 설정 팝업을 표시합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 신규 구현
+        /// </summary>
+        public void func_OnSettingsButtonClick()
+        {
+            Debug.Log("[CardMatchView] 설정 버튼 클릭");
+
+            if (m_soundService != null)
+            {
+                m_soundService.PlaySFX(SoundDefine.Sfx_cardmatch_flip);
+            }
+
+            if (m_settingsPopupView != null)
+            {
+                // [부모 레이어 렌더 가드 최적화]: 비활성 상태인 최상위 부모 노드 단 1개만 활성화하여 렉 방지
+                Transform parentNode = m_settingsPopupView.transform.parent;
+                Transform deepestInactiveParent = null;
+
+                while (parentNode != null)
+                {
+                    if (!parentNode.gameObject.activeSelf)
+                    {
+                        deepestInactiveParent = parentNode;
+                    }
+                    parentNode = parentNode.parent;
+                }
+
+                if (deepestInactiveParent != null)
+                {
+                    deepestInactiveParent.gameObject.SetActive(true);
+                    Debug.Log($"[CardMatchView] 가장 상위의 비활성 부모 UI 오브젝트를 활성화하여 계층 구조를 켰습니다: {deepestInactiveParent.name}");
+                }
+
+                m_settingsPopupView.ShowPopup();
+
+                // 팝업이 활성화된 즉시 UI 레이아웃과 캔버스 버퍼의 강제 업데이트 동기화 수행
+                Canvas.ForceUpdateCanvases();
+
+                Debug.Log("[CardMatchView] 게임을 일시정지하고 공통 설정 팝업을 즉시 동기화하여 활성화했습니다.");
+            }
+            else
+            {
+                Debug.LogWarning("[CardMatchView] CommonSettingsPopupView 의존성이 주입되지 않아 설정 팝업을 표시할 수 없습니다.");
+            }
+
+            // 타임 스케일을 최종 정지
+            Time.timeScale = 0f;
+        }
+
+        /// <summary>
+        /// [기능]: 설정 팝업이 닫힐 때 호출되며, 게임 일시정지를 해제합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 신규 구현
+        /// </summary>
+        private void func_OnSettingsClose()
+        {
+            Time.timeScale = 1f;
+            Debug.Log("[CardMatchView] 공통 설정 팝업이 닫혀 게임 일시정지를 해제했습니다.");
         }
         #endregion
     }

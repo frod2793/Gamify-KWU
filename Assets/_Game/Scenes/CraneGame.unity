@@ -384,7 +384,7 @@ MonoBehaviour:
   - {fileID: 1603405464}
   - {fileID: 151552675}
   m_resultPopup: {fileID: 1919712728}
-  m_transitionSettings: {fileID: 0}
+  m_transitionSettings: {fileID: 11400000, guid: 9710edcf009d00943af961dd2a7ca7d3, type: 2}
   m_startDelay: 0
 --- !u!1 &54835358
 GameObject:

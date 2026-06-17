@@ -3,6 +3,7 @@ using VContainer;
 using VContainer.Unity;
 using GameArifiction.Player;
 using GameArifiction.UI.Common;
+using GameArifiction.Core.Audio;
 
 namespace GameArifiction.CardMatch
 {
@@ -48,8 +49,36 @@ namespace GameArifiction.CardMatch
             builder.RegisterComponentInHierarchy<CardMatchView>();
             builder.RegisterComponentInHierarchy<CommonResultPopupView>();
 
+            // 비활성 상태의 설정 팝업을 씬 내에서 누락 없이 탐색하여 주입하는 방어 코드 적용
+            var settingsPopup = FindFirstObjectByType<CommonSettingsPopupView>(FindObjectsInactive.Include);
+            if (settingsPopup != null)
+            {
+                builder.RegisterComponent(settingsPopup);
+            }
+            else
+            {
+                builder.RegisterComponentInHierarchy<CommonSettingsPopupView>();
+            }
+
+            // 공용 설정 뷰모델 등록
+            builder.Register<CommonSettingsViewModel>(Lifetime.Scoped);
+
             // 3. EntryPoint (C# 진입점) 및 씬 제어 등록
             builder.RegisterEntryPoint<CardMatchFlowController>();
+
+            // 4. 공통 사운드 시스템 등록 (단독 실행 환경 지원)
+            if (Parent == null)
+            {
+                var soundView = FindFirstObjectByType<SoundPlayerView>();
+                if (soundView == null)
+                {
+                    var go = new GameObject("SoundPlayerView");
+                    soundView = go.AddComponent<SoundPlayerView>();
+                }
+                builder.RegisterComponent(soundView);
+                builder.Register<SoundService>(Lifetime.Scoped).AsImplementedInterfaces().AsSelf();
+                builder.RegisterBuildCallback(container => container.Inject(soundView));
+            }
         }
         #endregion
     }
