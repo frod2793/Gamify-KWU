@@ -85,6 +85,7 @@ namespace GameArifiction.GradeRunner
 
         private AudioClip m_shortImpactSound;
         private AudioClip m_longImpactSound;
+        private bool m_isPaused = false;
 
         #endregion
 
@@ -153,6 +154,7 @@ namespace GameArifiction.GradeRunner
                 m_viewModel.OnIntroCutsceneStarted += HandleIntroCutscene;
                 m_viewModel.OnPhase2CutsceneStarted += HandlePhase2Cutscene;
                 m_viewModel.OnGameEndCutsceneStarted += HandleGameEndCutscene;
+                m_viewModel.OnPauseStateChanged += HandlePauseStateChanged;
             }
 
             if (m_soundService != null)
@@ -169,6 +171,7 @@ namespace GameArifiction.GradeRunner
                 m_viewModel.OnIntroCutsceneStarted -= HandleIntroCutscene;
                 m_viewModel.OnPhase2CutsceneStarted -= HandlePhase2Cutscene;
                 m_viewModel.OnGameEndCutsceneStarted -= HandleGameEndCutscene;
+                m_viewModel.OnPauseStateChanged -= HandlePauseStateChanged;
             }
 
             if (m_soundService != null)
@@ -205,8 +208,109 @@ namespace GameArifiction.GradeRunner
         #region 이벤트 핸들러 및 내부 메서드 (Private Methods)
 
         /// <summary>
+        /// [기능]: 일시정지 활성화 상태 변경 시 실행 중인 DOTween 연출 및 오디오 소스를 정지하거나 재개합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-17
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 커스텀 일시정지 연출 동기화 기능 추가
+        /// </summary>
+        private void HandlePauseStateChanged(bool isPaused)
+        {
+            m_isPaused = isPaused;
+
+            if (isPaused)
+            {
+                transform.DOPause();
+                if (m_dialogueBubble != null)
+                {
+                    m_dialogueBubble.DOPause();
+                }
+                if (m_phase1Visual != null)
+                {
+                    m_phase1Visual.transform.DOPause();
+                    SpriteRenderer[] sprites = m_phase1Visual.GetComponentsInChildren<SpriteRenderer>();
+                    for (int i = 0; i < sprites.Length; i++)
+                    {
+                        if (sprites[i] != null)
+                        {
+                            sprites[i].DOPause();
+                        }
+                    }
+                }
+                if (m_phase2StartVisual != null)
+                {
+                    m_phase2StartVisual.transform.DOPause();
+                }
+                if (m_phase2Visual != null)
+                {
+                    m_phase2Visual.transform.DOPause();
+                }
+
+                if (m_audioSource != null && m_audioSource.isPlaying)
+                {
+                    m_audioSource.Pause();
+                }
+            }
+            else
+            {
+                transform.DOPlay();
+                if (m_dialogueBubble != null)
+                {
+                    m_dialogueBubble.DOPlay();
+                }
+                if (m_phase1Visual != null)
+                {
+                    m_phase1Visual.transform.DOPlay();
+                    SpriteRenderer[] sprites = m_phase1Visual.GetComponentsInChildren<SpriteRenderer>();
+                    for (int i = 0; i < sprites.Length; i++)
+                    {
+                        if (sprites[i] != null)
+                        {
+                            sprites[i].DOPlay();
+                        }
+                    }
+                }
+                if (m_phase2StartVisual != null)
+                {
+                    m_phase2StartVisual.transform.DOPlay();
+                }
+                if (m_phase2Visual != null)
+                {
+                    m_phase2Visual.transform.DOPlay();
+                }
+
+                if (m_audioSource != null)
+                {
+                    m_audioSource.UnPause();
+                }
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 일시정지 상태인 동안 비동기적으로 대기 루프를 유지하는 헬퍼 메서드입니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-17
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 신규 비동기 일시정지 가드 추가
+        /// </summary>
+        private async UniTask WaitWhilePausedAsync(CancellationToken token)
+        {
+            while (m_isPaused)
+            {
+                bool isCanceled = await UniTask.Yield(PlayerLoopTiming.Update, token).SuppressCancellationThrow();
+                if (isCanceled || token.IsCancellationRequested)
+                {
+                    return;
+                }
+            }
+        }
+
+        /// <summary>
         /// [기능]: 도입부 컷씬 트리거 시 호출되며, 화면 흔들림과 시간 지연 후 교수가 위에서 등장(Fade-In)하며 대사를 출력합니다.
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-17
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 비동기 일시정지 호환성 추가
         /// </summary>
         private void HandleIntroCutscene()
         {
@@ -225,11 +329,30 @@ namespace GameArifiction.GradeRunner
             }
             if (UnityEngine.Camera.main != null)
             {
-                UnityEngine.Camera.main.transform.DOShakePosition(1.0f, 0.5f, 10, 90f, false, true).ToUniTask().Forget();
+                var shakeTween = UnityEngine.Camera.main.transform.DOShakePosition(1.0f, 0.5f, 10, 90f, false, true);
+                if (m_isPaused)
+                {
+                    shakeTween.Pause();
+                }
+                shakeTween.ToUniTask().Forget();
             }
 
             // 3. 1초 흔들림 진행 + 1.5초 흔들림 멈춤 대기 = 총 2.5초 대기
-            await UniTask.Delay(System.TimeSpan.FromSeconds(2.5f), cancellationToken: token);
+            float elapsed1 = 0f;
+            while (elapsed1 < 2.5f)
+            {
+                await WaitWhilePausedAsync(token);
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                await UniTask.Yield(PlayerLoopTiming.Update, token);
+                if (!m_isPaused)
+                {
+                    elapsed1 += Time.deltaTime;
+                }
+            }
 
             // 4. 교수 페이드 인 + 상단에서 하강 연출
             SetVisualActiveOnly(m_phase1Visual);
@@ -237,6 +360,10 @@ namespace GameArifiction.GradeRunner
             // Y축 상단(+5)에서 기존 Y로 떨어짐
             transform.position = new Vector3(m_startPositionX, m_startPositionY + 5f, transform.position.z);
             var moveTween = transform.DOMoveY(m_startPositionY, 0.5f).SetEase(Ease.OutQuad);
+            if (m_isPaused)
+            {
+                moveTween.Pause();
+            }
 
             if (m_phase1Visual != null)
             {
@@ -248,13 +375,21 @@ namespace GameArifiction.GradeRunner
                         Color c = sprites[i].color;
                         c.a = 0f;
                         sprites[i].color = c;
-                        sprites[i].DOFade(1f, 0.5f);
+                        var fadeTween = sprites[i].DOFade(1f, 0.5f);
+                        if (m_isPaused)
+                        {
+                            fadeTween.Pause();
+                        }
                     }
                 }
             }
 
             // 하강 완료 대기
-            await moveTween.ToUniTask(cancellationToken: token);
+            await moveTween.ToUniTask(cancellationToken: token).SuppressCancellationThrow();
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
 
             // 5. 착지 직후 흔들림(2초) + 긴 쿠궁음
             if (m_longImpactSound != null && m_audioSource != null)
@@ -263,10 +398,29 @@ namespace GameArifiction.GradeRunner
             }
             if (UnityEngine.Camera.main != null)
             {
-                UnityEngine.Camera.main.transform.DOShakePosition(2.0f, 0.5f, 10, 90f, false, true).ToUniTask().Forget();
+                var shake2Tween = UnityEngine.Camera.main.transform.DOShakePosition(2.0f, 0.5f, 10, 90f, false, true);
+                if (m_isPaused)
+                {
+                    shake2Tween.Pause();
+                }
+                shake2Tween.ToUniTask().Forget();
             }
 
-            await UniTask.Delay(System.TimeSpan.FromSeconds(2.0f), cancellationToken: token);
+            float elapsed2 = 0f;
+            while (elapsed2 < 2.0f)
+            {
+                await WaitWhilePausedAsync(token);
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                await UniTask.Yield(PlayerLoopTiming.Update, token);
+                if (!m_isPaused)
+                {
+                    elapsed2 += Time.deltaTime;
+                }
+            }
 
             // 6. 대사 출력
             if (m_viewModel != null)
@@ -282,39 +436,75 @@ namespace GameArifiction.GradeRunner
         }
 
         /// <summary>
-        /// [기능]: 2페이즈 전환 컷씬 트리거 시 호출되며, 교수님 형상을 연출용(Phase 2 Start)으로 교체하고 분노 진동 후 대사를 치고 본 2페이즈 비주얼로 바꿉니다.
+        /// [기능]: 2페이즈 전환 컷씬 트리거 시 호출되며, 일시정지 동작을 보장하기 위해 비동기 루프로 전환하여 실행합니다.
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-17
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 기존 컷씬 연출을 일시정지 대응이 가능하도록 비동기 방식으로 수정
         /// </summary>
         private void HandlePhase2Cutscene()
         {
-            // 모든 연출 스케일/이동 중지 후 즉시 최초 시작 X위치로 신속 이동
+            HandlePhase2CutsceneAsync(this.GetCancellationTokenOnDestroy()).Forget();
+        }
+
+        private async UniTaskVoid HandlePhase2CutsceneAsync(CancellationToken token)
+        {
+            // 모든 연출 스케일/이동 중지
             transform.DOKill();
-            transform.DOMoveX(m_startPositionX, 0.4f).SetEase(Ease.OutQuad).OnComplete(() =>
+
+            var moveTween = transform.DOMoveX(m_startPositionX, 0.4f).SetEase(Ease.OutQuad);
+            if (m_isPaused)
             {
-                // 원위치 도착 완료 시점부터 본격 2페이즈 변신 연출 시작
-                // 2페이즈 시작용 임시 연출 비주얼 활성화
-                SetVisualActiveOnly(m_phase2StartVisual);
+                moveTween.Pause();
+            }
 
-                // 위압감 넘치는 분노 진동 연출
-                transform.DOShakePosition(0.6f, 0.4f, 15);
-                transform.DOPunchScale(new Vector3(0.15f, 0.15f, 0f), 0.5f, 8, 1.0f);
+            await moveTween.ToUniTask(cancellationToken: token).SuppressCancellationThrow();
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
 
-                DOVirtual.DelayedCall(0.7f, () =>
+            // 원위치 도착 완료 시점부터 본격 2페이즈 변신 연출 시작
+            SetVisualActiveOnly(m_phase2StartVisual);
+
+            // 위압감 넘치는 분노 진동 연출
+            var shakeTween = transform.DOShakePosition(0.6f, 0.4f, 15);
+            var punchTween = transform.DOPunchScale(new Vector3(0.15f, 0.15f, 0f), 0.5f, 8, 1.0f);
+            
+            if (m_isPaused)
+            {
+                shakeTween.Pause();
+                punchTween.Pause();
+            }
+
+            float elapsed = 0f;
+            while (elapsed < 0.7f)
+            {
+                await WaitWhilePausedAsync(token);
+                if (token.IsCancellationRequested)
                 {
+                    return;
+                }
+
+                await UniTask.Yield(PlayerLoopTiming.Update, token);
+                if (!m_isPaused)
+                {
+                    elapsed += Time.deltaTime;
+                }
+            }
+
+            if (m_viewModel != null)
+            {
+                TypeDialogue(m_viewModel.Phase2Dialogue, () =>
+                {
+                    // 대사가 끝나면 최종 2페이즈 공격형태 비주얼로 교체하고 게임 재개
+                    SetVisualActiveOnly(m_phase2Visual);
                     if (m_viewModel != null)
                     {
-                        TypeDialogue(m_viewModel.Phase2Dialogue, () =>
-                        {
-                            // 대사가 끝나면 최종 2페이즈 공격형태 비주얼로 교체하고 게임 재개
-                            SetVisualActiveOnly(m_phase2Visual);
-                            if (m_viewModel != null)
-                            {
-                                m_viewModel.CompletePhase2Cutscene();
-                            }
-                        });
+                        m_viewModel.CompletePhase2Cutscene();
                     }
                 });
-            });
+            }
         }
 
         /// <summary>
@@ -331,10 +521,18 @@ namespace GameArifiction.GradeRunner
         }
 
         /// <summary>
-        /// [기능]: 0초 도달 시 게임 종료 컷씬을 진행합니다. (분노 진동 -> 대사 출력 -> 위로 사라짐)
+        /// [기능]: 0초 도달 시 게임 종료 컷씬을 진행하며, 일시정지 상태를 고려합니다.
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-17
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 비동기 일시정지 대응 적용
         /// </summary>
         private void HandleGameEndCutscene()
+        {
+            HandleGameEndCutsceneAsync(this.GetCancellationTokenOnDestroy()).Forget();
+        }
+
+        private async UniTaskVoid HandleGameEndCutsceneAsync(CancellationToken token)
         {
             transform.DOKill();
             
@@ -342,31 +540,60 @@ namespace GameArifiction.GradeRunner
             SetVisualActiveOnly(m_phase2StartVisual);
 
             // 위압감 넘치는 분노 진동 연출 (2페이즈 시작과 동일)
-            transform.DOShakePosition(0.6f, 0.4f, 15);
-            transform.DOPunchScale(new Vector3(0.15f, 0.15f, 0f), 0.5f, 8, 1.0f);
-
-            DOVirtual.DelayedCall(0.7f, () =>
+            var shakeTween = transform.DOShakePosition(0.6f, 0.4f, 15);
+            var punchTween = transform.DOPunchScale(new Vector3(0.15f, 0.15f, 0f), 0.5f, 8, 1.0f);
+            
+            if (m_isPaused)
             {
-                if (m_viewModel != null)
-                {
-                    TypeDialogue(m_viewModel.GameEndDialogue, () =>
-                    {
-                        // 대사 종료 후 위로 사라질 때 카메라 쉐이크 추가
-                        if (UnityEngine.Camera.main != null)
-                        {
-                            UnityEngine.Camera.main.transform.DOShakePosition(1.0f, 0.3f, 10, 90f, false, true).ToUniTask().Forget();
-                        }
+                shakeTween.Pause();
+                punchTween.Pause();
+            }
 
-                        transform.DOMoveY(m_startPositionY + 15f, 1.0f).SetEase(Ease.InQuad).OnComplete(() =>
-                        {
-                            if (m_viewModel != null)
-                            {
-                                m_viewModel.CompleteGameEndCutscene();
-                            }
-                        });
-                    });
+            float elapsed = 0f;
+            while (elapsed < 0.7f)
+            {
+                await WaitWhilePausedAsync(token);
+                if (token.IsCancellationRequested)
+                {
+                    return;
                 }
-            });
+
+                await UniTask.Yield(PlayerLoopTiming.Update, token);
+                if (!m_isPaused)
+                {
+                    elapsed += Time.deltaTime;
+                }
+            }
+
+            if (m_viewModel != null)
+            {
+                TypeDialogue(m_viewModel.GameEndDialogue, () =>
+                {
+                    // 대사 종료 후 위로 사라질 때 카메라 쉐이크 추가
+                    if (UnityEngine.Camera.main != null)
+                    {
+                        var shakeCamTween = UnityEngine.Camera.main.transform.DOShakePosition(1.0f, 0.3f, 10, 90f, false, true);
+                        if (m_isPaused)
+                        {
+                            shakeCamTween.Pause();
+                        }
+                        shakeCamTween.ToUniTask().Forget();
+                    }
+
+                    var moveTween = transform.DOMoveY(m_startPositionY + 15f, 1.0f).SetEase(Ease.InQuad);
+                    if (m_isPaused)
+                    {
+                        moveTween.Pause();
+                    }
+                    moveTween.OnComplete(() =>
+                    {
+                        if (m_viewModel != null)
+                        {
+                            m_viewModel.CompleteGameEndCutscene();
+                        }
+                    });
+                });
+            }
         }
 
         /// <summary>
@@ -390,8 +617,11 @@ namespace GameArifiction.GradeRunner
         }
 
         /// <summary>
-        /// [기능]: 말풍선을 활성화하고 텍스트를 타자기 방식으로 쳐준 뒤 부드럽게 퇴출 후 콜백을 실행합니다.
+        /// [기능]: 말풍선을 활성화하고 텍스트를 타자기 방식으로 쳐준 뒤 부드럽게 퇴출 후 콜백을 실행합니다. (일시정지 완벽 제어 지원)
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-17
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 일시정지 중 텍스트 연출 및 홀드 시간 대기가 완전히 중단 및 재개되도록 구조 변경
         /// </summary>
         private void TypeDialogue(string text, System.Action onComplete)
         {
@@ -404,7 +634,12 @@ namespace GameArifiction.GradeRunner
             {
                 m_dialogueBubble.gameObject.SetActive(true);
                 m_dialogueBubble.alpha = 0f;
-                m_dialogueBubble.DOFade(1f, 0.25f).ToUniTask().Forget();
+                var fadeTween = m_dialogueBubble.DOFade(1f, 0.25f);
+                if (m_isPaused)
+                {
+                    fadeTween.Pause();
+                }
+                fadeTween.ToUniTask().Forget();
             }
 
             if (m_dialogueText != null)
@@ -418,6 +653,13 @@ namespace GameArifiction.GradeRunner
                     {
                         return;
                     }
+
+                    await WaitWhilePausedAsync(cancellationToken);
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
                     m_dialogueText.text = text.Substring(0, i);
 
                     // 타이핑 소리 재생: 공백이 아닐 때만 유효 글자로 판단하여 박자 맞춰 1:1로 재생
@@ -430,11 +672,39 @@ namespace GameArifiction.GradeRunner
                         }
                     }
 
-                    await UniTask.Delay(System.TimeSpan.FromSeconds(m_typingSpeed), cancellationToken: cancellationToken).SuppressCancellationThrow();
+                    float elapsed = 0f;
+                    while (elapsed < m_typingSpeed)
+                    {
+                        await WaitWhilePausedAsync(cancellationToken);
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            return;
+                        }
+
+                        await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
+                        if (!m_isPaused)
+                        {
+                            elapsed += Time.deltaTime;
+                        }
+                    }
                 }
 
                 // 다 출력된 후 설정된 대기 시간 동안 머무름
-                await UniTask.Delay(System.TimeSpan.FromSeconds(m_dialogueHoldDuration), cancellationToken: cancellationToken).SuppressCancellationThrow();
+                float holdElapsed = 0f;
+                while (holdElapsed < m_dialogueHoldDuration)
+                {
+                    await WaitWhilePausedAsync(cancellationToken);
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
+                    if (!m_isPaused)
+                    {
+                        holdElapsed += Time.deltaTime;
+                    }
+                }
 
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -443,7 +713,12 @@ namespace GameArifiction.GradeRunner
 
                 if (m_dialogueBubble != null)
                 {
-                    m_dialogueBubble.DOFade(0f, 0.25f).OnComplete(() =>
+                    var fadeOutTween = m_dialogueBubble.DOFade(0f, 0.25f);
+                    if (m_isPaused)
+                    {
+                        fadeOutTween.Pause();
+                    }
+                    fadeOutTween.OnComplete(() =>
                     {
                         m_dialogueBubble.gameObject.SetActive(false);
                         if (onComplete != null)
