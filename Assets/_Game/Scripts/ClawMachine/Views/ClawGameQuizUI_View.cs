@@ -103,6 +103,10 @@ namespace GameArifiction.ClawMachine
             if (m_questionText != null && m_viewModel.CurrentQuiz != null)
             {
                 string rawQuestion = m_viewModel.CurrentQuiz.Question;
+                
+                // [보완]: 유니티 YAML 직렬화에서 가져온 이중 백슬래시 개행 문자열을 진짜 개행 문자로 치환합니다.
+                rawQuestion = rawQuestion.Replace("\\n", "\n");
+
                 string[] lines = rawQuestion.Split(new[] { "\r\n", "\n" }, System.StringSplitOptions.RemoveEmptyEntries);
 
                 if (lines.Length > 0)
