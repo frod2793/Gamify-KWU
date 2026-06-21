@@ -13,28 +13,103 @@ MonoBehaviour:
   m_Name: QuizDatabase
   m_EditorClassIdentifier: Assembly-CSharp::GamifyKWU.CraneGame.Data.QuizDatabaseSO
   m_quizList:
-  - m_question: "UX/UI [?] \uC5D0 \uB300\uD574 \uC544\uC2ED\uB2C8\uAE4C?"
-    m_correctAnswer: "\uC544\uC774\uCF58"
+  - m_question: "(?) 정보를 시각적으로 압축하여 전달하는 UI 요소이다.\n\n텍스트보다 빠르게 의미를 전달\n메뉴, 기능, 상태 표시 등에 활용\n스마트폰 앱에서 자주 사용"
+    m_correctAnswer: "아이콘"
     m_wrongAnswers:
-    - "\uD3F0\uD2B8"
-    - "\uD31D\uC5C5"
-    - "\uCCB4\uD06C\uBC15\uC2A4"
-    - "\uB4DC\uB86D\uB2E4\uC6B4"
+    - "폰트"
+    - "팝업"
+    - "체크박스"
     m_quizType: 0
-    m_explanation: " ?\uC5D0 \uB300\uD558\uC5EC  (1) \uBAA9\uC801\uC740 \uC815\uBCF4\uC640
-      \uAE30\uB2A5\uC5D0 \uB300\uD55C \uC124\uBA85\uC744 \uC774\uBBF8\uC9C0\uB97C
-      \uD1B5\uD574 \uC27D\uACE0 \uD6A8 \uACFC\uC801\uC73C\uB85C \uC804\uB2EC\uD558\uB294
-      \uAC83\uC774\uB2E4.  (2) ?\uC758 \uC2EC\uBBF8\uC131\uC5D0\uB9CC \uCE58\uC911\uD558\uC5EC
-      \uD55C \uD654\uBA74 \uB0B4\uC758 \uB2E4\uB978 \uB514\uC790\uC778 \uC694\uC18C\uB4E4
-      \uACFC\uC758 \uC870\uD654\uB098 \uC77C\uAD00\uC131, \uADE0\uD615\uC774 \uBB34\uB108\uC9C4\uB2E4\uBA74
-      ?\uC790\uCCB4\uAC00 \uC544\uBB34\uB9AC \uD654\uB824 \uD558\uACE0 \uC544\uB984\uB2E4\uC6CC\uB3C4
-      \uC808\uB300 \uC88B\uC740 \uB514\uC790\uC778\uC774\uB77C\uACE0 \uD560 \uC218
-      \uC5C6\uB2E4. "
-  - m_question: "UI/UX\uC758 \uC694\uC18C\uAC00 \uC544\uB2CC \uAC83\uC740?"
-    m_correctAnswer: "\uAD11\uC6B4\uB300"
+    m_explanation: "정보를 시각적으로 압축하여 전달하는 UI 요소입니다."
+    m_category: 0
+    m_hint: "그림으로 핵심을 보여주는 것!"
+  - m_question: "(?)은 화면 위에 나타나 사용자의 주의를 끌고, 중요한 정보를 전달하는 UI 요소이다.\n\n사용자의 시선을 집중 시킴\n알림, 경고, 확인 요청, 안내 등에 활용\n사용자의 선택(확인, 취소 등)을 받아 다음 행동을 유도"
+    m_correctAnswer: "팝업"
     m_wrongAnswers:
-    - "\uD3F0\uD2B8"
-    - "\uD31D\uC5C5"
-    - "\uCCB4\uD06C\uBC15\uC2A4"
+    - "아이콘"
+    - "드롭박스"
+    - "체크박스"
+    m_quizType: 0
+    m_explanation: "화면 위에 나타나 사용자의 주의를 끌고 정보를 전달하는 UI 요소입니다."
+    m_category: 0
+    m_hint: "갑자기 나타나는 창!"
+  - m_question: "(?)은 여러 옵션 중 하나를 선택할 수 있게 해주는 UI 요소이다.\n\n클릭하여 목록을 열고 옵션을 확인\n여러 항목 중 하나를 선택하는 데 활용\n선택한 내용을 현재 화면에 간결하게 표시"
+    m_correctAnswer: "드롭박스"
+    m_wrongAnswers:
+    - "아이콘"
+    - "팝업"
+    - "체크박스"
+    m_quizType: 0
+    m_explanation: "여러 옵션 중 하나를 선택할 수 있게 해주는 UI 요소입니다."
+    m_category: 0
+    m_hint: "목록에서 하나를 골라 선택하는 것!"
+  - m_question: "(?)은 항목을 선택하거나 해제할 수 있게 해주는 UI 요소이다.\n\n클릭하여 선택 상태를 변경\n여러 항목을 동시에 선택하거나 해제하는 데 활용\n선택 여부를 시각적으로 보여줌"
+    m_correctAnswer: "체크박스"
+    m_wrongAnswers:
+    - "아이콘"
+    - "드롭박스"
+    - "팝업"
+    m_quizType: 0
+    m_explanation: "항목을 선택하거나 해제할 수 있게 해주는 UI 요소입니다."
+    m_category: 0
+    m_hint: "작은 상자를 클릭해 선택을 표시하는 것!"
+  - m_question: "(?)은 글자의 모양, 크기, 두께 등을 설정할 수 있게 해주는 UI 요소이다.\n\n클릭하여 글자 스타일을 변경\n여러 스타일 중 하나를 선택하여 적용하는 데 활용\n가독성과 분위기를 조절"
+    m_correctAnswer: "폰트"
+    m_wrongAnswers:
+    - "아이콘"
+    - "팝업"
+    - "체크박스"
+    m_quizType: 0
+    m_explanation: "글자의 모양, 크기, 두께 등을 설정할 수 있게 해주는 UI 요소입니다."
+    m_category: 0
+    m_hint: "글자의 스타일을 바꿔 적용하는 것!"
+  - m_question: "(?) 정보를 시각적으로 압축하여 전달하는 UI 요소이다.\n\n텍스트보다 빠르게 의미를 전달\n메뉴, 기능, 상태 표시 등에 활용\n스마트폰 앱에서 자주 사용"
+    m_correctAnswer: "아이콘"
+    m_wrongAnswers:
+    - "폰트"
+    - "팝업"
+    - "체크박스"
     m_quizType: 1
-    m_explanation: 
+    m_explanation: "정보를 시각적으로 압축하여 전달하는 UI 요소입니다."
+    m_category: 0
+    m_hint: "그림으로 핵심을 보여주는 것!"
+  - m_question: "(?)은 화면 위에 나타나 사용자의 주의를 끌고, 중요한 정보를 전달하는 UI 요소이다.\n\n사용자의 시선을 집중 시킴\n알림, 경고, 확인 요청, 안내 등에 활용\n사용자의 선택(확인, 취소 등)을 받아 다음 행동을 유도"
+    m_correctAnswer: "팝업"
+    m_wrongAnswers:
+    - "아이콘"
+    - "드롭박스"
+    - "체크박스"
+    m_quizType: 1
+    m_explanation: "화면 위에 나타나 사용자의 주의를 끌고 정보를 전달하는 UI 요소입니다."
+    m_category: 0
+    m_hint: "갑자기 나타나는 창!"
+  - m_question: "(?)은 여러 옵션 중 하나를 선택할 수 있게 해주는 UI 요소이다.\n\n클릭하여 목록을 열고 옵션을 확인\n여러 항목 중 하나를 선택하는 데 활용\n선택한 내용을 현재 화면에 간결하게 표시"
+    m_correctAnswer: "드롭박스"
+    m_wrongAnswers:
+    - "아이콘"
+    - "팝업"
+    - "체크박스"
+    m_quizType: 1
+    m_explanation: "여러 옵션 중 하나를 선택할 수 있게 해주는 UI 요소입니다."
+    m_category: 0
+    m_hint: "목록에서 하나를 골라 선택하는 것!"
+  - m_question: "(?)은 항목을 선택하거나 해제할 수 있게 해주는 UI 요소이다.\n\n클릭하여 선택 상태를 변경\n여러 항목을 동시에 선택하거나 해제하는 데 활용\n선택 여부를 시각적으로 보여줌"
+    m_correctAnswer: "체크박스"
+    m_wrongAnswers:
+    - "아이콘"
+    - "드롭박스"
+    - "팝업"
+    m_quizType: 1
+    m_explanation: "항목을 선택하거나 해제할 수 있게 해주는 UI 요소입니다."
+    m_category: 0
+    m_hint: "작은 상자를 클릭해 선택을 표시하는 것!"
+  - m_question: "(?)은 글자의 모양, 크기, 두께 등을 설정할 수 있게 해주는 UI 요소이다.\n\n클릭하여 글자 스타일을 변경\n여러 스타일 중 하나를 선택하여 적용하는 데 활용\n가독성과 분위기를 조절"
+    m_correctAnswer: "폰트"
+    m_wrongAnswers:
+    - "아이콘"
+    - "팝업"
+    - "체크박스"
+    m_quizType: 1
+    m_explanation: "글자의 모양, 크기, 두께 등을 설정할 수 있게 해주는 UI 요소입니다."
+    m_category: 0
+    m_hint: "글자의 스타일을 바꿔 적용하는 것!"

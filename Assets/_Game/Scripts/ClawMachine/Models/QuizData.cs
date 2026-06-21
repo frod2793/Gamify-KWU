@@ -15,6 +15,19 @@ namespace GamifyKWU.CraneGame.Data
     }
 
     /// <summary>
+    /// [기능]: 퀴즈 문제의 종류/주제를 분류하는 카테고리 형식
+    /// [작성자]: 윤승종
+    /// </summary>
+    public enum QuizCategory
+    {
+        UIUX,                 // UI/UX 디자인
+        SoftwareEngineering,  // 소프트웨어 공학
+        DesignPattern,        // 디자인 패턴
+        UnityEngine,          // 유니티 엔진
+        GeneralCS             // 컴퓨터 사이언스 일반
+    }
+
+    /// <summary>
     /// [기능]: 객관식 문제 하나에 대한 질문과 정답 및 오답 리스트, 그리고 타깃 게임 타입을 보관하는 데이터 클래스
     /// [작성자]: 윤승종
     /// </summary>
@@ -41,6 +54,14 @@ namespace GamifyKWU.CraneGame.Data
         [SerializeField]
         [Tooltip("퀴즈 정답에 대한 상세 설명 내용입니다.")]
         private string m_explanation;
+
+        [SerializeField]
+        [Tooltip("해당 퀴즈가 분류될 주제 카테고리입니다.")]
+        private QuizCategory m_category = QuizCategory.UIUX;
+
+        [SerializeField]
+        [Tooltip("퀴즈 문제 풀이에 제공될 힌트 내용입니다.")]
+        private string m_hint = "";
         #endregion
 
         #region 공개 프로퍼티 (Properties)
@@ -83,16 +104,34 @@ namespace GamifyKWU.CraneGame.Data
                 return m_explanation;
             }
         }
+
+        public QuizCategory Category
+        {
+            get
+            {
+                return m_category;
+            }
+        }
+
+        public string Hint
+        {
+            get
+            {
+                return m_hint;
+            }
+        }
         #endregion
 
         #region 생성자 (Constructor)
-        public QuizData(string question, string correctAnswer, List<string> wrongAnswers, QuizType quizType = QuizType.ClawMachine, string explanation = "")
+        public QuizData(string question, string correctAnswer, List<string> wrongAnswers, QuizType quizType = QuizType.ClawMachine, string explanation = "", QuizCategory category = QuizCategory.UIUX, string hint = "")
         {
             m_question = question;
             m_correctAnswer = correctAnswer;
             m_wrongAnswers = wrongAnswers;
             m_quizType = quizType;
             m_explanation = explanation;
+            m_category = category;
+            m_hint = hint;
         }
         #endregion
     }

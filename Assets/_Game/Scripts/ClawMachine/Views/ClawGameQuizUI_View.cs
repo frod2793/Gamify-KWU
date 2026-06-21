@@ -1,5 +1,6 @@
 using DG.Tweening;
 using TMPro;
+using GamifyKWU.CraneGame.Data;
 using UnityEngine;
 using UnityEngine.UI;
 using GameArifiction.Core.Audio;
@@ -8,15 +9,12 @@ using VContainer;
 namespace GameArifiction.ClawMachine
 {
     /// <summary>
-    /// [기능]: UI Canvas 상단에 제한시간 타이머를 제어하고 게임 시작 전 퀴즈 문제 팝업 및 문제 다시보기 기능을 연동하는 UI View.
+    /// [기능]: UI Canvas 상단에 제한시간 타이머를 제어하고 게임 시작 전 퀴즈 문제 팝업 및 문제 다시보기 기능을 연동하는 UI View (클로게임 전용).
     /// [작성자]: 윤승종
-    /// [수정 날짜]: 2026-06-06
-    /// [마지막 수정 작성자]: 윤승종
-    /// [수정 내용]: ISoundService를 주입받아 퀴즈 노출 시 Sfx_claw_question 재생 및 버튼 클릭 시 터치음 일괄 연동 적용
     /// </summary>
-    public class QuizUI_View : MonoBehaviour
+    public class ClawGameQuizUI_View : MonoBehaviour
     {
-        #region 참조 (Inspector)
+        #region UI 참조 (Inspector)
         [SerializeField]
         [Tooltip("남은 제한 시간을 표시할 TextMeshProUGUI 컴포넌트입니다.")]
         private TextMeshProUGUI m_timeText;
@@ -27,8 +25,16 @@ namespace GameArifiction.ClawMachine
         private GameObject m_quizPopupPanel;
 
         [SerializeField]
-        [Tooltip("퀴즈 문제를 게임 중 다시 볼 수 있는 버튼입니다.")]
-        private Button m_showQuizButton;
+        [Tooltip("퀴즈 문제 제목을 표시할 TextMeshProUGUI 컴포넌트입니다.")]
+        private TextMeshProUGUI m_titleText;
+
+        [SerializeField]
+        [Tooltip("퀴즈 질문을 표시할 TextMeshProUGUI 컴포넌트입니다.")]
+        private TextMeshProUGUI m_questionText;
+
+        [SerializeField]
+        [Tooltip("퀴즈 힌트 텍스트를 단독 표시할 TextMeshProUGUI 컴포넌트입니다.")]
+        private TextMeshProUGUI m_hintText;
         #endregion
 
         #region 내부 필드 (Private Fields)
@@ -65,15 +71,17 @@ namespace GameArifiction.ClawMachine
                 m_viewModel.OnStateChanged -= HandleStateChanged;
                 m_viewModel.OnTimeChanged -= UpdateTimeUI;
             }
-
-            if (m_showQuizButton != null)
-            {
-                m_showQuizButton.onClick.RemoveListener(func_OnShowQuizButtonClick);
-            }
         }
         #endregion
 
         #region 초기화 (Initialization)
+        /// <summary>
+        /// [기능]: 뷰모델을 주입받아 이벤트를 구독하고 퀴즈 문제 텍스트를 시안 레이아웃에 맞춰 포맷팅하여 바인딩합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-21
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 시안의 ◆ 리스트 지시자, 구분선 및 힌트 텍스트의 분리 렌더링 동적 포맷팅 적용
+        /// </summary>
         public void Initialize(ClawGameViewModel viewModel)
         {
             m_viewModel = viewModel;
@@ -85,14 +93,52 @@ namespace GameArifiction.ClawMachine
             // 초기 제한 시간 타이머 UI 동기화 갱신
             UpdateTimeUI(m_viewModel.TimeLeft);
 
+            // 퀴즈 문제 제목 텍스트 동적 바인딩
+            if (m_titleText != null && m_viewModel.CurrentQuiz != null)
+            {
+                m_titleText.text = GetCategoryKoreanName(m_viewModel.CurrentQuiz.Category);
+            }
+
+            // 퀴즈 문제 텍스트 시안 스타일 포맷팅 및 동적 바인딩
+            if (m_questionText != null && m_viewModel.CurrentQuiz != null)
+            {
+                string rawQuestion = m_viewModel.CurrentQuiz.Question;
+                string[] lines = rawQuestion.Split(new[] { "\r\n", "\n" }, System.StringSplitOptions.RemoveEmptyEntries);
+
+                if (lines.Length > 0)
+                {
+                    System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                    
+                    // 1. 첫 번째 라인 (질문 정의 타이틀)
+                    sb.AppendLine(lines[0]);
+                    
+                    // 2. 점선 구분선 삽입
+                    sb.AppendLine("<color=#bbbbbb>- - - - - - - - - - - - - - - - - - - - - - - - - - - - -</color>");
+                    sb.AppendLine();
+
+                    // 3. 두 번째 라인부터 ◆ 다이아몬드 지시자를 자동 부착하여 설명 리스트 구성
+                    for (int i = 1; i < lines.Length; i++)
+                    {
+                        sb.AppendLine($"<color=#1a1a1a>◆</color> {lines[i]}");
+                    }
+
+                    m_questionText.text = sb.ToString();
+                }
+                else
+                {
+                    m_questionText.text = rawQuestion;
+                }
+            }
+
+            // 힌트 텍스트 단독 영역 할당
+            if (m_hintText != null && m_viewModel.CurrentQuiz != null)
+            {
+                m_hintText.text = m_viewModel.CurrentQuiz.Hint;
+            }
+
             if (m_quizPopupPanel != null)
             {
                 m_quizPopupPanel.SetActive(false);
-            }
-
-            if (m_showQuizButton != null)
-            {
-                m_showQuizButton.onClick.AddListener(func_OnShowQuizButtonClick);
             }
         }
         #endregion
@@ -201,6 +247,29 @@ namespace GameArifiction.ClawMachine
                 {
                     m_quizPopupPanel.SetActive(false);
                 }
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 퀴즈 카테고리 enum 값을 직관적인 한글 타이틀 이름으로 변환합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private string GetCategoryKoreanName(QuizCategory category)
+        {
+            switch (category)
+            {
+                case QuizCategory.UIUX:
+                    return "Q. UI/UX 디자인 문제";
+                case QuizCategory.SoftwareEngineering:
+                    return "Q. 소프트웨어 공학 문제";
+                case QuizCategory.DesignPattern:
+                    return "Q. 디자인 패턴 문제";
+                case QuizCategory.UnityEngine:
+                    return "Q. 유니티 엔진 문제";
+                case QuizCategory.GeneralCS:
+                    return "Q. 컴퓨터 사이언스 문제";
+                default:
+                    return "Q. 퀴즈 문제";
             }
         }
         #endregion

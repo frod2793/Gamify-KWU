@@ -121,7 +121,7 @@ namespace GameArifiction.ClawMachine
         {
             // 인형뽑기(ClawMachine) 뷰 및 주요 컴포넌트 등록
             builder.RegisterComponentInHierarchy<ClawGameView>();
-            builder.RegisterComponentInHierarchy<QuizUI_View>();
+            builder.RegisterComponentInHierarchy<ClawGameQuizUI_View>();
             builder.RegisterComponentInHierarchy<ClawMachineExitView>();
             builder.RegisterComponentInHierarchy<ClawGameResultPopupView>();
             builder.RegisterComponentInHierarchy<ClawGameTutorialPopupView>();

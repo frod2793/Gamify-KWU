@@ -56,7 +56,7 @@ namespace GameArifiction.ClawMachine
 
         private ClawGameViewModel m_viewModel;
         private ClawGameTutorialPopupView m_tutorialPopupView;
-        private QuizUI_View m_quizUIView;
+        private ClawGameQuizUI_View m_quizUIView;
         private CommonSettingsPopupView m_settingsPopupView;
         private ISoundService m_soundService;
         private float m_prevHorizontalInput;
@@ -79,7 +79,7 @@ namespace GameArifiction.ClawMachine
             ClawView clawView,
             ClawGameResultPopupView resultPopup,
             ClawGameTutorialPopupView tutorialPopup,
-            QuizUI_View quizUIView)
+            ClawGameQuizUI_View quizUIView)
         {
             m_soundService = soundService;
             m_settingsPopupView = settingsPopupView;

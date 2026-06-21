@@ -21,7 +21,7 @@ namespace GameArifiction.ClawMachine
     {
         #region 내부 의존성 필드 (Private Fields)
         private readonly ClawGameViewModel m_viewModel;
-        private readonly QuizUI_View m_quizUIView;
+        private readonly ClawGameQuizUI_View m_quizUIView;
         private readonly ClawMachineExitView m_exitView;
         private readonly ClawGameResultPopupView m_resultPopupView;
         private readonly ClawGameView m_gameView;
@@ -38,6 +38,56 @@ namespace GameArifiction.ClawMachine
 
         // [최적화]: 캡슐 재사용을 위한 Object Pool
         private List<GameObject> m_dollPool = new List<GameObject>();
+
+        // [신규]: 사용자가 제공한 5대 실제 퀴즈 폴백 데이터셋
+        private static readonly List<QuizData> s_fallbackQuizzes = new List<QuizData>
+        {
+            new QuizData(
+                "(?) 정보를 시각적으로 압축하여 전달하는 UI 요소이다. 텍스트보다 빠르게 의미를 전달하며 메뉴, 기능, 상태 표시 등에 활용되고 스마트폰 앱에서 자주 사용된다.",
+                "아이콘",
+                new List<string> { "폰트", "팝업", "체크박스" },
+                QuizType.ClawMachine,
+                "정보를 시각적으로 압축하여 전달하는 UI 요소입니다.",
+                QuizCategory.UIUX,
+                "그림으로 핵심을 보여주는 것!"
+            ),
+            new QuizData(
+                "(?)은 화면 위에 나타나 사용자의 주의를 끌고, 중요한 정보를 전달하는 UI 요소이다. 사용자의 시선을 집중시키며 알림, 경고, 확인 요청, 안내 등에 활용되고 사용자의 선택(확인, 취소 등)을 받아 다음 행동을 유도한다.",
+                "팝업",
+                new List<string> { "아이콘", "드롭박스", "체크박스" },
+                QuizType.ClawMachine,
+                "화면 위에 나타나 사용자의 주의를 끌고 정보를 전달하는 UI 요소입니다.",
+                QuizCategory.UIUX,
+                "갑자기 나타나는 창!"
+            ),
+            new QuizData(
+                "(?)은 여러 옵션 중 하나를 선택할 수 있게 해주는 UI 요소이다. 클릭하여 목록을 열고 옵션을 확인하며, 여러 항목 중 하나를 선택하는 데 활용되고 선택한 내용을 현재 화면에 간결하게 표시한다.",
+                "드롭박스",
+                new List<string> { "아이콘", "팝업", "체크박스" },
+                QuizType.ClawMachine,
+                "여러 옵션 중 하나를 선택할 수 있게 해주는 UI 요소입니다.",
+                QuizCategory.UIUX,
+                "목록에서 하나를 골라 선택하는 것!"
+            ),
+            new QuizData(
+                "(?)은 항목을 선택하거나 해제할 수 있게 해주는 UI 요소이다. 클릭하여 선택 상태를 변경하며, 여러 항목을 동시에 선택하거나 해제하는 데 활용되고 선택 여부를 시각적으로 보여준다.",
+                "체크박스",
+                new List<string> { "아이콘", "드롭박스", "팝업" },
+                QuizType.ClawMachine,
+                "항목을 선택하거나 해제할 수 있게 해주는 UI 요소입니다.",
+                QuizCategory.UIUX,
+                "작은 상자를 클릭해 선택을 표시하는 것!"
+            ),
+            new QuizData(
+                "(?)은 글자의 모양, 크기, 두께 등을 설정할 수 있게 해주는 UI 요소이다. 클릭하여 글자 스타일을 변경하고 여러 스타일 중 하나를 선택하여 적용하는 데 활용되며 가독성과 분위기를 조절한다.",
+                "폰트",
+                new List<string> { "아이콘", "팝업", "체크박스" },
+                QuizType.ClawMachine,
+                "글자의 모양, 크기, 두께 등을 설정할 수 있게 해주는 UI 요소입니다.",
+                QuizCategory.UIUX,
+                "글자의 스타일을 바꿔 적용하는 것!"
+            )
+        };
         #endregion
 
         #region 생성자 의존성 주입 (Constructor DI)
@@ -48,7 +98,7 @@ namespace GameArifiction.ClawMachine
         [Inject]
         public ClawGameFlowController(
             ClawGameViewModel viewModel,
-            QuizUI_View quizUIView,
+            ClawGameQuizUI_View quizUIView,
             ClawMachineExitView exitView,
             ClawGameResultPopupView resultPopupView,
             ClawGameView gameView,
@@ -123,12 +173,8 @@ namespace GameArifiction.ClawMachine
 
             if (selectedQuiz == null)
             {
-                selectedQuiz = new QuizData(
-                    "UX/UI [?] 에 대해 아십니까?",
-                    "아이콘",
-                    new List<string> { "폰트", "팝업", "체크박스" },
-                    QuizType.ClawMachine
-                );
+                int randomIndex = Random.Range(0, s_fallbackQuizzes.Count);
+                selectedQuiz = s_fallbackQuizzes[randomIndex];
             }
 
             m_viewModel.SetQuiz(selectedQuiz);
