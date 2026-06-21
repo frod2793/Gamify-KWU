@@ -131,6 +131,7 @@ namespace GameArifiction.ClawMachine
                 else
                 {
                     m_questionText.text = rawQuestion;
+                    Debug.LogWarning($"[ClawGameQuizUI_View] 분할된 라인이 없어 원본 텍스트를 그대로 바인딩했습니다. 질문: {rawQuestion}");
                 }
             }
 

@@ -4208,8 +4208,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: GameArifiction.ClawMachine.QuizUI_View, GamifyKWU.Runtime
+      - m_Target: {fileID: 1340386580}
+        m_TargetAssemblyTypeName: GameArifiction.ClawMachine.ClawGameQuizUI_View,
+          GamifyKWU.Runtime
         m_MethodName: func_OnStartButtonClicked
         m_Mode: 1
         m_Arguments:
