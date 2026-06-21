@@ -113,8 +113,8 @@ namespace GameArifiction.ClawMachine
                 {
                     System.Text.StringBuilder sb = new System.Text.StringBuilder();
                     
-                    // 1. 첫 번째 라인 (질문 정의 타이틀)
-                    sb.AppendLine(lines[0]);
+                    // 1. 첫 번째 라인 (질문 정의 타이틀)을 볼드체로 렌더링
+                    sb.AppendLine($"<b>{lines[0]}</b>");
                     
                     // 2. 점선 구분선 삽입
                     sb.AppendLine("<color=#bbbbbb>- - - - - - - - - - - - - - - - - - - - - - - - - - - - -</color>");
