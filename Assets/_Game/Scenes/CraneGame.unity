@@ -2114,7 +2114,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: 1.156189, y: -360}
+  m_AnchoredPosition: {x: 1.15625, y: -360}
   m_SizeDelta: {x: -122.375, y: 272.1015}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &549623822
@@ -2531,6 +2531,115 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 726228351}
   m_CullTransparentMesh: 1
+--- !u!21 &760911616
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Mona10x12 SDF Material (Instance) + Mona10x12-Bold SDF Atlas (Instance)
+  m_Shader: {fileID: 4800000, guid: 68e6db2ebdc24f95958faec2be5558d6, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Cube:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FaceTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: -7479647851789397715, guid: a0a074be91af4d54487bf9b60a929a2d, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OutlineTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Ambient: 0.5
+    - _Bevel: 0.5
+    - _BevelClamp: 0
+    - _BevelOffset: 0
+    - _BevelRoundness: 0
+    - _BevelWidth: 0
+    - _BumpFace: 0
+    - _BumpOutline: 0
+    - _ColorMask: 15
+    - _CullMode: 0
+    - _Diffuse: 0.5
+    - _FaceDilate: 0
+    - _FaceUVSpeedX: 0
+    - _FaceUVSpeedY: 0
+    - _GlowInner: 0.05
+    - _GlowOffset: 0
+    - _GlowOuter: 0.05
+    - _GlowPower: 0.75
+    - _GradientScale: 5
+    - _LightAngle: 3.1416
+    - _MaskSoftnessX: 0
+    - _MaskSoftnessY: 0
+    - _OutlineSoftness: 0
+    - _OutlineUVSpeedX: 0
+    - _OutlineUVSpeedY: 0
+    - _OutlineWidth: 0
+    - _PerspectiveFilter: 0.875
+    - _Reflectivity: 10
+    - _ScaleRatioA: 0.8
+    - _ScaleRatioB: 0.65
+    - _ScaleRatioC: 0.65
+    - _ScaleX: 1
+    - _ScaleY: 1
+    - _ShaderFlags: 0
+    - _Sharpness: 0
+    - _SpecularPower: 2
+    - _Stencil: 0
+    - _StencilComp: 8
+    - _StencilOp: 0
+    - _StencilReadMask: 255
+    - _StencilWriteMask: 255
+    - _TextureHeight: 4096
+    - _TextureWidth: 4096
+    - _UnderlayDilate: 0
+    - _UnderlayOffsetX: 0
+    - _UnderlayOffsetY: 0
+    - _UnderlaySoftness: 0
+    - _VertexOffsetX: 0
+    - _VertexOffsetY: 0
+    - _WeightBold: 0.75
+    - _WeightNormal: 0
+    m_Colors:
+    - _ClipRect: {r: -32767, g: -32767, b: 32767, a: 32767}
+    - _EnvMatrixRotation: {r: 0, g: 0, b: 0, a: 0}
+    - _FaceColor: {r: 1, g: 1, b: 1, a: 1}
+    - _GlowColor: {r: 0, g: 1, b: 0, a: 0.5}
+    - _MaskCoord: {r: 0, g: 0, b: 32767, a: 32767}
+    - _OutlineColor: {r: 0, g: 0, b: 0, a: 1}
+    - _ReflectFaceColor: {r: 0, g: 0, b: 0, a: 1}
+    - _ReflectOutlineColor: {r: 0, g: 0, b: 0, a: 1}
+    - _SpecularColor: {r: 1, g: 1, b: 1, a: 1}
+    - _UnderlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!1 &761692035
 GameObject:
   m_ObjectHideFlags: 0
@@ -4810,8 +4919,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -9.809937, y: -48.77173}
-  m_SizeDelta: {x: -324.94, y: -399.9999}
+  m_AnchoredPosition: {x: 4.3012085, y: -48.77173}
+  m_SizeDelta: {x: -347.52, y: -399.9999}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1239254812
 MonoBehaviour:
@@ -4836,18 +4945,19 @@ MonoBehaviour:
   m_text: "(?)\uC740 \uC5EC\uB7EC \uC635\uC158 \uC911 \uD558\uB098\uB97C \uC120\uD0DD\uD560
     \uC218 \uC788\uAC8C \uD574\uC8FC\uB294 UI \uC694\uC18C\uC774\uB2E4.\n\n\uD074\uB9AD\uD558\uC5EC
     \uBAA9\uB85D\uC744 \uC5F4\uACE0 \uC635\uC158\uC744 \uD655\uC778\n\uC5EC\uB7EC
-    \uD56D\uBAA9 \uC911 \uD558\uB098\uB97C \uC120\uD0DD\uD558\uB294 \uB370 \uD65C\uC6A9\n\uC120\uD0DD\uD55C
-    \uB0B4\uC6A9\uC744 \uD604\uC7AC \uD654\uBA74\uC5D0 \uAC04\uACB0\uD558\uAC8C \uD45C\uC2DC\n\n<b>(\uD78C\uD2B8:
-    \uBAA9\uB85D\uC5D0\uC11C \uD558\uB098\uB97C \uACE8\uB77C \uC120\uD0DD\uD558\uB294
-    \uAC83!)</b>"
+    \uD56D\uBAA9 \uC911 \uD558\uB098\uB97C \uC120\uD0DD\uD558\uB294 \uB370 \uD65C\uC6A9
+    \uB370 \uD65C\uC6A9 \uB370 \uD65C\uC6A9 \uB370 \uD65C\uC6A9\n\uC120\uD0DD\uD55C
+    \uB0B4\uC6A9\uC744 \uD604\uC7AC \uD654\uBA74\uC5D0 \uAC04\uACB0\uD558\uAC8C \uD45C\uC2DC\n\n"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: d079d0eeb31ab9041a9156afcefed9a8, type: 2}
   m_sharedMaterial: {fileID: 425690142}
   m_fontSharedMaterials:
   - {fileID: 425690142}
+  - {fileID: 760911616}
   m_fontMaterial: {fileID: 425690142}
   m_fontMaterials:
   - {fileID: 425690142}
+  - {fileID: 760911616}
   m_fontColor32:
     serializedVersion: 2
     rgba: 4279900698
@@ -4868,7 +4978,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 37.25
+  m_fontSize: 36.25
   m_fontSizeBase: 48
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -5048,7 +5158,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1275496936
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5061,12 +5171,12 @@ RectTransform:
   m_LocalScale: {x: 0.8, y: 0.8, z: 0.8}
   m_ConstrainProportionsScale: 1
   m_Children:
+  - {fileID: 1206189646}
   - {fileID: 220244348}
   - {fileID: 175834217}
   - {fileID: 1133256906}
   - {fileID: 1239254811}
   - {fileID: 1947779497}
-  - {fileID: 1206189646}
   m_Father: {fileID: 1340386575}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
