@@ -25,6 +25,9 @@ namespace GameArifiction.GradeRunner
         private string m_assignedWord;
         private TweenCallback m_deactivateCallback;
 
+        private Tween m_moveTween;
+        private Tween m_scaleTween;
+
         #endregion
 
         #region 공개 프로퍼티 (Public Properties)
@@ -46,6 +49,18 @@ namespace GameArifiction.GradeRunner
         private void OnDisable()
         {
             // DOTween 애니메이션 자원 누수 방지를 위한 정리
+            if (m_moveTween != null && m_moveTween.IsActive())
+            {
+                m_moveTween.Kill();
+            }
+            m_moveTween = null;
+
+            if (m_scaleTween != null && m_scaleTween.IsActive())
+            {
+                m_scaleTween.Kill();
+            }
+            m_scaleTween = null;
+
             if (m_spriteRenderer != null)
             {
                 m_spriteRenderer.DOKill();
@@ -85,7 +100,7 @@ namespace GameArifiction.GradeRunner
             ApplyVisuals();
 
             // DOTween을 사용하여 개별 Update 호출 없이 하강 구현
-            transform.DOMoveY(m_targetY, m_fallDuration)
+            m_moveTween = transform.DOMoveY(m_targetY, m_fallDuration)
                 .SetEase(Ease.Linear)
                 .OnComplete(m_deactivateCallback);
         }
@@ -158,7 +173,7 @@ namespace GameArifiction.GradeRunner
 
                 // 프리미엄 반짝임 펄스 연출
                 transform.DOKill();
-                transform.DOScale(new Vector3(1.25f, 1.25f, 1f), 0.5f)
+                m_scaleTween = transform.DOScale(new Vector3(1.25f, 1.25f, 1f), 0.5f)
                     .SetLoops(-1, LoopType.Yoyo)
                     .SetEase(Ease.InOutSine);
             }
@@ -179,17 +194,32 @@ namespace GameArifiction.GradeRunner
 
         /// <summary>
         /// [기능]: 일시정지 상태에 따라 현재 진행 중인 DOTween 하강 및 크기 연출을 멈추거나 재개합니다.
+        ///         (명시적 트윈 참조 상태를 확인하여 안전하게 제어합니다)
         /// [작성자]: 윤승종
         /// </summary>
         public void SetPauseState(bool isPaused)
         {
             if (isPaused)
             {
-                transform.DOPause();
+                if (m_moveTween != null && m_moveTween.IsActive())
+                {
+                    m_moveTween.Pause();
+                }
+                if (m_scaleTween != null && m_scaleTween.IsActive())
+                {
+                    m_scaleTween.Pause();
+                }
             }
             else
             {
-                transform.DOPlay();
+                if (m_moveTween != null && m_moveTween.IsActive())
+                {
+                    m_moveTween.Play();
+                }
+                if (m_scaleTween != null && m_scaleTween.IsActive())
+                {
+                    m_scaleTween.Play();
+                }
             }
         }
 

@@ -218,6 +218,12 @@ namespace GameArifiction.GradeRunner
 
             objInstance.gameObject.SetActive(true);
             objInstance.Initialize(type, codeColor, m_groundY, fallDuration, selectedWord);
+
+            // [보완 안전장치]: 현재 컷씬 연출이나 수동 정지 등으로 플레이 진행이 불가능한 상태라면 스폰 직후 즉시 정지시킵니다.
+            if (m_viewModel != null && !m_viewModel.IsPlayable)
+            {
+                objInstance.SetPauseState(true);
+            }
         }
 
         /// <summary>
@@ -288,16 +294,25 @@ namespace GameArifiction.GradeRunner
 
         /// <summary>
         /// [기능]: 일시정지 상태 변경 이벤트를 수신하여 화면 상의 모든 낙하 오브젝트 트윈을 일시정지/재개합니다.
+        ///         (시스템 정지 및 유저 수동 일시정지 모두에서 낙하물은 정지합니다)
         /// [작성자]: 윤승종
         /// </summary>
-        private void HandlePauseStateChanged(bool isPaused)
+        private void HandlePauseStateChanged(bool isPaused, bool isUserPause)
         {
+            // [보완 가드]: 유저 수동 정지가 풀렸다(isPaused == false) 할지라도,
+            // 현재 시스템이 여전히 컷씬 진행 중 등으로 플레이 불가능 상태(!IsPlayable)라면 낙하물은 계속 정지되어 있어야 합니다.
+            bool shouldPause = isPaused;
+            if (!isPaused && m_viewModel != null && !m_viewModel.IsPlayable)
+            {
+                shouldPause = true;
+            }
+
             int codeCount = m_codePool.Count;
             for (int i = 0; i < codeCount; i++)
             {
                 if (m_codePool[i] != null && m_codePool[i].gameObject.activeSelf)
                 {
-                    m_codePool[i].SetPauseState(isPaused);
+                    m_codePool[i].SetPauseState(shouldPause);
                 }
             }
 
@@ -306,11 +321,11 @@ namespace GameArifiction.GradeRunner
             {
                 if (m_cheatSheetPool[i] != null && m_cheatSheetPool[i].gameObject.activeSelf)
                 {
-                    m_cheatSheetPool[i].SetPauseState(isPaused);
+                    m_cheatSheetPool[i].SetPauseState(shouldPause);
                 }
             }
 
-            Debug.Log($"[FallingObjectSpawnerView] 낙하 오브젝트 일시정지 상태 동기화 완료: {isPaused}");
+            Debug.Log($"[FallingObjectSpawnerView] 낙하 오브젝트 일시정지 상태 동기화 완료 (요청: {isPaused}, 최종결정: {shouldPause})");
         }
 
         #endregion

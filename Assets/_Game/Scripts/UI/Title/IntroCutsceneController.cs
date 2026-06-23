@@ -30,7 +30,7 @@ namespace GamifyKWU.UI.Title
         [SerializeField]
         [Inject]
         [Tooltip("씬 상에 존재하는 실제 제어 대상인 플레이어 뷰 컴포넌트입니다.")]
-        private PlayerView m_playerView;
+        private PlayerView m_lobbyPlayerView;
 
         [SerializeField]
         [Tooltip("인트로 연출 감상 여부 세션 상태를 기록/참조할 플레이어 ScriptableObject 데이터 자산입니다.")]
@@ -39,11 +39,11 @@ namespace GamifyKWU.UI.Title
         [Header("좌표 설정")]
         [SerializeField]
         [Tooltip("컷씬 개시 시 캐릭터가 최초 텔레포트 스폰될 입구 지점의 트랜스폼 좌표입니다.")]
-        private Transform m_entrancePoint;
+        private Transform m_titleEntrancePoint;
 
         [SerializeField]
         [Tooltip("캐릭터가 걸어와 최종 정지하게 될 로비 시작 구역의 트랜스폼 좌표입니다.")]
-        private Transform m_startPoint;
+        private Transform m_titleStartPoint;
 
         [SerializeField]
         [Tooltip("목표 도달을 판정하는 절대 오차 임계치 반경(m)입니다. 이 거리 이내로 좁혀지면 정지합니다.")]
@@ -105,8 +105,18 @@ namespace GamifyKWU.UI.Title
         private float m_startScale = 0.3f;
 
         [SerializeField]
-        [Tooltip("캐릭터가 로비 시작점에 도착했을 때의 원래 목표 스케일입니다.")]
-        private float m_endScale = 1.0f;
+        [Range(0.5f, 2.0f)]
+        [Tooltip("캐릭터가 로비 시작점에 도착했을 때의 원래 목표 스케일입니다. (기본 권장: 1.5)")]
+        private float m_endScale = 1.5f;
+
+        [Header("로비 연출 설정 (실제 플레이어)")]
+        [SerializeField]
+        [Tooltip("인게임 인트로 컷씬 시 실제 플레이어가 최초 텔레포트 스폰될 로비 입구 지점의 트랜스폼 좌표입니다.")]
+        private Transform m_lobbyEntrancePoint;
+
+        [SerializeField]
+        [Tooltip("인게임 인트로 컷씬 시 실제 플레이어가 걸어와 최종 정지하게 될 로비 내부 지점의 트랜스폼 좌표입니다.")]
+        private Transform m_lobbyStartPoint;
 
         #endregion
 
@@ -187,21 +197,12 @@ namespace GamifyKWU.UI.Title
             }
 
             // 인게임 플레이어는 타이틀 화면 재생 중에는 숨김 처리
-            if (m_playerView != null)
+            if (m_lobbyPlayerView != null)
             {
-                m_playerView.gameObject.SetActive(false);
+                m_lobbyPlayerView.gameObject.SetActive(false);
             }
 
-            if (m_playerSO != null && !m_forcePlayIntro)
-            {
-                if (m_playerSO.IsIntroPlayed || m_playerSO.HasSavedPosition)
-                {
-                    Debug.Log("[IntroCutsceneController] 이미 인트로를 시청했거나 세션이 복귀 상태이므로 대기하지 않고 리턴합니다.");
-                    StopTitleAnimationLoop();
-                    SkipIntroSequence();
-                    return;
-                }
-            }
+
         }
 
         private void Update()
@@ -290,49 +291,46 @@ namespace GamifyKWU.UI.Title
             titleVM.SetInputLocked(true);
             Vector3 originalPos = m_titlePlayerView.transform.position;
 
-            while (!token.IsCancellationRequested)
+            float elapsed = 0f;
+            float duration = 4.0f; // 4초 동안 뒤에서 앞으로 달려오기
+
+            m_titlePlayerView.transform.localScale = new Vector3(m_startScale, m_startScale, 1f);
+            m_titlePlayerView.transform.position = m_titleEntrancePoint != null ? m_titleEntrancePoint.position : originalPos;
+
+            Vector2 startPos = m_titlePlayerView.transform.position;
+            Vector2 targetPos = m_titleStartPoint != null ? m_titleStartPoint.position : originalPos;
+
+            while (elapsed < duration)
             {
-                float elapsed = 0f;
-                float duration = 4.0f; // 4초 동안 뒤에서 앞으로 달려오기
-
-                m_titlePlayerView.transform.localScale = new Vector3(m_startScale, m_startScale, 1f);
-                m_titlePlayerView.transform.position = m_entrancePoint != null ? m_entrancePoint.position : originalPos;
-
-                Vector2 startPos = m_titlePlayerView.transform.position;
-                Vector2 targetPos = m_startPoint != null ? m_startPoint.position : originalPos;
-
-                while (elapsed < duration)
+                if (token.IsCancellationRequested)
                 {
-                    if (token.IsCancellationRequested)
-                    {
-                        return;
-                    }
-
-                    elapsed += Time.deltaTime;
-                    float ratio = Mathf.Clamp01(elapsed / duration);
-
-                    // 1. 가상 입력을 주기적으로 주입해 SPUM MOVE(달리기) 애니메이션 상태 강제
-                    titleVM.ProcessInput(Vector2.down, Time.deltaTime);
-
-                    // 2. 위치 선형 보간
-                    m_titlePlayerView.transform.position = Vector2.Lerp(startPos, targetPos, ratio);
-
-                    // 3. 스케일 선형 보간 (원근감)
-                    float lerpedScale = Mathf.Lerp(m_startScale, m_endScale, ratio);
-                    if (Mathf.Abs(m_titlePlayerView.transform.localScale.x - lerpedScale) > 0.001f)
-                    {
-                        m_titlePlayerView.transform.localScale = new Vector3(lerpedScale, lerpedScale, 1f);
-                    }
-
-                    await UniTask.Yield(PlayerLoopTiming.Update, token);
+                    return;
                 }
 
-                // 4. 도달 후 가상 입력 해제(IDLE) 및 스케일 확정, 1초간 대기 후 다시 뒤로 가기 루프 반복
-                titleVM.ProcessInput(Vector2.zero, Time.deltaTime);
-                m_titlePlayerView.transform.localScale = new Vector3(m_endScale, m_endScale, 1f);
+                elapsed += Time.deltaTime;
+                float ratio = Mathf.Clamp01(elapsed / duration);
 
-                await UniTask.Delay(System.TimeSpan.FromSeconds(1f), cancellationToken: token);
+                // 1. 가상 입력을 주기적으로 주입해 SPUM MOVE(달리기) 애니메이션 상태 강제
+                titleVM.ProcessInput(Vector2.down, Time.deltaTime);
+
+                // 2. 위치 선형 보간 계산 및 뷰모델 강제 피드백 동화 (물리 떨림/꼬임 차단)
+                Vector2 lerpedPos = Vector2.Lerp(startPos, targetPos, ratio);
+                titleVM.ForceSetPosition(lerpedPos);
+                m_titlePlayerView.transform.position = lerpedPos;
+
+                // 3. 스케일 선형 보간 (원근감)
+                float lerpedScale = Mathf.Lerp(m_startScale, m_endScale, ratio);
+                if (Mathf.Abs(m_titlePlayerView.transform.localScale.x - lerpedScale) > 0.001f)
+                {
+                    m_titlePlayerView.transform.localScale = new Vector3(lerpedScale, lerpedScale, 1f);
+                }
+
+                await UniTask.Yield(PlayerLoopTiming.Update, token);
             }
+
+            // 4. 도달 후 가상 입력 해제(IDLE) 및 스케일 확정 (영구 정지 대기 상태 유지)
+            titleVM.ProcessInput(Vector2.zero, Time.deltaTime);
+            m_titlePlayerView.transform.localScale = new Vector3(m_endScale, m_endScale, 1f);
         }
 
         /// <summary>
@@ -369,9 +367,9 @@ namespace GamifyKWU.UI.Title
             StopTitleAnimationLoop();
 
             // 2. 실제 인게임 플레이어 활성화
-            if (m_playerView != null)
+            if (m_lobbyPlayerView != null)
             {
-                m_playerView.gameObject.SetActive(true);
+                m_lobbyPlayerView.gameObject.SetActive(true);
             }
 
             if (m_playerSO != null && !m_forcePlayIntro)
@@ -390,6 +388,9 @@ namespace GamifyKWU.UI.Title
         /// <summary>
         /// [기능]: 이미 인트로를 시청하여 컷씬을 건너뛸 때, 캐릭터 위치를 시작 지점으로 강제 세팅하고 조작 잠금 및 UI를 해제합니다.
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-23
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 로비용 캐릭터 텔레포트 복원 및 UseMovementBounds 복구 적용
         /// </summary>
         private void SkipIntroSequence()
         {
@@ -400,22 +401,23 @@ namespace GamifyKWU.UI.Title
                 m_speechBubblePanel.SetActive(false);
             }
 
-            if (m_playerView != null)
+            if (m_lobbyPlayerView != null)
             {
+                m_lobbyPlayerView.UseMovementBounds = true;
                 // 플레이어 부모 오브젝트의 스케일을 원래 스케일(1.0)로 초기화
-                m_playerView.transform.localScale = Vector3.one;
+                m_lobbyPlayerView.transform.localScale = Vector3.one;
 
-                PlayerViewModel playerVM = m_playerView.GetViewModel();
+                PlayerViewModel playerVM = m_lobbyPlayerView.GetViewModel();
                 if (playerVM != null)
                 {
                     // 1. 조작 입력 잠금 해제
                     playerVM.SetInputLocked(false);
-                    
+
                     // 2. 시작 포인트 위치로 강제 이동
-                    if (m_startPoint != null)
+                    if (m_lobbyStartPoint != null)
                     {
-                        playerVM.ForceSetPosition(m_startPoint.position);
-                        m_playerView.transform.position = m_startPoint.position;
+                        playerVM.ForceSetPosition(m_lobbyStartPoint.position);
+                        m_lobbyPlayerView.transform.position = m_lobbyStartPoint.position;
                     }
                 }
             }
@@ -434,6 +436,9 @@ namespace GamifyKWU.UI.Title
         /// <summary>
         /// [기능]: 프레임 가상 입력을 주입해 플레이어 캐릭터 조작 시스템 루프를 완전히 활용한 자동 걷기 컷씬을 진행합니다.
         /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-23
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 로비 전용 이동 좌표를 활용한 걷기 시퀀스 주입 및 리네이밍 적용
         /// </summary>
         private async UniTaskVoid PlayIntroSequenceAsync(CancellationToken token)
         {
@@ -442,17 +447,19 @@ namespace GamifyKWU.UI.Title
 
             SetInteractionUIActiveState(false);
 
-            if (m_playerView == null)
+            if (m_lobbyPlayerView == null)
             {
                 Debug.LogError("[IntroCutsceneController] 씬에 주입되거나 할당된 PlayerView가 없어 인트로를 재생할 수 없습니다.");
                 return;
             }
 
+            m_lobbyPlayerView.UseMovementBounds = false;
+
             // PlayerView의 Start() 초기화(InitializeMVVM)가 실행될 시간을 보장하기 위해 1프레임 대기합니다.
             await UniTask.Yield(PlayerLoopTiming.Update, token);
 
             // 플레이어 조작 ViewModel을 리플렉션 없이 안전하게 획득
-            PlayerViewModel playerVM = m_playerView.GetViewModel();
+            PlayerViewModel playerVM = m_lobbyPlayerView.GetViewModel();
 
             if (playerVM == null)
             {
@@ -460,13 +467,13 @@ namespace GamifyKWU.UI.Title
                 return;
             }
 
-            // 1. 조작 입력 잠금, 입구 포인트로 즉각 이동(텔레포트)
+            // 1. 조작 입력 잠금, 로비 입구 포인트로 즉각 이동(텔레포트)
             playerVM.SetInputLocked(true);
 
-            if (m_entrancePoint != null)
+            if (m_lobbyEntrancePoint != null)
             {
-                playerVM.ForceSetPosition(m_entrancePoint.position);
-                m_playerView.transform.position = m_entrancePoint.position;
+                playerVM.ForceSetPosition(m_lobbyEntrancePoint.position);
+                m_lobbyPlayerView.transform.position = m_lobbyEntrancePoint.position;
             }
 
             // 트랜지션 페이드 아웃 효과 완료 후 화면이 깨끗하게 복구될 때까지 설정한 시간(m_postTransitionDelay)만큼 정적인 대기를 수행합니다.
@@ -476,11 +483,11 @@ namespace GamifyKWU.UI.Title
             }
 
             // 2. 가상 입력 피딩 이동 루프 실행
-            if (m_startPoint != null)
+            if (m_lobbyStartPoint != null)
             {
-                Vector2 targetPos = m_startPoint.position;
+                Vector2 targetPos = m_lobbyStartPoint.position;
 
-                while (Vector2.Distance(m_playerView.transform.position, targetPos) > m_arrivalThreshold)
+                while (Vector2.Distance(m_lobbyPlayerView.transform.position, targetPos) > m_arrivalThreshold)
                 {
                     if (token.IsCancellationRequested)
                     {
@@ -488,7 +495,7 @@ namespace GamifyKWU.UI.Title
                     }
 
                     // 목표 지점으로 향하는 가상 방향 입력 벡터(정규화) 계산
-                    Vector2 currentPos = m_playerView.transform.position;
+                    Vector2 currentPos = m_lobbyPlayerView.transform.position;
                     Vector2 direction = (targetPos - currentPos).normalized;
 
                     // 실제 조작과 정확하게 일치하도록 ProcessInput 프레임 주입 실행
@@ -501,9 +508,9 @@ namespace GamifyKWU.UI.Title
 
             // 3. 목적지 도착 후 가상 입력 zero를 주입해 정지 애니메이션(IDLE) 자동 복원 및 스케일 초기화 보장
             playerVM.ProcessInput(Vector2.zero, Time.deltaTime);
-            if (m_playerView != null)
+            if (m_lobbyPlayerView != null)
             {
-                m_playerView.transform.localScale = Vector3.one;
+                m_lobbyPlayerView.transform.localScale = Vector3.one;
             }
 
             // 3.5. 대사 시작 전 카메라 줌인 연행 개시 및 대기
@@ -528,7 +535,7 @@ namespace GamifyKWU.UI.Title
 
         private void UpdateBubblePosition()
         {
-            if (m_playerView == null || m_speechBubbleRect == null || m_cameraFollow == null)
+            if (m_lobbyPlayerView == null || m_speechBubbleRect == null || m_cameraFollow == null)
             {
                 return;
             }
@@ -542,7 +549,7 @@ namespace GamifyKWU.UI.Title
                 return;
             }
 
-            Vector3 worldPos = m_playerView.transform.position;
+            Vector3 worldPos = m_lobbyPlayerView.transform.position;
             worldPos.y += m_worldOffsetY;
 
             Vector2 screenPoint = activeCamera.WorldToScreenPoint(worldPos);
@@ -687,16 +694,24 @@ namespace GamifyKWU.UI.Title
                 m_cameraFollow.ZoomOut();
             }
 
-            if (m_playerView != null)
+            if (m_lobbyPlayerView != null)
             {
+                m_lobbyPlayerView.UseMovementBounds = true;
                 // 플레이어 최종 원래 스케일 복원 확정
-                m_playerView.transform.localScale = Vector3.one;
+                m_lobbyPlayerView.transform.localScale = Vector3.one;
 
-                PlayerViewModel playerVM = m_playerView.GetViewModel();
+                PlayerViewModel playerVM = m_lobbyPlayerView.GetViewModel();
 
                 if (playerVM != null)
                 {
                     playerVM.SetInputLocked(false);
+
+                    // 시작 포인트 위치로 강제 안착
+                    if (m_lobbyStartPoint != null)
+                    {
+                        playerVM.ForceSetPosition(m_lobbyStartPoint.position);
+                        m_lobbyPlayerView.transform.position = m_lobbyStartPoint.position;
+                    }
                 }
             }
 

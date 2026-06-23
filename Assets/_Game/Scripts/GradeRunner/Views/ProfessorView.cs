@@ -209,16 +209,19 @@ namespace GameArifiction.GradeRunner
 
         /// <summary>
         /// [기능]: 일시정지 활성화 상태 변경 시 실행 중인 DOTween 연출 및 오디오 소스를 정지하거나 재개합니다.
+        ///         (유저 수동 일시정지 시에만 교수 비주얼 및 오디오 소스를 정지합니다)
         /// [작성자]: 윤승종
-        /// [수정 날짜]: 2026-06-17
+        /// [수정 날짜]: 2026-06-22
         /// [마지막 수정 작성자]: 윤승종
-        /// [수정 내용]: 커스텀 일시정지 연출 동기화 기능 추가
+        /// [수정 내용]: 유저 수동 일시정지시에만 연출이 멈추도록 예외 조건 추가
         /// </summary>
-        private void HandlePauseStateChanged(bool isPaused)
+        private void HandlePauseStateChanged(bool isPaused, bool isUserPause)
         {
-            m_isPaused = isPaused;
+            // 교수 뷰 자체의 정지 상태는 오직 유저 수동 일시정지일 때만 반영합니다.
+            // 시스템 정지(컷씬)의 경우에는 교수 뷰 연출이 정상 동작해야 합니다.
+            m_isPaused = isPaused && isUserPause;
 
-            if (isPaused)
+            if (m_isPaused)
             {
                 transform.DOPause();
                 if (m_dialogueBubble != null)
@@ -332,7 +335,7 @@ namespace GameArifiction.GradeRunner
                 var shakeTween = UnityEngine.Camera.main.transform.DOShakePosition(1.0f, 0.5f, 10, 90f, false, true);
                 if (m_isPaused)
                 {
-                    shakeTween.Pause();
+                    _ = shakeTween.Pause();
                 }
                 shakeTween.ToUniTask().Forget();
             }
@@ -362,7 +365,7 @@ namespace GameArifiction.GradeRunner
             var moveTween = transform.DOMoveY(m_startPositionY, 0.5f).SetEase(Ease.OutQuad);
             if (m_isPaused)
             {
-                moveTween.Pause();
+                _ = moveTween.Pause();
             }
 
             if (m_phase1Visual != null)
@@ -378,7 +381,7 @@ namespace GameArifiction.GradeRunner
                         var fadeTween = sprites[i].DOFade(1f, 0.5f);
                         if (m_isPaused)
                         {
-                            fadeTween.Pause();
+                            _ = fadeTween.Pause();
                         }
                     }
                 }
@@ -401,7 +404,7 @@ namespace GameArifiction.GradeRunner
                 var shake2Tween = UnityEngine.Camera.main.transform.DOShakePosition(2.0f, 0.5f, 10, 90f, false, true);
                 if (m_isPaused)
                 {
-                    shake2Tween.Pause();
+                    _ = shake2Tween.Pause();
                 }
                 shake2Tween.ToUniTask().Forget();
             }
@@ -455,7 +458,7 @@ namespace GameArifiction.GradeRunner
             var moveTween = transform.DOMoveX(m_startPositionX, 0.4f).SetEase(Ease.OutQuad);
             if (m_isPaused)
             {
-                moveTween.Pause();
+                _ = moveTween.Pause();
             }
 
             await moveTween.ToUniTask(cancellationToken: token).SuppressCancellationThrow();
@@ -473,8 +476,8 @@ namespace GameArifiction.GradeRunner
             
             if (m_isPaused)
             {
-                shakeTween.Pause();
-                punchTween.Pause();
+                _ = shakeTween.Pause();
+                _ = punchTween.Pause();
             }
 
             float elapsed = 0f;
@@ -545,8 +548,8 @@ namespace GameArifiction.GradeRunner
             
             if (m_isPaused)
             {
-                shakeTween.Pause();
-                punchTween.Pause();
+                _ = shakeTween.Pause();
+                _ = punchTween.Pause();
             }
 
             float elapsed = 0f;
@@ -637,7 +640,7 @@ namespace GameArifiction.GradeRunner
                 var fadeTween = m_dialogueBubble.DOFade(1f, 0.25f);
                 if (m_isPaused)
                 {
-                    fadeTween.Pause();
+                    _ = fadeTween.Pause();
                 }
                 fadeTween.ToUniTask().Forget();
             }
@@ -716,7 +719,7 @@ namespace GameArifiction.GradeRunner
                     var fadeOutTween = m_dialogueBubble.DOFade(0f, 0.25f);
                     if (m_isPaused)
                     {
-                        fadeOutTween.Pause();
+                        _ = fadeOutTween.Pause();
                     }
                     fadeOutTween.OnComplete(() =>
                     {

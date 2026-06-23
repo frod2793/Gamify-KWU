@@ -76,7 +76,7 @@ namespace GameArifiction.GradeRunner
         public event Action OnIntroCutsceneStarted; // 도입부 교수님 등장 대사 이벤트
         public event Action OnPhase2CutsceneStarted; // 2페이즈 돌입 교수님 분노 대사 이벤트
         public event Action OnGameEndCutsceneStarted; // 게임 종료 교수님 연출 이벤트
-        public event Action<bool> OnPauseStateChanged; // 일시정지 상태 변경 알림 이벤트
+        public event Action<bool, bool> OnPauseStateChanged; // 일시정지 상태 변경 알림 이벤트 (bool isPaused, bool isUserPause)
 
         #endregion
 
@@ -212,9 +212,8 @@ namespace GameArifiction.GradeRunner
                 return;
             }
 
-            m_isPaused = false;
-            OnPauseStateChanged?.Invoke(false);
             ChangeState(GradeRunnerState.Playing);
+            OnPauseStateChanged?.Invoke(false, false);
 
             Debug.Log("[GradeRunnerViewModel] 2페이즈 전환 컷씬 완료. 게임플레이 재개.");
         }
@@ -313,7 +312,7 @@ namespace GameArifiction.GradeRunner
         public void PauseGame()
         {
             m_isPaused = true;
-            OnPauseStateChanged?.Invoke(true);
+            OnPauseStateChanged?.Invoke(true, true);
             Debug.Log("[GradeRunnerViewModel] 게임이 일시정지되었습니다.");
         }
 
@@ -324,7 +323,7 @@ namespace GameArifiction.GradeRunner
         public void ResumeGame()
         {
             m_isPaused = false;
-            OnPauseStateChanged?.Invoke(false);
+            OnPauseStateChanged?.Invoke(false, true);
             Debug.Log("[GradeRunnerViewModel] 게임이 재개되었습니다.");
         }
 
@@ -406,12 +405,11 @@ namespace GameArifiction.GradeRunner
                     OnPhaseChanged?.Invoke(m_currentPhase);
 
                     // 2페이즈 돌입 시 전환 컷씬 상태로 설정하고 타이머 일시정지
-                    m_isPaused = true;
-                    OnPauseStateChanged?.Invoke(true);
+                    OnPauseStateChanged?.Invoke(true, false);
                     ChangeState(GradeRunnerState.Phase2Cutscene);
                     OnPhase2CutsceneStarted?.Invoke();
 
-                    Debug.Log("[GradeRunnerViewModel] 2페이즈에 돌입하였습니다! 컷씬 연출을 위해 일시정지합니다.");
+                    Debug.Log("[GradeRunnerViewModel] 2페이즈에 돌입하였습니다! 컷씬 연출을 위해 시스템 정지를 전파합니다.");
                 }
             }
 
@@ -422,8 +420,7 @@ namespace GameArifiction.GradeRunner
 
             // 0초 도달 시 즉시 FinishGame을 하지 않고, 컷씬 상태로 넘긴 후 일시정지 처리
             m_model.RemainingTime = 0f;
-            m_isPaused = true;
-            OnPauseStateChanged?.Invoke(true);
+            OnPauseStateChanged?.Invoke(true, false);
             ChangeState(GradeRunnerState.GameEndCutscene);
             OnGameEndCutsceneStarted?.Invoke();
             Debug.Log("[GradeRunnerViewModel] 타이머 0초 도달. 게임 종료 연출을 시작합니다.");
@@ -486,8 +483,8 @@ namespace GameArifiction.GradeRunner
             if (m_isPaused)
             {
                 m_isPaused = false;
-                OnPauseStateChanged?.Invoke(false);
             }
+            OnPauseStateChanged?.Invoke(false, true);
 
             StopGameTasks();
 
@@ -617,7 +614,8 @@ namespace GameArifiction.GradeRunner
         /// </summary>
         private async UniTask WaitWhilePausedAsync(CancellationToken token)
         {
-            while (m_isPaused)
+            // 수동 일시정지 상태이거나, 게임 상태가 Playing이 아닌 컷씬 상태인 동안 대기합니다.
+            while (m_isPaused || (m_currentState != GradeRunnerState.Playing && m_currentState != GradeRunnerState.Idle && m_currentState != GradeRunnerState.Tutorial))
             {
                 bool isCanceled = await UniTask.Yield(PlayerLoopTiming.Update, token).SuppressCancellationThrow();
                 if (isCanceled || token.IsCancellationRequested)

@@ -232,6 +232,22 @@ namespace GameArifiction.Player
 
         #region 공개 메서드
         /// <summary>
+        /// [기능]: 런타임에 맵의 이동 경계선 제한 적용 여부를 동적으로 제어합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        public bool UseMovementBounds
+        {
+            get
+            {
+                return m_useMovementBounds;
+            }
+            set
+            {
+                m_useMovementBounds = value;
+            }
+        }
+
+        /// <summary>
         /// [기능]: 외부 및 LifetimeScope에서 플레이어 세션 데이터 자산에 안전하게 접근할 수 있도록 노출합니다.
         /// [작성자]: 윤승종
         /// </summary>

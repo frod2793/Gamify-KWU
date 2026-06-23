@@ -13,103 +13,97 @@ MonoBehaviour:
   m_Name: QuizDatabase
   m_EditorClassIdentifier: Assembly-CSharp::GamifyKWU.CraneGame.Data.QuizDatabaseSO
   m_quizList:
-  - m_question: "(?) 정보를 시각적으로 압축하여 전달하는 UI 요소이다.\n\n텍스트보다 빠르게 의미를 전달\n메뉴, 기능, 상태 표시 등에 활용\n스마트폰 앱에서 자주 사용"
-    m_correctAnswer: "아이콘"
+  - m_question: "(?) \uC815\uBCF4\uB97C \uC2DC\uAC01\uC801\uC73C\uB85C \uC555\uCD95\uD558\uC5EC
+      \uC804\uB2EC\uD558\uB294 UI \uC694\uC18C\uC774\uB2E4.\n\n\uD14D\uC2A4\uD2B8\uBCF4\uB2E4
+      \uBE60\uB974\uAC8C \uC758\uBBF8\uB97C \uC804\uB2EC\n\uBA54\uB274, \uAE30\uB2A5,
+      \uC0C1\uD0DC \uD45C\uC2DC \uB4F1\uC5D0 \uD65C\uC6A9\n\uC2A4\uB9C8\uD2B8\uD3F0
+      \uC571\uC5D0\uC11C \uC790\uC8FC \uC0AC\uC6A9"
+    m_correctAnswer: "\uC544\uC774\uCF58"
     m_wrongAnswers:
-    - "폰트"
-    - "팝업"
-    - "체크박스"
+    - "\uD3F0\uD2B8"
+    - "\uD31D\uC5C5"
+    - "\uCCB4\uD06C\uBC15\uC2A4"
     m_quizType: 0
-    m_explanation: "정보를 시각적으로 압축하여 전달하는 UI 요소입니다."
+    m_explanation: "\uC815\uBCF4\uB97C \uC2DC\uAC01\uC801\uC73C\uB85C \uC555\uCD95\uD558\uC5EC
+      \uC804\uB2EC\uD558\uB294 UI \uC694\uC18C\uC785\uB2C8\uB2E4."
     m_category: 0
-    m_hint: "그림으로 핵심을 보여주는 것!"
-  - m_question: "(?)은 화면 위에 나타나 사용자의 주의를 끌고, 중요한 정보를 전달하는 UI 요소이다.\n\n사용자의 시선을 집중 시킴\n알림, 경고, 확인 요청, 안내 등에 활용\n사용자의 선택(확인, 취소 등)을 받아<br>다음 행동을 유도"
-    m_correctAnswer: "팝업"
+    m_hint: "\uADF8\uB9BC\uC73C\uB85C \uD575\uC2EC\uC744 \uBCF4\uC5EC\uC8FC\uB294
+      \uAC83!"
+  - m_question: "(?)\uC740 \uD654\uBA74 \uC704\uC5D0 \uB098\uD0C0\uB098 \uC0AC\uC6A9\uC790\uC758
+      \uC8FC\uC758\uB97C \uB04C\uACE0, \uC911\uC694\uD55C \uC815\uBCF4\uB97C \uC804\uB2EC\uD558\uB294
+      UI \uC694\uC18C\uC774\uB2E4.\n\n\uC0AC\uC6A9\uC790\uC758 \uC2DC\uC120\uC744
+      \uC9D1\uC911 \uC2DC\uD0B4\n\uC54C\uB9BC, \uACBD\uACE0, \uD655\uC778 \uC694\uCCAD,
+      \uC548\uB0B4 \uB4F1\uC5D0 \uD65C\uC6A9\n\uC0AC\uC6A9\uC790\uC758 \uC120\uD0DD(\uD655\uC778,
+      \uCDE8\uC18C \uB4F1)\uC744 \uBC1B\uC544<br>\uB2E4\uC74C \uD589\uB3D9\uC744
+      \uC720\uB3C4"
+    m_correctAnswer: "\uD31D\uC5C5"
     m_wrongAnswers:
-    - "아이콘"
-    - "드롭박스"
-    - "체크박스"
+    - "\uC544\uC774\uCF58"
+    - "\uB4DC\uB86D\uBC15\uC2A4"
+    - "\uCCB4\uD06C\uBC15\uC2A4"
     m_quizType: 0
-    m_explanation: "화면 위에 나타나 사용자의 주의를 끌고 정보를 전달하는 UI 요소입니다."
+    m_explanation: "\uD654\uBA74 \uC704\uC5D0 \uB098\uD0C0\uB098 \uC0AC\uC6A9\uC790\uC758
+      \uC8FC\uC758\uB97C \uB04C\uACE0 \uC815\uBCF4\uB97C \uC804\uB2EC\uD558\uB294
+      UI \uC694\uC18C\uC785\uB2C8\uB2E4."
     m_category: 0
-    m_hint: "갑자기 나타나는 창!"
-  - m_question: "(?)은 여러 옵션 중 하나를 선택할 수 있게 해주는 UI 요소이다.\n\n클릭하여 목록을 열고 옵션을 확인\n여러 항목 중 하나를 선택하는 데 활용\n선택한 내용을 현재 화면에 간결하게 표시"
-    m_correctAnswer: "드롭박스"
+    m_hint: "\uAC11\uC790\uAE30 \uB098\uD0C0\uB098\uB294 \uCC3D!"
+  - m_question: "(?)\uC740 \uC5EC\uB7EC \uC635\uC158 \uC911 \uD558\uB098\uB97C \uC120\uD0DD\uD560
+      \uC218 \uC788\uAC8C \uD574\uC8FC\uB294 UI \uC694\uC18C\uC774\uB2E4.\n\n\uD074\uB9AD\uD558\uC5EC
+      \uBAA9\uB85D\uC744 \uC5F4\uACE0 \uC635\uC158\uC744 \uD655\uC778\n\uC5EC\uB7EC
+      \uD56D\uBAA9 \uC911 \uD558\uB098\uB97C \uC120\uD0DD\uD558\uB294 \uB370 \uD65C\uC6A9\n\uC120\uD0DD\uD55C
+      \uB0B4\uC6A9\uC744 \uD604\uC7AC \uD654\uBA74\uC5D0 \uAC04\uACB0\uD558\uAC8C
+      \uD45C\uC2DC"
+    m_correctAnswer: "\uB4DC\uB86D\uBC15\uC2A4"
     m_wrongAnswers:
-    - "아이콘"
-    - "팝업"
-    - "체크박스"
+    - "\uC544\uC774\uCF58"
+    - "\uD31D\uC5C5"
+    - "\uCCB4\uD06C\uBC15\uC2A4"
     m_quizType: 0
-    m_explanation: "여러 옵션 중 하나를 선택할 수 있게 해주는 UI 요소입니다."
+    m_explanation: "\uC5EC\uB7EC \uC635\uC158 \uC911 \uD558\uB098\uB97C \uC120\uD0DD\uD560
+      \uC218 \uC788\uAC8C \uD574\uC8FC\uB294 UI \uC694\uC18C\uC785\uB2C8\uB2E4."
     m_category: 0
-    m_hint: "목록에서 하나를 골라 선택하는 것!"
-  - m_question: "(?)은 항목을 선택하거나 해제할 수 있게 해주는 UI 요소이다.\n\n클릭하여 선택 상태를 변경\n여러 항목을 동시에 선택하거나 해제하는<br>데 활용\n선택 여부를 시각적으로 보여줌"
-    m_correctAnswer: "체크박스"
+    m_hint: "\uBAA9\uB85D\uC5D0\uC11C \uD558\uB098\uB97C \uACE8\uB77C \uC120\uD0DD\uD558\uB294
+      \uAC83!"
+  - m_question: "(?)\uC740 \uD56D\uBAA9\uC744 \uC120\uD0DD\uD558\uAC70\uB098 \uD574\uC81C\uD560
+      \uC218 \uC788\uAC8C \uD574\uC8FC\uB294 UI \uC694\uC18C\uC774\uB2E4.\n\n\uD074\uB9AD\uD558\uC5EC
+      \uC120\uD0DD \uC0C1\uD0DC\uB97C \uBCC0\uACBD\n\uC5EC\uB7EC \uD56D\uBAA9\uC744
+      \uB3D9\uC2DC\uC5D0 \uC120\uD0DD\uD558\uAC70\uB098 \uD574\uC81C\uD558\uB294<br>\uB370
+      \uD65C\uC6A9\n\uC120\uD0DD \uC5EC\uBD80\uB97C \uC2DC\uAC01\uC801\uC73C\uB85C
+      \uBCF4\uC5EC\uC90C"
+    m_correctAnswer: "\uCCB4\uD06C\uBC15\uC2A4"
     m_wrongAnswers:
-    - "아이콘"
-    - "드롭박스"
-    - "팝업"
+    - "\uC544\uC774\uCF58"
+    - "\uB4DC\uB86D\uBC15\uC2A4"
+    - "\uD31D\uC5C5"
     m_quizType: 0
-    m_explanation: "항목을 선택하거나 해제할 수 있게 해주는 UI 요소입니다."
+    m_explanation: "\uD56D\uBAA9\uC744 \uC120\uD0DD\uD558\uAC70\uB098 \uD574\uC81C\uD560
+      \uC218 \uC788\uAC8C \uD574\uC8FC\uB294 UI \uC694\uC18C\uC785\uB2C8\uB2E4."
     m_category: 0
-    m_hint: "작은 상자를 클릭해 선택을 표시하는 것!"
-  - m_question: "(?)은 글자의 모양, 크기, 두께 등을 설정할 수 있게 해주는 UI 요소이다.\n\n클릭하여 글자 스타일을 변경\n여러 스타일 중 하나를 선택하여 적용하는<br>데 활용\n가독성과 분위기를 조절"
-    m_correctAnswer: "폰트"
+    m_hint: "\uC791\uC740 \uC0C1\uC790\uB97C \uD074\uB9AD\uD574 \uC120\uD0DD\uC744
+      \uD45C\uC2DC\uD558\uB294 \uAC83!"
+  - m_question: "(?)\uC740 \uAE00\uC790\uC758 \uBAA8\uC591, \uD06C\uAE30, \uB450\uAED8
+      \uB4F1\uC744 \uC124\uC815\uD560 \uC218 \uC788\uAC8C \uD574\uC8FC\uB294 UI \uC694\uC18C\uC774\uB2E4.\n\n\uD074\uB9AD\uD558\uC5EC
+      \uAE00\uC790 \uC2A4\uD0C0\uC77C\uC744 \uBCC0\uACBD\n\uC5EC\uB7EC \uC2A4\uD0C0\uC77C
+      \uC911 \uD558\uB098\uB97C \uC120\uD0DD\uD558\uC5EC \uC801\uC6A9\uD558\uB294<br>\uB370
+      \uD65C\uC6A9\n\uAC00\uB3C5\uC131\uACFC \uBD84\uC704\uAE30\uB97C \uC870\uC808"
+    m_correctAnswer: "\uD3F0\uD2B8"
     m_wrongAnswers:
-    - "아이콘"
-    - "팝업"
-    - "체크박스"
+    - "\uC544\uC774\uCF58"
+    - "\uD31D\uC5C5"
+    - "\uCCB4\uD06C\uBC15\uC2A4"
     m_quizType: 0
-    m_explanation: "글자의 모양, 크기, 두께 등을 설정할 수 있게 해주는 UI 요소입니다."
+    m_explanation: "\uAE00\uC790\uC758 \uBAA8\uC591, \uD06C\uAE30, \uB450\uAED8 \uB4F1\uC744
+      \uC124\uC815\uD560 \uC218 \uC788\uAC8C \uD574\uC8FC\uB294 UI \uC694\uC18C\uC785\uB2C8\uB2E4."
     m_category: 0
-    m_hint: "글자의 스타일을 바꿔 적용하는 것!"
-  - m_question: "(?) 정보를 시각적으로 압축하여 전달하는 UI 요소이다.\n\n텍스트보다 빠르게 의미를 전달\n메뉴, 기능, 상태 표시 등에 활용\n스마트폰 앱에서 자주 사용"
-    m_correctAnswer: "아이콘"
+    m_hint: "\uAE00\uC790\uC758 \uC2A4\uD0C0\uC77C\uC744 \uBC14\uAFD4 \uC801\uC6A9\uD558\uB294
+      \uAC83!"
+  - m_question: "UI/UX \uC694\uC18C\uAC00 \uC544\uB2CC\uAC83\uC740?"
+    m_correctAnswer: "\uAD11\uC6B4\uB300"
     m_wrongAnswers:
-    - "폰트"
-    - "팝업"
-    - "체크박스"
+    - "\uD3F0\uD2B8"
+    - "\uD31D\uC5C5 "
+    - "\uCCB4\uD06C\uBC15\uC2A4"
     m_quizType: 1
-    m_explanation: "정보를 시각적으로 압축하여 전달하는 UI 요소입니다."
+    m_explanation: 
     m_category: 0
-    m_hint: "그림으로 핵심을 보여주는 것!"
-  - m_question: "(?)은 화면 위에 나타나 사용자의 주의를 끌고, 중요한 정보를 전달하는 UI 요소이다.\n\n사용자의 시선을 집중 시킴\n알림, 경고, 확인 요청, 안내 등에 활용\n사용자의 선택(확인, 취소 등)을 받아<br>다음 행동을 유도"
-    m_correctAnswer: "팝업"
-    m_wrongAnswers:
-    - "아이콘"
-    - "드롭박스"
-    - "체크박스"
-    m_quizType: 1
-    m_explanation: "화면 위에 나타나 사용자의 주의를 끌고 정보를 전달하는 UI 요소입니다."
-    m_category: 0
-    m_hint: "갑자기 나타나는 창!"
-  - m_question: "(?)은 여러 옵션 중 하나를 선택할 수 있게 해주는 UI 요소이다.\n\n클릭하여 목록을 열고 옵션을 확인\n여러 항목 중 하나를 선택하는 데 활용\n선택한 내용을 현재 화면에 간결하게 표시"
-    m_correctAnswer: "드롭박스"
-    m_wrongAnswers:
-    - "아이콘"
-    - "팝업"
-    - "체크박스"
-    m_quizType: 1
-    m_explanation: "여러 옵션 중 하나를 선택할 수 있게 해주는 UI 요소입니다."
-    m_category: 0
-    m_hint: "목록에서 하나를 골라 선택하는 것!"
-  - m_question: "(?)은 항목을 선택하거나 해제할 수 있게 해주는 UI 요소이다.\n\n클릭하여 선택 상태를 변경\n여러 항목을 동시에 선택하거나 해제하는<br>데 활용\n선택 여부를 시각적으로 보여줌"
-    m_correctAnswer: "체크박스"
-    m_wrongAnswers:
-    - "아이콘"
-    - "드롭박스"
-    - "팝업"
-    m_quizType: 1
-    m_explanation: "항목을 선택하거나 해제할 수 있게 해주는 UI 요소입니다."
-    m_category: 0
-    m_hint: "작은 상자를 클릭해 선택을 표시하는 것!"
-  - m_question: "(?)은 글자의 모양, 크기, 두께 등을 설정할 수 있게 해주는 UI 요소이다.\n\n클릭하여 글자 스타일을 변경\n여러 스타일 중 하나를 선택하여 적용하는<br>데 활용\n가독성과 분위기를 조절"
-    m_correctAnswer: "폰트"
-    m_wrongAnswers:
-    - "아이콘"
-    - "팝업"
-    - "체크박스"
-    m_quizType: 1
-    m_explanation: "글자의 모양, 크기, 두께 등을 설정할 수 있게 해주는 UI 요소입니다."
-    m_category: 0
-    m_hint: "글자의 스타일을 바꿔 적용하는 것!"
+    m_hint: 

@@ -141,21 +141,22 @@ namespace GameArifiction.GradeRunner
 
         /// <summary>
         /// [기능]: 일시정지 상태에 따라 BGM을 일시정지시키거나 재개합니다.
+        ///         (유저 수동 일시정지 시에만 BGM을 일시정지합니다)
         /// [작성자]: 윤승종
         /// </summary>
-        private void HandlePauseStateChanged(bool isPaused)
+        private void HandlePauseStateChanged(bool isPaused, bool isUserPause)
         {
             if (m_soundService == null)
             {
                 return;
             }
 
-            if (isPaused)
+            if (isPaused && isUserPause)
             {
                 m_soundService.PauseBGM();
                 // Debug.Log("[GradeRunnerAudioPresenter] BGM 일시정지.");
             }
-            else
+            else if (!isPaused)
             {
                 m_soundService.ResumeBGM();
                 // Debug.Log("[GradeRunnerAudioPresenter] BGM 재개.");

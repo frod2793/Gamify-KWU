@@ -21,6 +21,10 @@ namespace GameArifiction.CardMatch
         [SerializeField]
         [Tooltip("카드 맞추기 게임의 난이도 및 학점 기준이 설정된 ScriptableObject 데이터 자산입니다.")]
         private CardMatchSettingsSO m_settings;
+
+        [SerializeField]
+        [Tooltip("로비 전환 연출에 사용할 이지 트랜지션 프로필 자산입니다.")]
+        private EasyTransition.TransitionSettings m_transitionSettings;
         #endregion
 
         #region 의존성 설정 (VContainer Configure)
@@ -43,6 +47,15 @@ namespace GameArifiction.CardMatch
             else
             {
                 Debug.LogWarning("[CardMatchLifetimeScope] CardMatchSettingsSO가 설정되지 않았습니다.");
+            }
+
+            if (m_transitionSettings != null)
+            {
+                builder.RegisterInstance(m_transitionSettings);
+            }
+            else
+            {
+                Debug.LogWarning("[CardMatchLifetimeScope] TransitionSettings가 설정되지 않았습니다.");
             }
 
             // 2. 뷰 컴포넌트 자동 탐색 및 등록
