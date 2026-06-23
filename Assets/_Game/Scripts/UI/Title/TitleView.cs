@@ -67,11 +67,21 @@ namespace GamifyKWU.UI.Title
         [Tooltip("플로팅 이펙트의 한 주기 시간(초)입니다.")]
         private float m_floatingDuration = 1.5f;
 
+        [Header("배경 구름 스크롤 설정 (통합 연출)")]
+        [SerializeField]
+        [Tooltip("무한 스크롤을 적용할 구름 이미지들의 RectTransform 목록입니다.")]
+        private RectTransform[] m_cloudRects;
+
+        [SerializeField]
+        [Tooltip("초당 스크롤 속도(px)입니다.")]
+        private float m_cloudScrollSpeed = 30f;
+
         #endregion
 
         #region 내부 필드 (Private Fields)
 
         private TitleViewModel m_viewModel;
+        private RectTransform m_canvasRect;
 
         [Inject]
         private IntroCutsceneController m_introController;
@@ -94,6 +104,20 @@ namespace GamifyKWU.UI.Title
         {
             InitializeMVVM();
             PlayTitleLogoAnimation();
+
+            // WebGL 최적화: 해상도 변경 대응을 위한 부모 Canvas 캐싱
+            if (m_cloudRects != null && m_cloudRects.Length > 0)
+            {
+                if (m_cloudRects[0] != null)
+                {
+                    m_canvasRect = m_cloudRects[0].parent as RectTransform;
+                }
+            }
+        }
+
+        private void Update()
+        {
+            ScrollClouds();
         }
 
         private void OnDestroy()
@@ -196,6 +220,45 @@ namespace GamifyKWU.UI.Title
             m_titleLogoRect.DOAnchorPosY(anchorPos.y + m_floatingAmplitude, m_floatingDuration)
                 .SetEase(Ease.InOutSine)
                 .SetLoops(-1, LoopType.Yoyo);
+        }
+
+        /// <summary>
+        /// [기능]: 타이틀 배경 구름들을 무한 스크롤하고 WebGL 해상도 경계 이탈 시 꼬리 물기 정밀 시프팅 처리합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void ScrollClouds()
+        {
+            if (m_cloudRects == null || m_canvasRect == null)
+            {
+                return;
+            }
+
+            float halfParentWidth = m_canvasRect.rect.width * 0.5f;
+            int cloudCount = m_cloudRects.Length;
+
+            for (int i = 0; i < cloudCount; i++)
+            {
+                RectTransform cloud = m_cloudRects[i];
+                if (cloud == null)
+                {
+                    continue;
+                }
+
+                // 1. 왼쪽으로 스크롤 이동
+                float movement = m_cloudScrollSpeed * Time.deltaTime;
+                cloud.anchoredPosition -= new Vector2(movement, 0f);
+
+                // 2. 동적 해상도 바운더리 체크 (완전히 화면 밖으로 이탈 시 반대편 배치)
+                float halfSelfWidth = cloud.rect.width * 0.5f;
+                float wrapLimit = halfParentWidth + halfSelfWidth;
+
+                if (cloud.anchoredPosition.x <= -wrapLimit)
+                {
+                    // 프레임 오버플로우 오차까지 완벽 보정하기 위해 구름 총 너비 스팬만큼 정밀 시프트
+                    float totalWidthSpan = cloud.rect.width * cloudCount;
+                    cloud.anchoredPosition += new Vector2(totalWidthSpan, 0f);
+                }
+            }
         }
 
         #endregion

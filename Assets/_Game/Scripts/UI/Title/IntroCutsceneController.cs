@@ -24,6 +24,10 @@ namespace GamifyKWU.UI.Title
 
         [Header("연출 대상 참조")]
         [SerializeField]
+        [Tooltip("타이틀 화면에서만 원근감 달리기 루프 연출을 수행할 비주얼 캐릭터입니다.")]
+        private PlayerView m_titlePlayerView;
+
+        [SerializeField]
         [Inject]
         [Tooltip("씬 상에 존재하는 실제 제어 대상인 플레이어 뷰 컴포넌트입니다.")]
         private PlayerView m_playerView;
@@ -95,6 +99,15 @@ namespace GamifyKWU.UI.Title
         [Tooltip("활성화 시, 시청 완료 기록 및 세션 복원 여부를 강제 우회하여 항상 인트로를 구동합니다.")]
         private bool m_forcePlayIntro = false;
 
+        [Header("원근감 연출 설정")]
+        [SerializeField]
+        [Tooltip("캐릭터가 최초 입구에 스폰될 때의 시작 스케일입니다.")]
+        private float m_startScale = 0.3f;
+
+        [SerializeField]
+        [Tooltip("캐릭터가 로비 시작점에 도착했을 때의 원래 목표 스케일입니다.")]
+        private float m_endScale = 1.0f;
+
         #endregion
 
         #region 내부 필드 (Private Fields)
@@ -108,6 +121,7 @@ namespace GamifyKWU.UI.Title
         private int m_currentTextIndex = 0;
         private bool m_isIntroRunning = false;
         private CancellationTokenSource m_cts;
+        private CancellationTokenSource m_titleCts;
         private CancellationTokenSource m_typingCts;
         private bool m_isTypingActive = false;
         private string m_fullTextOfCurrentPage = string.Empty;
@@ -164,11 +178,27 @@ namespace GamifyKWU.UI.Title
             }
 #endif
 
+            // 타이틀용 연출 비동기 루프 개시
+            if (m_titlePlayerView != null)
+            {
+                m_titlePlayerView.gameObject.SetActive(true);
+                m_titleCts = new CancellationTokenSource();
+                PlayTitleAnimationLoopAsync(m_titleCts.Token).Forget();
+            }
+
+            // 인게임 플레이어는 타이틀 화면 재생 중에는 숨김 처리
+            if (m_playerView != null)
+            {
+                m_playerView.gameObject.SetActive(false);
+            }
+
             if (m_playerSO != null && !m_forcePlayIntro)
             {
                 if (m_playerSO.IsIntroPlayed || m_playerSO.HasSavedPosition)
                 {
                     Debug.Log("[IntroCutsceneController] 이미 인트로를 시청했거나 세션이 복귀 상태이므로 대기하지 않고 리턴합니다.");
+                    StopTitleAnimationLoop();
+                    SkipIntroSequence();
                     return;
                 }
             }
@@ -228,6 +258,103 @@ namespace GamifyKWU.UI.Title
         }
 
         /// <summary>
+        /// [기능]: 타이틀 화면 뷰 활성화 시 연출용 플레이어의 원근감 달리기 무한 루프를 비동기 재생합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private async UniTaskVoid PlayTitleAnimationLoopAsync(CancellationToken token)
+        {
+            if (m_titlePlayerView == null)
+            {
+                return;
+            }
+
+            // PlayerView의 초기화 대기 보장
+            await UniTask.Yield(PlayerLoopTiming.Update, token);
+
+            // PlayerViewModel이 외부 팩토리를 통해 안전하게 할당될 때까지 대기
+            PlayerViewModel titleVM = null;
+            while (titleVM == null)
+            {
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                titleVM = m_titlePlayerView.GetViewModel();
+                if (titleVM == null)
+                {
+                    await UniTask.Yield(PlayerLoopTiming.Update, token);
+                }
+            }
+
+            titleVM.SetInputLocked(true);
+            Vector3 originalPos = m_titlePlayerView.transform.position;
+
+            while (!token.IsCancellationRequested)
+            {
+                float elapsed = 0f;
+                float duration = 4.0f; // 4초 동안 뒤에서 앞으로 달려오기
+
+                m_titlePlayerView.transform.localScale = new Vector3(m_startScale, m_startScale, 1f);
+                m_titlePlayerView.transform.position = m_entrancePoint != null ? m_entrancePoint.position : originalPos;
+
+                Vector2 startPos = m_titlePlayerView.transform.position;
+                Vector2 targetPos = m_startPoint != null ? m_startPoint.position : originalPos;
+
+                while (elapsed < duration)
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    elapsed += Time.deltaTime;
+                    float ratio = Mathf.Clamp01(elapsed / duration);
+
+                    // 1. 가상 입력을 주기적으로 주입해 SPUM MOVE(달리기) 애니메이션 상태 강제
+                    titleVM.ProcessInput(Vector2.down, Time.deltaTime);
+
+                    // 2. 위치 선형 보간
+                    m_titlePlayerView.transform.position = Vector2.Lerp(startPos, targetPos, ratio);
+
+                    // 3. 스케일 선형 보간 (원근감)
+                    float lerpedScale = Mathf.Lerp(m_startScale, m_endScale, ratio);
+                    if (Mathf.Abs(m_titlePlayerView.transform.localScale.x - lerpedScale) > 0.001f)
+                    {
+                        m_titlePlayerView.transform.localScale = new Vector3(lerpedScale, lerpedScale, 1f);
+                    }
+
+                    await UniTask.Yield(PlayerLoopTiming.Update, token);
+                }
+
+                // 4. 도달 후 가상 입력 해제(IDLE) 및 스케일 확정, 1초간 대기 후 다시 뒤로 가기 루프 반복
+                titleVM.ProcessInput(Vector2.zero, Time.deltaTime);
+                m_titlePlayerView.transform.localScale = new Vector3(m_endScale, m_endScale, 1f);
+
+                await UniTask.Delay(System.TimeSpan.FromSeconds(1f), cancellationToken: token);
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 타이틀 무한 루프 캐릭터 연출을 즉각 정지 및 비활성화합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void StopTitleAnimationLoop()
+        {
+            if (m_titleCts != null)
+            {
+                m_titleCts.Cancel();
+                m_titleCts.Dispose();
+                m_titleCts = null;
+            }
+
+            if (m_titlePlayerView != null)
+            {
+                m_titlePlayerView.gameObject.SetActive(false);
+            }
+        }
+
+        /// <summary>
         /// [기능]: 타이틀 뷰의 이지 트랜지션 페이드 아웃(페이드 차단 완료) 시점에 호출되어 인트로 컷씬을 비동기 구동합니다.
         /// [작성자]: 윤승종
         /// </summary>
@@ -238,16 +365,70 @@ namespace GamifyKWU.UI.Title
                 return;
             }
 
+            // 1. 타이틀 캐릭터 연출 정지
+            StopTitleAnimationLoop();
+
+            // 2. 실제 인게임 플레이어 활성화
+            if (m_playerView != null)
+            {
+                m_playerView.gameObject.SetActive(true);
+            }
+
             if (m_playerSO != null && !m_forcePlayIntro)
             {
                 if (m_playerSO.IsIntroPlayed || m_playerSO.HasSavedPosition)
                 {
+                    SkipIntroSequence();
                     return;
                 }
             }
 
             m_cts = new CancellationTokenSource();
             PlayIntroSequenceAsync(m_cts.Token).Forget();
+        }
+
+        /// <summary>
+        /// [기능]: 이미 인트로를 시청하여 컷씬을 건너뛸 때, 캐릭터 위치를 시작 지점으로 강제 세팅하고 조작 잠금 및 UI를 해제합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void SkipIntroSequence()
+        {
+            m_isIntroRunning = false;
+
+            if (m_speechBubblePanel != null)
+            {
+                m_speechBubblePanel.SetActive(false);
+            }
+
+            if (m_playerView != null)
+            {
+                // 플레이어 부모 오브젝트의 스케일을 원래 스케일(1.0)로 초기화
+                m_playerView.transform.localScale = Vector3.one;
+
+                PlayerViewModel playerVM = m_playerView.GetViewModel();
+                if (playerVM != null)
+                {
+                    // 1. 조작 입력 잠금 해제
+                    playerVM.SetInputLocked(false);
+                    
+                    // 2. 시작 포인트 위치로 강제 이동
+                    if (m_startPoint != null)
+                    {
+                        playerVM.ForceSetPosition(m_startPoint.position);
+                        m_playerView.transform.position = m_startPoint.position;
+                    }
+                }
+            }
+
+            if (m_cameraFollow != null)
+            {
+                m_cameraFollow.ZoomOut();
+            }
+
+            // 3. 상호작용 UI 활성화
+            SetInteractionUIActiveState(true);
+
+            Debug.Log("[IntroCutsceneController] 이미 인트로를 시청하여 컷씬을 생략하고 플레이어 조작 모드로 즉시 이행합니다.");
         }
 
         /// <summary>
@@ -279,8 +460,9 @@ namespace GamifyKWU.UI.Title
                 return;
             }
 
-            // 1. 조작 입력 잠금 & 입구 포인트로 즉각 이동(텔레포트)
+            // 1. 조작 입력 잠금, 입구 포인트로 즉각 이동(텔레포트)
             playerVM.SetInputLocked(true);
+
             if (m_entrancePoint != null)
             {
                 playerVM.ForceSetPosition(m_entrancePoint.position);
@@ -317,10 +499,14 @@ namespace GamifyKWU.UI.Title
                 }
             }
 
-            // 3. 목적지 도착 후 가상 입력 zero를 주입해 정지 애니메이션(IDLE) 자동 복원
+            // 3. 목적지 도착 후 가상 입력 zero를 주입해 정지 애니메이션(IDLE) 자동 복원 및 스케일 초기화 보장
             playerVM.ProcessInput(Vector2.zero, Time.deltaTime);
+            if (m_playerView != null)
+            {
+                m_playerView.transform.localScale = Vector3.one;
+            }
 
-            // 3.5. 대사 시작 전 카메라 줌인 연출 선행 개시 및 대기
+            // 3.5. 대사 시작 전 카메라 줌인 연행 개시 및 대기
             if (m_cameraFollow != null)
             {
                 m_cameraFollow.ZoomIn();
@@ -503,6 +689,9 @@ namespace GamifyKWU.UI.Title
 
             if (m_playerView != null)
             {
+                // 플레이어 최종 원래 스케일 복원 확정
+                m_playerView.transform.localScale = Vector3.one;
+
                 PlayerViewModel playerVM = m_playerView.GetViewModel();
 
                 if (playerVM != null)

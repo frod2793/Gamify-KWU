@@ -31,8 +31,18 @@ public class LobbyLifetimeScope : LifetimeScope
     {
         Debug.Log("[LobbyLifetimeScope] 로비 씬의 의존성 바인딩 구성을 개시합니다.");
 
-        // 1. 하이어라키 내의 뷰들 중 PlayerView를 먼저 자동 탐색 및 등록
-        var playerView = FindFirstObjectByType<PlayerView>();
+        // 1. 하이어라키 내의 뷰들 중 인게임 PlayerView를 태그로 명시적 탐색 및 등록
+        PlayerView playerView = null;
+        GameObject playerGo = GameObject.FindWithTag("Player");
+        if (playerGo != null)
+        {
+            playerView = playerGo.GetComponent<PlayerView>();
+        }
+        else
+        {
+            playerView = FindFirstObjectByType<PlayerView>();
+        }
+
         if (playerView != null)
         {
             builder.RegisterComponent(playerView);
@@ -115,6 +125,26 @@ public class LobbyLifetimeScope : LifetimeScope
             if (soundView != null)
             {
                 container.Inject(soundView);
+            }
+
+            // 씬 내의 타이틀용 연출 캐릭터(PlayerView)를 찾아 수동으로 의존성 주입 실행하여 팩토리 오류 제거
+            var titlePlayerGo = GameObject.Find("Player_TitleIntro");
+            if (titlePlayerGo != null)
+            {
+                var titlePlayerView = titlePlayerGo.GetComponent<PlayerView>();
+                if (titlePlayerView != null)
+                {
+                    container.Inject(titlePlayerView);
+                }
+            }
+            else
+            {
+                // 비활성화 상태인 경우를 대비하여 하이어라키 전체 검색 (격리 구역 내)
+                var titlePlayerView = FindFirstObjectByType<PlayerView>(FindObjectsInactive.Include);
+                if (titlePlayerView != null && titlePlayerView.gameObject.name == "Player_TitleIntro")
+                {
+                    container.Inject(titlePlayerView);
+                }
             }
 
             // 씬 내의 모든 PortalView 인스턴스를 탐색하여 수동으로 의존성 주입 실행
