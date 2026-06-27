@@ -1,0 +1,209 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!687078895 &4343727234628468602
+SpriteAtlas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: LobbyAtlas
+  m_EditorData:
+    serializedVersion: 2
+    textureSettings:
+      serializedVersion: 2
+      anisoLevel: 0
+      compressionQuality: 0
+      maxTextureSize: 0
+      textureCompression: 0
+      filterMode: 0
+      generateMipMaps: 0
+      readable: 0
+      crunchedCompression: 0
+      sRGB: 1
+    platformSettings:
+    - serializedVersion: 4
+      m_BuildTarget: WebGL
+      m_MaxTextureSize: 2048
+      m_ResizeAlgorithm: 0
+      m_TextureFormat: 48
+      m_TextureCompression: 1
+      m_CompressionQuality: 50
+      m_CrunchedCompression: 0
+      m_AllowsAlphaSplitting: 0
+      m_Overridden: 1
+      m_IgnorePlatformSupport: 0
+      m_AndroidETC2FallbackOverride: 0
+      m_ForceMaximumCompressionQuality_BC6H_BC7: 0
+    - serializedVersion: 4
+      m_BuildTarget: DefaultTexturePlatform
+      m_MaxTextureSize: 2048
+      m_ResizeAlgorithm: 0
+      m_TextureFormat: -1
+      m_TextureCompression: 0
+      m_CompressionQuality: 50
+      m_CrunchedCompression: 0
+      m_AllowsAlphaSplitting: 0
+      m_Overridden: 0
+      m_IgnorePlatformSupport: 0
+      m_AndroidETC2FallbackOverride: 0
+      m_ForceMaximumCompressionQuality_BC6H_BC7: 0
+    packingSettings:
+      serializedVersion: 2
+      padding: 4
+      blockOffset: 1
+      allowAlphaSplitting: 0
+      enableRotation: 0
+      enableTightPacking: 0
+      enableAlphaDilation: 0
+    secondaryTextureSettings: {}
+    variantMultiplier: 1
+    packables:
+    - {fileID: 102900000, guid: 898f868e2231949ea89c1953bd109c8a, type: 3}
+    bindAsDefault: 1
+    isAtlasV2: 0
+    cachedData: {fileID: 0}
+    packedSpriteRenderDataKeys:
+    - c5c5dd00765f6e24baf54949166eda6e: 21300000
+    - f73069502d051458688def03791f8f3c: 21300000
+    - c9385470e4baf4a9fa9fa792a0c27608: 21300000
+    - 7d1bdab0f53e1448c91cfe47aa26f732: 21300000
+    - 215b20c082daa4933b83b718ab7292c7: 21300000
+    - 9c6f44e0d810146fea33e2f1b985a7f3: 21300000
+    - 8502ebf0883b24749878bd40ca173d24: 21300000
+    - 9c6569f1bda724043961d04f2ac67a17: 21300000
+    - 6d875a625edd94584a866482c75eeeb2: -1533992517
+    - 6d875a625edd94584a866482c75eeeb2: -751481496
+    - 6d875a625edd94584a866482c75eeeb2: 264485755
+    - 6d875a625edd94584a866482c75eeeb2: -122039330
+    - 6d875a625edd94584a866482c75eeeb2: -1437954741
+    - 6d875a625edd94584a866482c75eeeb2: -1161854117
+    - a6fea79247e59436b9a02ed68d6094e1: 21300000
+    - dc5daec36c32e4744b1184056800952e: 21300000
+    - 2d12e9e354510ba4ea54ebb7c75647c4: 21300000
+    - fc406df321c82408ca3177efdf0251a6: 21300000
+    - b610b814238c641c08c50c00ac154af1: 21300000
+    - 32b6b544d0d12e742988a1b6be827f2d: 21300000
+    - 4db64c64e56684c4fa4228ddc825c963: 21300000
+    - 6a6e4a74204d9426aad465cde01a1709: 21300000
+    - a7d85b845e1d16349b195c04620b5330: 21300000
+    - 3e14e0d41599249649753b3059a24937: 21300000
+    - 753eb4f430edc424dbece2068da31f88: 21300000
+    - d6e8eb75f2661498db8d381e3db90629: 416957443
+    - f9537926a09474586a91e007d6cbe63f: 21300000
+    - 5ea58b56beaab419e8a528f819fd85b2: 21300000
+    - 40ccd896ed23a435a85ba0329ce47e82: 21300000
+    - 7f8727275c34848df9f3c6de297d085c: 21300000
+    - 6a9288b7e7b1147fd88de45f14fc827b: 21300000
+    - 5cf767b8e286c08448ff201329a88ff0: 21300000
+    - 99b6071a855ad4a0487e76787207c7cf: 21300000
+    - 3311d93aa36814227b60f25c3f49d0b4: 21300000
+    - 712b2c4a4bc9643aeacf8975680309d3: 21300000
+    - 33a7ae4b90e964863a41b684d7ab119e: 21300000
+    - 3322bb5b9f7e3704bb9ddfff2c2b8ca8: 21300000
+    - 3a6d142c113104d8a876b7ea5647efaa: 21300000
+    - 9f4e557ceb2d0094992a340d89533a7e: 21300000
+    - 01a6269c7d0f74012becc38a8f17ed06: 21300000
+    - dc63b87df54524f4a9f2f1e7c2efe553: 21300000
+    - f4b10d2ea973141aa9d427c3f2de204e: 21300000
+    - 3cee564e4a35c4ee2ac0dc32796928fd: 21300000
+    - 6f65629e761d41a42973acb9a9dc342d: 21300000
+    - b28082de8ae6749c8a4068476da0cc46: 21300000
+    - 7360a92f57c37458aa72af5006e900eb: 2141850191
+  m_MasterAtlas: {fileID: 0}
+  m_PackedSprites:
+  - {fileID: 21300000, guid: c5c5dd00765f6e24baf54949166eda6e, type: 3}
+  - {fileID: 21300000, guid: f73069502d051458688def03791f8f3c, type: 3}
+  - {fileID: 21300000, guid: c9385470e4baf4a9fa9fa792a0c27608, type: 3}
+  - {fileID: 21300000, guid: 7d1bdab0f53e1448c91cfe47aa26f732, type: 3}
+  - {fileID: 21300000, guid: 215b20c082daa4933b83b718ab7292c7, type: 3}
+  - {fileID: 21300000, guid: 9c6f44e0d810146fea33e2f1b985a7f3, type: 3}
+  - {fileID: 21300000, guid: 8502ebf0883b24749878bd40ca173d24, type: 3}
+  - {fileID: 21300000, guid: 9c6569f1bda724043961d04f2ac67a17, type: 3}
+  - {fileID: -1533992517, guid: 6d875a625edd94584a866482c75eeeb2, type: 3}
+  - {fileID: -751481496, guid: 6d875a625edd94584a866482c75eeeb2, type: 3}
+  - {fileID: 264485755, guid: 6d875a625edd94584a866482c75eeeb2, type: 3}
+  - {fileID: -122039330, guid: 6d875a625edd94584a866482c75eeeb2, type: 3}
+  - {fileID: -1437954741, guid: 6d875a625edd94584a866482c75eeeb2, type: 3}
+  - {fileID: -1161854117, guid: 6d875a625edd94584a866482c75eeeb2, type: 3}
+  - {fileID: 21300000, guid: a6fea79247e59436b9a02ed68d6094e1, type: 3}
+  - {fileID: 21300000, guid: dc5daec36c32e4744b1184056800952e, type: 3}
+  - {fileID: 21300000, guid: 2d12e9e354510ba4ea54ebb7c75647c4, type: 3}
+  - {fileID: 21300000, guid: fc406df321c82408ca3177efdf0251a6, type: 3}
+  - {fileID: 21300000, guid: b610b814238c641c08c50c00ac154af1, type: 3}
+  - {fileID: 21300000, guid: 32b6b544d0d12e742988a1b6be827f2d, type: 3}
+  - {fileID: 21300000, guid: 4db64c64e56684c4fa4228ddc825c963, type: 3}
+  - {fileID: 21300000, guid: 6a6e4a74204d9426aad465cde01a1709, type: 3}
+  - {fileID: 21300000, guid: a7d85b845e1d16349b195c04620b5330, type: 3}
+  - {fileID: 21300000, guid: 3e14e0d41599249649753b3059a24937, type: 3}
+  - {fileID: 21300000, guid: 753eb4f430edc424dbece2068da31f88, type: 3}
+  - {fileID: 416957443, guid: d6e8eb75f2661498db8d381e3db90629, type: 3}
+  - {fileID: 21300000, guid: f9537926a09474586a91e007d6cbe63f, type: 3}
+  - {fileID: 21300000, guid: 5ea58b56beaab419e8a528f819fd85b2, type: 3}
+  - {fileID: 21300000, guid: 40ccd896ed23a435a85ba0329ce47e82, type: 3}
+  - {fileID: 21300000, guid: 7f8727275c34848df9f3c6de297d085c, type: 3}
+  - {fileID: 21300000, guid: 6a9288b7e7b1147fd88de45f14fc827b, type: 3}
+  - {fileID: 21300000, guid: 5cf767b8e286c08448ff201329a88ff0, type: 3}
+  - {fileID: 21300000, guid: 99b6071a855ad4a0487e76787207c7cf, type: 3}
+  - {fileID: 21300000, guid: 3311d93aa36814227b60f25c3f49d0b4, type: 3}
+  - {fileID: 21300000, guid: 712b2c4a4bc9643aeacf8975680309d3, type: 3}
+  - {fileID: 21300000, guid: 33a7ae4b90e964863a41b684d7ab119e, type: 3}
+  - {fileID: 21300000, guid: 3322bb5b9f7e3704bb9ddfff2c2b8ca8, type: 3}
+  - {fileID: 21300000, guid: 3a6d142c113104d8a876b7ea5647efaa, type: 3}
+  - {fileID: 21300000, guid: 9f4e557ceb2d0094992a340d89533a7e, type: 3}
+  - {fileID: 21300000, guid: 01a6269c7d0f74012becc38a8f17ed06, type: 3}
+  - {fileID: 21300000, guid: dc63b87df54524f4a9f2f1e7c2efe553, type: 3}
+  - {fileID: 21300000, guid: f4b10d2ea973141aa9d427c3f2de204e, type: 3}
+  - {fileID: 21300000, guid: 3cee564e4a35c4ee2ac0dc32796928fd, type: 3}
+  - {fileID: 21300000, guid: 6f65629e761d41a42973acb9a9dc342d, type: 3}
+  - {fileID: 21300000, guid: b28082de8ae6749c8a4068476da0cc46, type: 3}
+  - {fileID: 2141850191, guid: 7360a92f57c37458aa72af5006e900eb, type: 3}
+  m_PackedSpriteNamesToIndex:
+  - Group 31
+  - image 57
+  - door_Sw
+  - Door_Card
+  - sprite_door
+  - sprite_flag_right_1
+  - Door_Crane
+  - Joystick_Filled
+  - Arm_R
+  - Arm_L
+  - Head
+  - Leg_R
+  - Leg_L
+  - Body
+  - sprite_ending_text
+  - sprite_flag_left_2
+  - sprite_fountain_water_1
+  - box
+  - sprite_trash_can
+  - sprite_fountain_water_4
+  - sprite_ending_bar_bottom
+  - image 55
+  - sprite_fountain_water_5
+  - sprite_game_title
+  - Group 15
+  - "\u1106\u1161\u11AF\u1111\u116E\u11BC\u1109\u1165\u11AB_0"
+  - Backgorund_under
+  - sprite_flag_right_2
+  - sprite_sky
+  - Wing
+  - sprite_wall
+  - sprite_cloud
+  - bg_game_lobby
+  - sprite_vending_machine
+  - sprite_flag_left_0
+  - sprite_flag_right_0
+  - Group 32
+  - sprite_kiosk
+  - sprite_fountain_water_3
+  - sprite_wall_pillar
+  - sprite_flag_left_1
+  - ProFessor
+  - sprite_floor
+  - sprite_fountain_water_2
+  - sprite_ending_bar_top
+  - Joystick_Virtual_0
+  m_RenderDataMap: {}
+  m_Tag: LobbyAtlas
+  m_IsVariant: 0

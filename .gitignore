@@ -107,6 +107,8 @@ InitTestScene*.unity*
 
 # AI Agents & Automation tools
 .agents/
+.understand-anything/
+docs/
 
 # Unity IDE Config files
 .vscode/
