@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using EasyTransition;
 using VContainer;
 using DG.Tweening;
+using TMPro;
 
 /// <summary>
 /// [기능]: 타이틀 화면 UI의 시각적 요소와 플레이어 입력을 담당하며, Transition 패키지를 제어하는 뷰 클래스입니다.
@@ -24,6 +25,11 @@ namespace GamifyKWU.UI.Title
     public class TitleView : MonoBehaviour
     {
         #region UI 참조 (Inspector)
+
+        [Header("빌드 버전 표시 설정")]
+        [SerializeField]
+        [Tooltip("빌드 버전을 표시할 TextMeshProUGUI 컴포넌트입니다. 미지정 시 런타임에 동적으로 좌하단에 생성합니다.")]
+        private TextMeshProUGUI m_versionText;
 
         [Header("트랜지션 설정")]
         [SerializeField] private TransitionSettings m_transitionSettings;
@@ -104,6 +110,7 @@ namespace GamifyKWU.UI.Title
         {
             InitializeMVVM();
             PlayTitleLogoAnimation();
+            SetupVersionText();
 
             // WebGL 최적화: 해상도 변경 대응을 위한 부모 Canvas 캐싱
             if (m_cloudRects != null && m_cloudRects.Length > 0)
@@ -136,6 +143,39 @@ namespace GamifyKWU.UI.Title
         #endregion
 
         #region 초기화 (Initialization)
+
+        /// <summary>
+        /// [기능]: 타이틀 화면 구석에 빌드 버전을 표시하기 위한 UI 텍스트메시프를 설정합니다. 미지정 시 런타임에 자동 생성합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-06-26
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 텍스트메시프로 버전 텍스트 셋업 및 Fallback 생성 연출 구현
+        /// </summary>
+        private void SetupVersionText()
+        {
+            if (m_versionText != null)
+            {
+                m_versionText.text = Application.version;
+                return;
+            }
+
+            // UI 참조가 비어 있을 시 런타임에 코드로 동적 생성 및 스타일링
+            GameObject versionObj = new GameObject("VersionText", typeof(RectTransform), typeof(TextMeshProUGUI));
+            versionObj.transform.SetParent(this.transform, false);
+
+            RectTransform rectTransform = versionObj.GetComponent<RectTransform>();
+            rectTransform.anchorMin = new Vector2(0f, 0f);
+            rectTransform.anchorMax = new Vector2(0f, 0f);
+            rectTransform.pivot = new Vector2(0f, 0f);
+            rectTransform.anchoredPosition = new Vector2(20f, 20f);
+
+            m_versionText = versionObj.GetComponent<TextMeshProUGUI>();
+            m_versionText.text = Application.version;
+            m_versionText.fontSize = 18f;
+            m_versionText.color = new Color(1f, 1f, 1f, 0.7f);
+            
+            Debug.Log($"[TitleView] 버전 텍스트가 인스펙터에 미할당되어 런타임에 동적으로 설치했습니다: {Application.version}");
+        }
 
         /// <summary>
         /// [기능]: MVVM 구조에 맞추어 모델 및 뷰모델을 생성하고 이벤트를 구독 바인딩합니다.
