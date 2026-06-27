@@ -86,6 +86,7 @@ namespace GameArifiction.GradeRunner
         private AudioClip m_shortImpactSound;
         private AudioClip m_longImpactSound;
         private bool m_isPaused = false;
+        private SpriteRenderer[] m_phase1Sprites;
 
         #endregion
 
@@ -121,6 +122,10 @@ namespace GameArifiction.GradeRunner
 
             // 시작 직후에는 빈 화면 대기 (IntroCutscene 진입 시 페이드인 등 연출 예정)
             SetVisualActiveOnly(null);
+            if (m_phase1Visual != null)
+            {
+                m_phase1Sprites = m_phase1Visual.GetComponentsInChildren<SpriteRenderer>(true);
+            }
             Debug.Log("[ProfessorView] 교수님 공격 캐릭터 뷰 초기화 성공.");
         }
 
@@ -231,12 +236,14 @@ namespace GameArifiction.GradeRunner
                 if (m_phase1Visual != null)
                 {
                     m_phase1Visual.transform.DOPause();
-                    SpriteRenderer[] sprites = m_phase1Visual.GetComponentsInChildren<SpriteRenderer>();
-                    for (int i = 0; i < sprites.Length; i++)
+                    if (m_phase1Sprites != null)
                     {
-                        if (sprites[i] != null)
+                        for (int i = 0; i < m_phase1Sprites.Length; i++)
                         {
-                            sprites[i].DOPause();
+                            if (m_phase1Sprites[i] != null)
+                            {
+                                m_phase1Sprites[i].DOPause();
+                            }
                         }
                     }
                 }
@@ -264,12 +271,14 @@ namespace GameArifiction.GradeRunner
                 if (m_phase1Visual != null)
                 {
                     m_phase1Visual.transform.DOPlay();
-                    SpriteRenderer[] sprites = m_phase1Visual.GetComponentsInChildren<SpriteRenderer>();
-                    for (int i = 0; i < sprites.Length; i++)
+                    if (m_phase1Sprites != null)
                     {
-                        if (sprites[i] != null)
+                        for (int i = 0; i < m_phase1Sprites.Length; i++)
                         {
-                            sprites[i].DOPlay();
+                            if (m_phase1Sprites[i] != null)
+                            {
+                                m_phase1Sprites[i].DOPlay();
+                            }
                         }
                     }
                 }

@@ -138,7 +138,6 @@ public class GradeRunnerLifetimeScope : LifetimeScope
         if (commonPopup != null)
         {
             builder.RegisterComponent(commonPopup);
-            // Debug.Log("[GradeRunnerLifetimeScope] 공통 결과 팝업 뷰 컨테이너 등록 완료.");
         }
         else
         {

@@ -65,7 +65,6 @@ namespace GameArifiction.GradeRunner
             if (m_viewModel != null)
             {
                 m_viewModel.OnGameResult += HandleGameResult;
-                // Debug.Log("[GradeRunnerResultPresenter] 게임 결과 이벤트 구독 처리를 완료했습니다 (POCO 기동).");
             }
         }
 
@@ -78,7 +77,6 @@ namespace GameArifiction.GradeRunner
             if (m_viewModel != null)
             {
                 m_viewModel.OnGameResult -= HandleGameResult;
-                // Debug.Log("[GradeRunnerResultPresenter] 게임 결과 이벤트 구독 해제를 완료했습니다.");
             }
         }
 
@@ -121,12 +119,12 @@ namespace GameArifiction.GradeRunner
         /// </summary>
         private void func_OnExitConfirm()
         {
-            // Debug.Log("[GradeRunnerResultPresenter] 플레이어가 로비 복귀 나가기 버튼을 선택했습니다.");
 
             // 로비 씬 복원 활성화 플래그 주입
             if (m_playerSO != null)
             {
                 m_playerSO.HasSavedPosition = true;
+                m_playerSO.IsReturnedFromMinigame = true;
             }
 
             // 이지 트랜지션 연출 적용

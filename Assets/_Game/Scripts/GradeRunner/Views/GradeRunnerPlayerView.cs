@@ -71,7 +71,6 @@ namespace GameArifiction.GradeRunner
         public void Construct(GradeRunnerViewModel viewModel)
         {
             m_viewModel = viewModel;
-            // Debug.Log("[GradeRunnerPlayerView] VContainer를 통해 뷰모델 의존성 주입이 완료되었습니다.");
         }
 
         #endregion
@@ -93,7 +92,6 @@ namespace GameArifiction.GradeRunner
             CalculateMovementBounds();
             InitializeSPUM();
             m_isInitialized = true;
-            // Debug.Log($"[GradeRunnerPlayerView] 플레이어 뷰 초기화 완료. 최종 이동 제한 경계(땅 기준): [{m_minX:F2} ~ {m_maxX:F2}]");
         }
 
         private void Update()
@@ -232,7 +230,6 @@ namespace GameArifiction.GradeRunner
                 if (m_spumPrefab._anim != null && m_spumPrefab._anim.runtimeAnimatorController == null && m_defaultSpumController != null)
                 {
                     m_spumPrefab._anim.runtimeAnimatorController = m_defaultSpumController;
-                    // Debug.Log("[GradeRunnerPlayerView] SPUM 애니메이터에 컨트롤러가 할당되어 있지 않아 기본 컨트롤러를 자동으로 주입했습니다.");
                 }
 
                 if (m_spumPrefab._anim != null && m_spumPrefab._anim.runtimeAnimatorController != null)

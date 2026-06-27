@@ -131,7 +131,6 @@ namespace GameArifiction.GradeRunner
 
         private void Start()
         {
-            // Debug.Log("[GradeRunnerHudView] HUD UI 뷰 초기화 및 데이터 바인딩 성공.");
         }
 
         private void OnDestroy()
@@ -501,7 +500,6 @@ namespace GameArifiction.GradeRunner
         /// </summary>
         public void func_OnSettingsButtonClick()
         {
-            // Debug.Log("[GradeRunnerHudView] 설정 버튼 클릭됨. 설정 팝업을 노출합니다.");
             if (m_viewModel != null)
             {
                 m_viewModel.PauseGame();
@@ -518,7 +516,6 @@ namespace GameArifiction.GradeRunner
         /// </summary>
         public void func_OnSettingsClose()
         {
-            // Debug.Log("[GradeRunnerHudView] 설정 팝업이 닫혔습니다. 게임을 재개합니다.");
             if (m_viewModel != null)
             {
                 m_viewModel.ResumeGame();
@@ -531,7 +528,6 @@ namespace GameArifiction.GradeRunner
         /// </summary>
         public void func_OnPauseButtonClick()
         {
-            // Debug.Log("[GradeRunnerHudView] 일시정지 버튼 클릭됨. 일시정지 팝업을 노출합니다.");
             if (m_viewModel != null)
             {
                 m_viewModel.PauseGame();

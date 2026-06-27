@@ -169,6 +169,7 @@ namespace GameArifiction.CardMatch
             if (m_playerSO != null)
             {
                 m_playerSO.HasSavedPosition = true;
+                m_playerSO.IsReturnedFromMinigame = true;
             }
 
             // EasyTransition 적용 검출

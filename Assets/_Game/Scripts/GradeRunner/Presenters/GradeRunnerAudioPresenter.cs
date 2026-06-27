@@ -40,11 +40,7 @@ namespace GameArifiction.GradeRunner
                 m_viewModel.OnGameStateChanged += HandleGameStateChanged;
                 m_viewModel.OnPhaseChanged += HandlePhaseChanged;
                 m_viewModel.OnScoreFeedback += HandleScoreFeedback;
-                m_viewModel.OnPauseStateChanged += HandlePauseStateChanged;
-
-                // Debug.Log("[GradeRunnerAudioPresenter] 뷰모델 사운드 관련 이벤트 구독 완료.");
-
-                // [추가]: IStartable 실행 순서(레이스 컨디션)에 의해 초기 튜토리얼 전환 이벤트를 놓친 경우를 대비해 수동으로 재생을 보장합니다.
+                // IStartable 실행 순서(레이스 컨디션)에 의해 초기 튜토리얼 전환 이벤트를 놓친 경우를 대비해 수동으로 재생을 보장합니다.
                 if (m_viewModel.CurrentState == GradeRunnerState.Tutorial)
                 {
                     HandleGameStateChanged(GradeRunnerState.Tutorial);
@@ -64,8 +60,6 @@ namespace GameArifiction.GradeRunner
                 m_viewModel.OnPhaseChanged -= HandlePhaseChanged;
                 m_viewModel.OnScoreFeedback -= HandleScoreFeedback;
                 m_viewModel.OnPauseStateChanged -= HandlePauseStateChanged;
-
-                // Debug.Log("[GradeRunnerAudioPresenter] 뷰모델 사운드 관련 이벤트 해제 완료.");
             }
 
             if (m_soundService != null)
@@ -93,7 +87,6 @@ namespace GameArifiction.GradeRunner
             if (state == GradeRunnerState.Playing && m_viewModel.CurrentPhase == GradeRunnerPhase.Phase1)
             {
                 m_soundService.PlayBGM(SoundDefine.Bgm_graderunner_phase1);
-                // Debug.Log("[GradeRunnerAudioPresenter] 1페이즈 BGM 재생 시작.");
             }
         }
 
@@ -112,7 +105,6 @@ namespace GameArifiction.GradeRunner
             {
                 // 2페이즈 플레이 진입 시 2페이즈 BGM 재생
                 m_soundService.PlayBGM(SoundDefine.Bgm_graderunner_phase2);
-                // Debug.Log("[GradeRunnerAudioPresenter] 2페이즈 BGM 재생 시작.");
             }
         }
 
@@ -154,12 +146,10 @@ namespace GameArifiction.GradeRunner
             if (isPaused && isUserPause)
             {
                 m_soundService.PauseBGM();
-                // Debug.Log("[GradeRunnerAudioPresenter] BGM 일시정지.");
             }
             else if (!isPaused)
             {
                 m_soundService.ResumeBGM();
-                // Debug.Log("[GradeRunnerAudioPresenter] BGM 재개.");
             }
         }
 

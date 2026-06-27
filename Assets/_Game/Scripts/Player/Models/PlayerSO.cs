@@ -31,6 +31,9 @@ namespace GameArifiction.Player
     public class PlayerSO : ScriptableObject
     {
         #region 내부 필드 (Private Fields)
+        [System.NonSerialized]
+        private bool m_isReturnedFromMinigame = false;
+
         [SerializeField]
         [Tooltip("플레이어가 마지막으로 기록한 위치 좌표입니다.")]
         private Vector2 m_lastPosition = Vector2.zero;
@@ -91,6 +94,15 @@ namespace GameArifiction.Player
             }
         }
 
+        public bool IsReturnedFromMinigame
+        {
+            get => m_isReturnedFromMinigame;
+            set
+            {
+                m_isReturnedFromMinigame = value;
+            }
+        }
+
         public bool IsIntroPlayed
         {
             get => m_isIntroPlayed;
@@ -128,7 +140,7 @@ namespace GameArifiction.Player
         /// </summary>
         private void OnEnable()
         {
-            // [삭제]: LoadFromLocal() 영구 불러오기 배제
+            hideFlags = HideFlags.DontUnloadUnusedAsset;
         }
         #endregion
 
@@ -145,6 +157,7 @@ namespace GameArifiction.Player
             m_minigameRecords.Clear();
             m_totalMinigamePlayTime = 0f;
             m_isIntroPlayed = false;
+            m_isReturnedFromMinigame = false;
 
 #if UNITY_EDITOR
             UnityEditor.EditorUtility.SetDirty(this);
@@ -250,7 +263,6 @@ namespace GameArifiction.Player
         /// </summary>
         public void SaveToLocal()
         {
-            // [삭제]: 로컬 저장 기능 배제
         }
 
         /// <summary>
@@ -259,7 +271,6 @@ namespace GameArifiction.Player
         /// </summary>
         public void LoadFromLocal()
         {
-            // [삭제]: 로컬 불러오기 기능 배제
         }
         #endregion
 

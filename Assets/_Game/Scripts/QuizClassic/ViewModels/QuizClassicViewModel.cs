@@ -269,6 +269,7 @@ namespace GameArifiction.QuizClassic
             if (m_playerSO != null)
             {
                 m_playerSO.HasSavedPosition = true;
+                m_playerSO.IsReturnedFromMinigame = true;
                 Debug.Log($"[QuizClassicViewModel] 로비 복귀 상태 세팅 완료 (HasSavedPosition = true). 복귀 좌표: {m_playerSO.LastPosition}");
             }
         }

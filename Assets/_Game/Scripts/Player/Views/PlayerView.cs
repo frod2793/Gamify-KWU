@@ -51,6 +51,7 @@ namespace GameArifiction.Player
         private bool m_isInitialized = false;
         private IInteractable m_currentInteractable;
         private PolygonCollider2D m_cachedFloorCollider;
+        private Rigidbody2D m_cachedRigidbody2D;
         #endregion
 
         #region 의존성 주입 (Dependency Injection)
@@ -69,6 +70,7 @@ namespace GameArifiction.Player
         private void Start()
         {
             InitializeMVVM();
+            m_cachedRigidbody2D = GetComponent<Rigidbody2D>();
 
             m_spumPrefab = GetComponentInChildren<SPUM_Prefabs>();
 
@@ -160,7 +162,6 @@ namespace GameArifiction.Player
                         rb.position = startPos;
                     }
 
-                    m_playerSO.HasSavedPosition = false;
                     Debug.Log($"[PlayerView] SO로부터 플레이어의 최종 위치를 감지하여 성공적으로 복구 스폰했습니다: {startPos}");
                 }
             }
@@ -342,10 +343,9 @@ namespace GameArifiction.Player
 
             transform.position = targetPos;
 
-            Rigidbody2D rb = GetComponent<Rigidbody2D>();
-            if (rb != null)
+            if (m_cachedRigidbody2D != null)
             {
-                rb.position = targetPos;
+                m_cachedRigidbody2D.position = targetPos;
             }
         }
 

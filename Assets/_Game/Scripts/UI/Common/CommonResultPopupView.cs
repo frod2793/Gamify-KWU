@@ -80,8 +80,6 @@ namespace GameArifiction.UI.Common
                 m_confirmButtonText = m_confirmButton.GetComponentInChildren<TextMeshProUGUI>();
                 m_confirmButton.onClick.AddListener(func_OnConfirmButtonClick);
             }
-
-            // Debug.Log("[CommonResultPopupView] 공통 결과 팝업 뷰 초기화 완료.");
         }
 
         /// <summary>
@@ -208,8 +206,6 @@ namespace GameArifiction.UI.Common
             transform.DOKill();
             transform.localScale = Vector3.zero;
             transform.DOScale(Vector3.one, 0.45f).SetEase(Ease.OutBack);
-
-            // Debug.Log("[CommonResultPopupView] 결과 팝업이 활성화되었으며 데이터를 바인딩했습니다.");
         }
 
         /// <summary>
@@ -227,8 +223,6 @@ namespace GameArifiction.UI.Common
         /// </summary>
         public void func_OnConfirmButtonClick()
         {
-            // Debug.Log("[CommonResultPopupView] 플레이어가 확인 버튼을 선택했습니다.");
-            
             Action callback = m_onConfirmAction;
             func_HidePopup();
 

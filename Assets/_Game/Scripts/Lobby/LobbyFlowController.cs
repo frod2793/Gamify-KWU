@@ -128,17 +128,11 @@ namespace GamifyKWU.Lobby
                     m_titleView.gameObject.SetActive(false);
                 }
 
-                // 2. 상호작용 UI 활성화
-                if (m_uiManager != null)
+                // 2. 인트로 컨트롤러에게 미니게임 복귀에 따른 연출 바이패스 및 활성화 요청
+                if (m_introController != null)
                 {
-                    m_uiManager.SetInteractionUIActive(true);
+                    m_introController.StartIntroCutscene();
                 }
-
-                // 3. 인트로 연출은 실행하지 않음
-                m_playerSO.IsIntroPlayed = true;
-
-                // 4. 플레이어 입력 락 해제
-                SetPlayerInputLocked(false);
             }
             else
             {

@@ -28,7 +28,6 @@ namespace GamifyKWU.UI.Title
         private PlayerView m_titlePlayerView;
 
         [SerializeField]
-        [Inject]
         [Tooltip("씬 상에 존재하는 실제 제어 대상인 플레이어 뷰 컴포넌트입니다.")]
         private PlayerView m_lobbyPlayerView;
 
@@ -181,7 +180,8 @@ namespace GamifyKWU.UI.Title
             UpdateAudioSourceVolume();
 
 #if UNITY_EDITOR
-            if (m_playerSO != null && m_forcePlayIntro)
+            // 런타임에 미니게임으로부터 복귀한 상태가 아닐 때만 디버그 초기화를 구동합니다.
+            if (m_playerSO != null && m_forcePlayIntro && !m_playerSO.IsReturnedFromMinigame)
             {
                 m_playerSO.ResetData();
                 Debug.Log("[IntroCutsceneController] 디버그 옵션 m_forcePlayIntro가 활성화되어 있어 플레이 기록(PlayerSO)을 초기화합니다.");
@@ -196,10 +196,10 @@ namespace GamifyKWU.UI.Title
                 PlayTitleAnimationLoopAsync(m_titleCts.Token).Forget();
             }
 
-            // 인게임 플레이어는 타이틀 화면 재생 중에는 숨김 처리
+            // [해결]: 인게임 플레이어는 언제나 씬에서 상시 활성화 상태를 유지합니다.
             if (m_lobbyPlayerView != null)
             {
-                m_lobbyPlayerView.gameObject.SetActive(false);
+                m_lobbyPlayerView.gameObject.SetActive(true);
             }
 
 
@@ -245,13 +245,15 @@ namespace GamifyKWU.UI.Title
         #region 초기화 및 실행 (Initialization & Execution)
 
         /// <summary>
-        /// [기능]: VContainer를 통해 전역 사운드 제어 서비스를 주입합니다.
+        /// [기능]: VContainer를 통해 전역 사운드 제어 서비스, 플레이어 데이터 및 플레이어 뷰를 주입받습니다.
         /// [작성자]: 윤승종
         /// </summary>
         [Inject]
-        public void Construct(ISoundService soundService)
+        public void Construct(ISoundService soundService, PlayerSO playerSO, PlayerView lobbyPlayerView)
         {
             m_soundService = soundService;
+            m_playerSO = playerSO;
+            m_lobbyPlayerView = lobbyPlayerView;
             if (m_soundService != null)
             {
                 m_soundService.OnSfxVolumeChanged += HandleSfxVolumeChanged;
@@ -272,11 +274,21 @@ namespace GamifyKWU.UI.Title
             // PlayerView의 초기화 대기 보장
             await UniTask.Yield(PlayerLoopTiming.Update, token);
 
+            if (m_titlePlayerView == null)
+            {
+                return;
+            }
+
             // PlayerViewModel이 외부 팩토리를 통해 안전하게 할당될 때까지 대기
             PlayerViewModel titleVM = null;
             while (titleVM == null)
             {
                 if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                if (m_titlePlayerView == null)
                 {
                     return;
                 }
@@ -288,15 +300,28 @@ namespace GamifyKWU.UI.Title
                 }
             }
 
+            if (m_titlePlayerView == null)
+            {
+                return;
+            }
+
             titleVM.SetInputLocked(true);
             Vector3 originalPos = m_titlePlayerView.transform.position;
 
             float elapsed = 0f;
-            float duration = 4.0f; // 4초 동안 뒤에서 앞으로 달려오기
+            float duration = 4.0f;
 
+            if (m_titlePlayerView == null)
+            {
+                return;
+            }
             m_titlePlayerView.transform.localScale = new Vector3(m_startScale, m_startScale, 1f);
             m_titlePlayerView.transform.position = m_titleEntrancePoint != null ? m_titleEntrancePoint.position : originalPos;
 
+            if (m_titlePlayerView == null)
+            {
+                return;
+            }
             Vector2 startPos = m_titlePlayerView.transform.position;
             Vector2 targetPos = m_titleStartPoint != null ? m_titleStartPoint.position : originalPos;
 
@@ -307,30 +332,49 @@ namespace GamifyKWU.UI.Title
                     return;
                 }
 
+                if (m_titlePlayerView == null)
+                {
+                    return;
+                }
+
                 elapsed += Time.deltaTime;
                 float ratio = Mathf.Clamp01(elapsed / duration);
 
-                // 1. 가상 입력을 주기적으로 주입해 SPUM MOVE(달리기) 애니메이션 상태 강제
                 titleVM.ProcessInput(Vector2.down, Time.deltaTime);
 
-                // 2. 위치 선형 보간 계산 및 뷰모델 강제 피드백 동화 (물리 떨림/꼬임 차단)
                 Vector2 lerpedPos = Vector2.Lerp(startPos, targetPos, ratio);
                 titleVM.ForceSetPosition(lerpedPos);
-                m_titlePlayerView.transform.position = lerpedPos;
 
-                // 3. 스케일 선형 보간 (원근감)
-                float lerpedScale = Mathf.Lerp(m_startScale, m_endScale, ratio);
-                if (Mathf.Abs(m_titlePlayerView.transform.localScale.x - lerpedScale) > 0.001f)
+                if (m_titlePlayerView != null)
                 {
-                    m_titlePlayerView.transform.localScale = new Vector3(lerpedScale, lerpedScale, 1f);
+                    m_titlePlayerView.transform.position = lerpedPos;
+                }
+                else
+                {
+                    return;
+                }
+
+                float lerpedScale = Mathf.Lerp(m_startScale, m_endScale, ratio);
+                if (m_titlePlayerView != null)
+                {
+                    if (Mathf.Abs(m_titlePlayerView.transform.localScale.x - lerpedScale) > 0.001f)
+                    {
+                        m_titlePlayerView.transform.localScale = new Vector3(lerpedScale, lerpedScale, 1f);
+                    }
+                }
+                else
+                {
+                    return;
                 }
 
                 await UniTask.Yield(PlayerLoopTiming.Update, token);
             }
 
-            // 4. 도달 후 가상 입력 해제(IDLE) 및 스케일 확정 (영구 정지 대기 상태 유지)
             titleVM.ProcessInput(Vector2.zero, Time.deltaTime);
-            m_titlePlayerView.transform.localScale = new Vector3(m_endScale, m_endScale, 1f);
+            if (m_titlePlayerView != null)
+            {
+                m_titlePlayerView.transform.localScale = new Vector3(m_endScale, m_endScale, 1f);
+            }
         }
 
         /// <summary>
@@ -371,10 +415,10 @@ namespace GamifyKWU.UI.Title
             {
                 m_lobbyPlayerView.gameObject.SetActive(true);
             }
-
-            if (m_playerSO != null && !m_forcePlayIntro)
+            if (m_playerSO != null)
             {
-                if (m_playerSO.IsIntroPlayed || m_playerSO.HasSavedPosition)
+                // 런타임 미니게임 복귀가 발생한 경우 무조건 스킵하며, 그 외에는 디버그 옵션이 꺼져 있고 이미 인트로를 본 경우 스킵합니다.
+                if (m_playerSO.IsReturnedFromMinigame || (!m_forcePlayIntro && m_playerSO.IsIntroPlayed))
                 {
                     SkipIntroSequence();
                     return;
@@ -413,12 +457,21 @@ namespace GamifyKWU.UI.Title
                     // 1. 조작 입력 잠금 해제
                     playerVM.SetInputLocked(false);
 
-                    // 2. 시작 포인트 위치로 강제 이동
-                    if (m_lobbyStartPoint != null)
+                    // 2. 시작 포인트 위치 또는 저장된 복귀 위치로 이동
+                    Vector2 targetSpawnPos = m_lobbyStartPoint != null ? (Vector2)m_lobbyStartPoint.position : (Vector2)m_lobbyPlayerView.transform.position;
+                    if (m_playerSO != null)
                     {
-                        playerVM.ForceSetPosition(m_lobbyStartPoint.position);
-                        m_lobbyPlayerView.transform.position = m_lobbyStartPoint.position;
+                        if (m_playerSO.HasSavedPosition)
+                        {
+                            targetSpawnPos = m_playerSO.LastPosition;
+                            m_playerSO.HasSavedPosition = false; // 일회성 텔레포트 후 복귀 상태 해제
+                        }
+                        m_playerSO.IsReturnedFromMinigame = false; // 일회성 런타임 플래그 초기화
                     }
+
+                    playerVM.ForceSetPosition(targetSpawnPos);
+                    m_lobbyPlayerView.transform.position = targetSpawnPos;
+                    Debug.Log($"[IntroCutsceneController] SkipIntroSequence 실행. 스폰 위치: {targetSpawnPos}");
                 }
             }
 
@@ -429,6 +482,11 @@ namespace GamifyKWU.UI.Title
 
             // 3. 상호작용 UI 활성화
             SetInteractionUIActiveState(true);
+
+            if (m_playerSO != null)
+            {
+                m_playerSO.IsIntroPlayed = true;
+            }
 
             Debug.Log("[IntroCutsceneController] 이미 인트로를 시청하여 컷씬을 생략하고 플레이어 조작 모드로 즉시 이행합니다.");
         }
