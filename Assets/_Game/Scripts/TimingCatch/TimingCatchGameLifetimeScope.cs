@@ -31,9 +31,32 @@ public class TimingCatchGameLifetimeScope : LifetimeScope
     #endregion
 
     #region 의존성 설정 (VContainer Configure)
+    /// <summary>
+    /// [기능]: 타이밍 게임의 데이터·핵심 로직·View·EntryPoint 등록 순서를 구성합니다.
+    /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-07-13
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: 기능 영역별 VContainer 구성 메서드로 분리.
+    /// </summary>
     protected override void Configure(IContainerBuilder builder)
     {
-        #region ScriptableObject 등록
+        ConfigureData(builder);
+        ConfigureCore(builder);
+        ConfigureViews(builder);
+        ConfigureEntryPoints(builder);
+    }
+    #endregion
+
+    #region 내부 구성 메서드 (Private Configuration Methods)
+    /// <summary>
+    /// [기능]: 게임 설정, 플레이어 데이터, 장면 전환 설정을 컨테이너에 등록합니다.
+    /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-07-13
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: ScriptableObject 등록 로직 분리.
+    /// </summary>
+    private void ConfigureData(IContainerBuilder builder)
+    {
         if (m_config != null)
         {
             builder.RegisterInstance(m_config);
@@ -62,44 +85,63 @@ public class TimingCatchGameLifetimeScope : LifetimeScope
         {
             Debug.LogWarning("[TimingCatchGameLifetimeScope] TransitionSettings가 설정되지 않았습니다.");
         }
-        #endregion
+    }
 
-        #region 핵심 계층 등록
+    /// <summary>
+    /// [기능]: 타이밍 게임의 서비스, 판정기, Model, ViewModel을 등록합니다.
+    /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-07-13
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: ViewModel을 판정 이벤트 소스 인터페이스로 함께 바인딩.
+    /// </summary>
+    private void ConfigureCore(IContainerBuilder builder)
+    {
         builder.Register<SoundService>(Lifetime.Scoped).AsImplementedInterfaces().AsSelf();
 
         builder.Register<ITimingJudgeCalculator, TimingCatchJudgeCalculator>(Lifetime.Scoped);
 
         builder.Register(container =>
         {
-            var config = container.Resolve<TimingCatchGameConfigSO>();
+            TimingCatchGameConfigSO config = container.Resolve<TimingCatchGameConfigSO>();
             return new TimingCatchGameModel(config);
         }, Lifetime.Scoped);
 
-        builder.Register<TimingCatchGameViewModel>(Lifetime.Scoped);
-        #endregion
-
-        #region 뷰 등록
-        builder.RegisterComponentInHierarchy<TimingCatchGameView>();
-        builder.RegisterComponentInHierarchy<CommonResultPopupView>();
-
-        var settingsPopup = FindFirstObjectByType<CommonSettingsPopupView>(FindObjectsInactive.Include);
-        if (settingsPopup != null)
-        {
-            builder.RegisterComponent(settingsPopup);
-        }
-        else
-        {
-            Debug.LogWarning("[TimingCatchGameLifetimeScope] CommonSettingsPopupView가 씬에 없습니다.");
-        }
+        builder.Register<TimingCatchGameViewModel>(Lifetime.Scoped)
+            .AsSelf()
+            .AsImplementedInterfaces();
 
         builder.Register<CommonSettingsViewModel>(Lifetime.Scoped);
-        #endregion
+    }
 
-        #region EntryPoint
+    /// <summary>
+    /// [기능]: 씬 하이어라키의 타이밍 게임 View와 캐릭터 반응 View를 자동 탐색하여 등록합니다.
+    /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-07-13
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: TimingCatchCharacterView 인터페이스 바인딩 추가.
+    /// </summary>
+    private void ConfigureViews(IContainerBuilder builder)
+    {
+        builder.RegisterComponentInHierarchy<TimingCatchGameView>();
+        builder.RegisterComponentInHierarchy<CommonResultPopupView>();
+        builder.RegisterComponentInHierarchy<CommonSettingsPopupView>();
+        builder.RegisterComponentInHierarchy<TimingCatchCharacterView>()
+            .AsImplementedInterfaces();
+    }
+
+    /// <summary>
+    /// [기능]: 게임 흐름, UI Presenter, 결과 Presenter, 캐릭터 반응 Presenter를 EntryPoint로 등록합니다.
+    /// [작성자]: 윤승종
+    /// [수정 날짜]: 2026-07-13
+    /// [마지막 수정 작성자]: 윤승종
+    /// [수정 내용]: TimingCatchCharacterPresenter EntryPoint 추가.
+    /// </summary>
+    private void ConfigureEntryPoints(IContainerBuilder builder)
+    {
         builder.RegisterEntryPoint<TimingCatchGameFlowController>(Lifetime.Scoped);
         builder.RegisterEntryPoint<TimingCatchGamePresenter>(Lifetime.Scoped);
         builder.RegisterEntryPoint<TimingCatchGameResultPresenter>(Lifetime.Scoped);
-        #endregion
+        builder.RegisterEntryPoint<TimingCatchCharacterPresenter>(Lifetime.Scoped);
     }
     #endregion
 }

@@ -8,7 +8,7 @@ namespace GameArifiction.TimingCatch
     /// [기능]: 타이밍 게임 Model/판정/스코어를 제어하고 상태 이벤트를 발행하는 뷰모델.
     /// [작성자]: 윤승종
     /// </summary>
-    public sealed class TimingCatchGameViewModel
+    public sealed class TimingCatchGameViewModel : ITimingCatchJudgeEventSource
     {
         #region 내부 필드 (Private Fields)
         private readonly TimingCatchGameModel m_model;
