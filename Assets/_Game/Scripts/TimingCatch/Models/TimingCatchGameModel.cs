@@ -10,8 +10,7 @@ namespace GameArifiction.TimingCatch
     {
         #region 내부 필드 (Private Fields)
         private readonly int m_maxStageCount;
-        private readonly float m_startGaugeSpeed;
-        private readonly float m_stageSpeedIncrease;
+        private readonly float[] m_stageGaugeSpeeds;
         private readonly float m_startPerfectWindow;
         private readonly float m_startGoodWindow;
         private readonly float m_perfectWindowDecay;
@@ -36,9 +35,8 @@ namespace GameArifiction.TimingCatch
                 throw new ArgumentNullException(nameof(config), "[TimingCatchGameModel] 설정 데이터가 없습니다.");
             }
 
-            m_maxStageCount = config.MaxStageCount;
-            m_startGaugeSpeed = config.StartGaugeSpeed;
-            m_stageSpeedIncrease = config.StageSpeedIncrease;
+            m_stageGaugeSpeeds = config.CreateStageGaugeSpeedsSnapshot();
+            m_maxStageCount = m_stageGaugeSpeeds.Length;
             m_startPerfectWindow = config.StartPerfectWindow;
             m_startGoodWindow = config.StartGoodWindow;
             m_perfectWindowDecay = config.PerfectWindowDecay;
@@ -85,7 +83,7 @@ namespace GameArifiction.TimingCatch
         {
             m_currentStage = 0;
             m_gaugePosition = 0.5f;
-            m_currentSpeed = m_startGaugeSpeed;
+            m_currentSpeed = GetStageGaugeSpeed(m_currentStage);
             m_stageElapsed = 0f;
             m_isRunning = true;
             m_direction = 1;
@@ -138,7 +136,7 @@ namespace GameArifiction.TimingCatch
                 return;
             }
 
-            m_currentSpeed += m_stageSpeedIncrease;
+            m_currentSpeed = GetStageGaugeSpeed(m_currentStage);
             m_gaugePosition = 0.5f;
             m_direction = 1;
         }
@@ -168,6 +166,34 @@ namespace GameArifiction.TimingCatch
             return target;
         }
         #endregion
+
+        #region 내부 메서드 (Private Methods)
+        /// <summary>
+        /// [기능]: 요청한 스테이지 인덱스에 대응하는 안전한 게이지 속도를 반환합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-07-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 스테이지별 독립 속도 조회와 배열 범위 방어 추가.
+        /// </summary>
+        private float GetStageGaugeSpeed(int stageIndex)
+        {
+            if (m_stageGaugeSpeeds == null || m_stageGaugeSpeeds.Length == 0)
+            {
+                return 1f;
+            }
+
+            int safeIndex = stageIndex;
+            if (safeIndex < 0)
+            {
+                safeIndex = 0;
+            }
+            else if (safeIndex >= m_stageGaugeSpeeds.Length)
+            {
+                safeIndex = m_stageGaugeSpeeds.Length - 1;
+            }
+
+            return m_stageGaugeSpeeds[safeIndex];
+        }
+        #endregion
     }
 }
-

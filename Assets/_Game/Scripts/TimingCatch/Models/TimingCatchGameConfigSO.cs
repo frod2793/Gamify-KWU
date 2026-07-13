@@ -9,19 +9,27 @@ namespace GameArifiction.TimingCatch
     [CreateAssetMenu(fileName = "TimingCatchConfigSO", menuName = "Gamify-KWU/TimingCatchConfigSO")]
     public sealed class TimingCatchGameConfigSO : ScriptableObject
     {
+        #region 상수 (Constants)
+        private const float SafeDefaultGaugeSpeed = 1f;
+        #endregion
+
+        #region 스테이지 설정 (Stage Settings)
         [Header("스테이지/속도")]
         [SerializeField]
-        [Tooltip("총 스테이지 수(요구사항 기준: 7단계).")]
-        private int m_maxStageCount = 7;
+        [Tooltip("스테이지 순서대로 적용할 게이지 이동 속도. 배열 인덱스 0은 1스테이지입니다.")]
+        private float[] m_stageGaugeSpeeds =
+        {
+            1f,
+            1.2f,
+            1.4f,
+            1.6f,
+            1.8f,
+            2f,
+            2.2f
+        };
+        #endregion
 
-        [SerializeField]
-        [Tooltip("첫 스테이지 게이지 이동 속도.")]
-        private float m_startGaugeSpeed = 1f;
-
-        [SerializeField]
-        [Tooltip("스테이지 클리어 시 누적 증가되는 게이지 속도.")]
-        private float m_stageSpeedIncrease = 0.2f;
-
+        #region 판정 설정 (Judge Settings)
         [Header("판정 구간")]
         [SerializeField]
         [Tooltip("Perfect 판정 시작 폭(0~0.5).")]
@@ -46,12 +54,16 @@ namespace GameArifiction.TimingCatch
         [SerializeField]
         [Tooltip("Good 최소 폭 하한선.")]
         private float m_minGoodWindow = 0.03f;
+        #endregion
 
+        #region 진행 설정 (Progress Settings)
         [Header("스테이지 진행/타임아웃")]
         [SerializeField]
         [Tooltip("입력이 없어도 스테이지를 강제 종료하는 제한시간(초). 0 이하면 비활성.")]
         private float m_stageTimeoutSeconds = 5.5f;
+        #endregion
 
+        #region 점수 설정 (Score Settings)
         [Header("점수/등급")]
         [SerializeField]
         [Tooltip("Perfect 판정 점수.")]
@@ -76,26 +88,28 @@ namespace GameArifiction.TimingCatch
         [SerializeField]
         [Tooltip("단일 미니게임에서 D 판정 임계 비율(0~1).")]
         private float m_gradeDThresholdRatio = 0.45f;
+        #endregion
 
+        #region 모드 설정 (Mode Settings)
         [Header("모드")]
         [SerializeField]
         [Tooltip("true 면 Perfect/Good 2단계, false 면 Perfect/Good/Miss 3단계.")]
         private bool m_useTwoJudgeLevels = false;
+        #endregion
 
+        #region 공개 프로퍼티 (Public Properties)
         public int MaxStageCount
         {
             get
             {
-                if (m_maxStageCount < 1)
+                if (m_stageGaugeSpeeds == null || m_stageGaugeSpeeds.Length == 0)
                 {
                     return 1;
                 }
-                return m_maxStageCount;
+
+                return m_stageGaugeSpeeds.Length;
             }
         }
-
-        public float StartGaugeSpeed => m_startGaugeSpeed;
-        public float StageSpeedIncrease => m_stageSpeedIncrease;
 
         public float StartPerfectWindow => m_startPerfectWindow;
         public float StartGoodWindow => m_startGoodWindow;
@@ -116,6 +130,40 @@ namespace GameArifiction.TimingCatch
         public float GradeDThresholdRatio => m_gradeDThresholdRatio;
 
         public bool UseTwoJudgeLevels => m_useTwoJudgeLevels;
+        #endregion
+
+        #region 공개 메서드 (Public Methods)
+        /// <summary>
+        /// [기능]: 모델 초기화용 스테이지 속도 배열 복사본을 생성합니다.
+        /// [작성자]: 윤승종
+        /// [수정 날짜]: 2026-07-13
+        /// [마지막 수정 작성자]: 윤승종
+        /// [수정 내용]: 스테이지별 독립 속도와 빈 배열/음수 값 방어 추가.
+        /// </summary>
+        public float[] CreateStageGaugeSpeedsSnapshot()
+        {
+            int stageCount = MaxStageCount;
+            var snapshot = new float[stageCount];
+
+            if (m_stageGaugeSpeeds == null || m_stageGaugeSpeeds.Length == 0)
+            {
+                snapshot[0] = SafeDefaultGaugeSpeed;
+                return snapshot;
+            }
+
+            for (int i = 0; i < stageCount; i++)
+            {
+                float speed = m_stageGaugeSpeeds[i];
+                if (speed < 0f)
+                {
+                    speed = 0f;
+                }
+
+                snapshot[i] = speed;
+            }
+
+            return snapshot;
+        }
+        #endregion
     }
 }
-
