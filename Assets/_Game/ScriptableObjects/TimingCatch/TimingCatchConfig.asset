@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0377163b3aedb46a0ac080692b699f4a, type: 3}
+  m_Name: TimingCatchConfig
+  m_EditorClassIdentifier: GamifyKWU.Runtime::GameArifiction.TimingCatch.TimingCatchGameConfigSO
+  m_maxStageCount: 7
+  m_startGaugeSpeed: 1
+  m_stageSpeedIncrease: 0.2
+  m_startPerfectWindow: 0.05
+  m_startGoodWindow: 0.1
+  m_perfectWindowDecay: 0.005
+  m_goodWindowDecay: 0.008
+  m_minPerfectWindow: 0.015
+  m_minGoodWindow: 0.03
+  m_stageTimeoutSeconds: 5.5
+  m_perfectScore: 100
+  m_goodScore: 60
+  m_gradeAThresholdRatio: 0.9
+  m_gradeBThresholdRatio: 0.75
+  m_gradeCThresholdRatio: 0.6
+  m_gradeDThresholdRatio: 0.45
+  m_useTwoJudgeLevels: 0

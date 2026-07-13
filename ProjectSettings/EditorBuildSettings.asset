@@ -17,6 +17,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Game/Scenes/CardMatch.unity
     guid: ecb22f70589cd41b0b6b7e16efc7f6b3
+  - enabled: 1
+    path: Assets/_Game/Scenes/TimingCatch.unity
+    guid: 7f44803ce291e4fb4b575fa26c10a25d
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
