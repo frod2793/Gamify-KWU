@@ -48,7 +48,7 @@ namespace GameArifiction.Tests.Editor
                     Assert.IsNotNull(references[i], $"{textFields[i]} 참조가 필요합니다.");
                 }
                 Assert.AreEqual(references.Length, new System.Collections.Generic.HashSet<Object>(references).Count, "HUD 텍스트는 별도 TMP 오브젝트여야 합니다.");
-                Assert.IsFalse(((TMPro.TMP_Text)serializedView.FindProperty("m_stateText").objectReferenceValue).gameObject.activeSelf, "중복 StateText는 숨겨야 합니다.");
+                Assert.IsFalse(((Component)serializedView.FindProperty("m_stateText").objectReferenceValue).gameObject.activeSelf, "중복 StateText는 숨겨야 합니다.");
 
                 Assert.IsNotNull(serializedView.FindProperty("m_slideImage").objectReferenceValue, "슬라이드 Image 참조가 필요합니다.");
                 Assert.AreEqual(6, serializedView.FindProperty("m_slideSprites").arraySize, "슬라이드 Sprite 6장이 필요합니다.");
@@ -73,7 +73,7 @@ namespace GameArifiction.Tests.Editor
                 RectTransform gaugeRect = gauge.GetComponent<RectTransform>();
                 Assert.LessOrEqual(gaugeRect.anchorMin.x, .05f);
                 Assert.GreaterOrEqual(gaugeRect.anchorMax.x, .95f);
-                RectTransform judge = ((TMPro.TMP_Text)serializedView.FindProperty("m_judgeText").objectReferenceValue).rectTransform;
+                RectTransform judge = ((Component)serializedView.FindProperty("m_judgeText").objectReferenceValue).GetComponent<RectTransform>();
                 RectTransform button = ((Button)serializedView.FindProperty("m_timingButton").objectReferenceValue).GetComponent<RectTransform>();
                 Assert.Greater(judge.anchorMin.y, gaugeRect.anchorMin.y);
                 Assert.Less(button.anchorMin.y, gaugeRect.anchorMin.y);
@@ -83,11 +83,11 @@ namespace GameArifiction.Tests.Editor
                 RectTransform cursor = serializedView.FindProperty("m_gaugePointer").objectReferenceValue as RectTransform;
                 Assert.AreEqual(cursor.rect.width, cursor.rect.height, .001f);
                 Assert.IsTrue(cursor.GetComponent<Image>().preserveAspect);
-                RectTransform dialogue = ((TMPro.TMP_Text)serializedView.FindProperty("m_dialogueText").objectReferenceValue).rectTransform;
+                RectTransform dialogue = ((Component)serializedView.FindProperty("m_dialogueText").objectReferenceValue).GetComponent<RectTransform>();
                 RectTransform star = ((Image)serializedView.FindProperty("m_starImage").objectReferenceValue).rectTransform;
                 Assert.Greater(dialogue.anchorMin.x, .25f);
                 Assert.Greater(star.anchorMin.y, .3f);
-                RectTransform bonus = ((TMPro.TMP_Text)serializedView.FindProperty("m_bonusText").objectReferenceValue).rectTransform;
+                RectTransform bonus = ((Component)serializedView.FindProperty("m_bonusText").objectReferenceValue).GetComponent<RectTransform>();
                 Assert.Less(bonus.anchorMin.x, .5f);
                 Assert.Greater(bonus.anchorMin.y, .35f);
             }
