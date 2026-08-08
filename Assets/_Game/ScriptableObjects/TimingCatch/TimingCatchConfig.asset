@@ -12,6 +12,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0377163b3aedb46a0ac080692b699f4a, type: 3}
   m_Name: TimingCatchConfig
   m_EditorClassIdentifier: GamifyKWU.Runtime::GameArifiction.TimingCatch.TimingCatchGameConfigSO
+  m_roundCount: 4
+  m_turnsPerRound: 3
+  m_difficultyRoundTripSeconds:
+  - 2
+  - 1.5
+  - 1
+  m_difficultyGreatZoneWidths:
+  - 0.2
+  - 0.15
+  - 0.1
+  m_turnTimeoutSeconds: 6
+  m_easyNormalIntermissionSeconds: 1
+  m_hardIntermissionSeconds: 2
+  m_difficultyGreatScores:
+  - 50
+  - 100
+  - 200
+  m_threeGreatBonus: 150
   m_stageGaugeSpeeds:
   - 1
   - 1.2
