@@ -30,25 +30,7 @@ MonoBehaviour:
   - 100
   - 200
   m_threeGreatBonus: 150
-  m_stageGaugeSpeeds:
-  - 1
-  - 1.2
-  - 1.4
-  - 1.6
-  - 1.8
-  - 2
-  - 2.2
-  m_startPerfectWindow: 0.05
-  m_startGoodWindow: 0.1
-  m_perfectWindowDecay: 0.005
-  m_goodWindowDecay: 0.008
-  m_minPerfectWindow: 0.015
-  m_minGoodWindow: 0.03
-  m_stageTimeoutSeconds: 5.5
-  m_perfectScore: 100
-  m_goodScore: 60
   m_gradeAThresholdRatio: 0.9
   m_gradeBThresholdRatio: 0.75
   m_gradeCThresholdRatio: 0.6
   m_gradeDThresholdRatio: 0.45
-  m_useTwoJudgeLevels: 0

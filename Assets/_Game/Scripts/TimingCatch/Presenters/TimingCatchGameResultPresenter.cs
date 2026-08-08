@@ -84,7 +84,7 @@ namespace GameArifiction.TimingCatch
             CommonPopupDataDTO popupData = new CommonPopupDataDTO(
                 "게임 결과",
                 $"총점: {result.TotalScore} / {result.MaxPossibleScore}\n" +
-                $"Perfect: {result.PerfectCount}, Good: {result.GoodCount}, Miss: {result.MissCount}\n" +
+                $"Great: {result.GreatCount}, Miss: {result.MissCount}\n" +
                 $"등급: {result.MinigameGrade}",
                 "발표 과목",
                 result.MinigameGrade,

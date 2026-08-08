@@ -81,14 +81,13 @@ namespace GameArifiction.Tests.Editor
         }
 
         /// <summary>
-        /// [기능]: Perfect와 Good 판정이 성공 반응을 한 번 요청하는지 검증합니다.
+        /// [기능]: Great 판정이 성공 반응을 한 번 요청하는지 검증합니다.
         /// [작성자]: 윤승종
         /// [수정 날짜]: 2026-07-13
         /// [마지막 수정 작성자]: 윤승종
         /// [수정 내용]: 성공 판정 라우팅 검증 추가.
         /// </summary>
-        [TestCase(TimingCatchJudgeType.Perfect)]
-        [TestCase(TimingCatchJudgeType.Good)]
+        [TestCase(TimingCatchJudgeType.Great)]
         public void JudgeEvaluated_WithSuccessJudge_PlaysSuccessReaction(TimingCatchJudgeType judge)
         {
             m_eventSource.Raise(judge);
@@ -125,7 +124,7 @@ namespace GameArifiction.Tests.Editor
         {
             m_presenter.Dispose();
 
-            m_eventSource.Raise(TimingCatchJudgeType.Perfect);
+            m_eventSource.Raise(TimingCatchJudgeType.Great);
 
             Assert.AreEqual(0, m_characterView.SuccessCount);
             Assert.AreEqual(0, m_characterView.FailureCount);

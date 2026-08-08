@@ -1,28 +1,29 @@
-using System;
-
 namespace GameArifiction.TimingCatch
 {
-    /// <summary>
-    /// [기능]: 뷰 바인딩용 타이밍 게임 상태 DTO.
-    /// [작성자]: 윤승종
-    /// </summary>
     public struct TimingCatchGameState
     {
         public float Gauge;
-        public float PerfectWindow;
-        public float GoodWindow;
-        public int CurrentStage;
-        public int MaxStage;
+        public float GreatZoneWidth;
+        public int CurrentRound;
+        public int CurrentTurn; // 1-based turn within the current round.
+        public int CurrentTurnTotal; // 1-based turn across the complete 12-turn game.
+        public int Round;
+        public int Turn;
+        public int TurnInRound;
+        public int TotalTurn;
+        public TimingCatchDifficulty Difficulty;
         public int Score;
-        public int PerfectCount;
-        public int GoodCount;
+        public int GreatCount;
         public int MissCount;
+        public int ConsecutiveGreat;
+        public int GreatBonusCount;
         public bool IsRunning;
+        public bool IsIntermission;
         public bool IsFinished;
-        public float StageElapsed;
-        public float StageTimeout;
-        public int PerfectScore;
-        public int GoodScore;
+        public bool InputEnabled;
+        public float IntermissionRemaining;
+        public float TurnElapsed;
+        public float TurnTimeout;
+        public int GreatScore;
     }
 }
-

@@ -77,7 +77,7 @@ namespace GameArifiction.TimingCatch
 
         #region 이벤트 핸들러 (Event Handlers)
         /// <summary>
-        /// [기능]: Perfect·Good은 성공 반응으로, Miss는 실패 반응으로 전달합니다.
+        /// [기능]: Great은 성공 반응으로, Miss는 실패 반응으로 전달합니다.
         /// [작성자]: 윤승종
         /// [수정 날짜]: 2026-07-13
         /// [마지막 수정 작성자]: 윤승종
@@ -90,7 +90,7 @@ namespace GameArifiction.TimingCatch
                 return;
             }
 
-            if (judge == TimingCatchJudgeType.Perfect || judge == TimingCatchJudgeType.Good)
+            if (judge == TimingCatchJudgeType.Great)
             {
                 CharacterView.PlaySuccessReaction();
                 return;
