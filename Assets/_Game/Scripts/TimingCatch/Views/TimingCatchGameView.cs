@@ -2,7 +2,6 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
-using GameArifiction.UI.Common;
 
 namespace GameArifiction.TimingCatch
 {
@@ -22,21 +21,14 @@ namespace GameArifiction.TimingCatch
         [SerializeField] private Image m_slideImage;
 
         [Header("Text")]
-        [SerializeField] private TextMeshProUGUI m_roundText;
         [SerializeField] private TextMeshProUGUI m_turnText;
-        [SerializeField] private TextMeshProUGUI m_difficultyText;
         [SerializeField] private TextMeshProUGUI m_scoreText;
         [SerializeField] private TextMeshProUGUI m_judgeText;
-        [SerializeField] private TextMeshProUGUI m_slideText;
         [SerializeField] private TextMeshProUGUI m_dialogueText;
-        [SerializeField] private TextMeshProUGUI m_starText;
         [SerializeField] private TextMeshProUGUI m_bonusText;
-        [SerializeField] private TextMeshProUGUI m_stateText;
 
         [Header("Buttons")]
         [SerializeField] private Button m_timingButton;
-        [SerializeField] private Button m_settingsButton;
-        [SerializeField] private CommonSettingsPopupView m_settingsPopupView;
 
 
         private TimingCatchGameViewModel m_viewModel;
@@ -47,7 +39,6 @@ namespace GameArifiction.TimingCatch
             if (m_backgroundImage != null) m_backgroundImage.preserveAspect = false;
             if (m_starImage != null) m_starImage.preserveAspect = true;
             if (m_timingButton != null) m_timingButton.onClick.AddListener(func_OnTimingButtonPressed);
-            if (m_settingsButton != null) m_settingsButton.onClick.AddListener(func_OnOpenSettings);
         }
 
         private void Update()
@@ -58,7 +49,6 @@ namespace GameArifiction.TimingCatch
         private void OnDestroy()
         {
             if (m_timingButton != null) m_timingButton.onClick.RemoveListener(func_OnTimingButtonPressed);
-            if (m_settingsButton != null) m_settingsButton.onClick.RemoveListener(func_OnOpenSettings);
             if (m_viewModel == null) return;
             m_viewModel.OnStateChanged -= func_OnStateChanged;
             m_viewModel.OnJudgeEvaluated -= func_OnJudgeEvaluated;
@@ -85,11 +75,6 @@ namespace GameArifiction.TimingCatch
             if (m_viewModel != null) m_viewModel.EvaluateInput();
         }
 
-        public void func_OnOpenSettings()
-        {
-            if (m_settingsPopupView != null) m_settingsPopupView.ShowPopup();
-        }
-
         private void func_OnStateChanged(TimingCatchGameState state)
         {
             if (m_gaugeSlider != null) m_gaugeSlider.value = state.Gauge;
@@ -97,18 +82,14 @@ namespace GameArifiction.TimingCatch
             UpdateJudgeZone(zone, state.GreatZoneWidth * .5f);
             UpdateGaugePointer(state.Gauge);
             if (m_timingButton != null) m_timingButton.interactable = state.InputEnabled;
-            SetText(m_roundText, $"ROUND {state.CurrentRound}/4");
             SetText(m_turnText, $"TURN {state.CurrentTurnTotal}/12");
-            SetText(m_difficultyText, state.Difficulty.ToString());
             SetText(m_scoreText, $"SCORE {state.Score}");
-            SetText(m_starText, $"★ {state.ConsecutiveGreat}");
             SetText(m_bonusText, state.GreatBonusCount > 0 ? $"BONUS +{state.GreatBonusCount * 150}" : string.Empty);
             SetText(m_dialogueText, state.IsIntermission ? "준비!" : string.Empty);
             if (m_slideSprites != null && m_slideSprites.Length > 0)
             {
                 int slideIndex = GetSlideIndex(state);
                 if (m_slideImage != null) m_slideImage.sprite = m_slideSprites[slideIndex];
-                if (m_slideText != null) m_slideText.text = $"SLIDE {slideIndex + 1}";
             }
         }
 
@@ -154,12 +135,6 @@ namespace GameArifiction.TimingCatch
             if (m_cursorImage == null && m_gaugePointer != null) m_cursorImage = m_gaugePointer.GetComponent<Image>();
             if (m_timingButton == null) m_timingButton = GetComponentInChildren<Button>(true);
             if (m_timingButtonImage == null && m_timingButton != null) m_timingButtonImage = m_timingButton.targetGraphic as Image;
-            if (m_settingsButton == null)
-            {
-                foreach (Button button in GetComponentsInChildren<Button>(true))
-                    if (button != m_timingButton) { m_settingsButton = button; break; }
-            }
-            if (m_settingsPopupView == null) m_settingsPopupView = FindAnyObjectByType<CommonSettingsPopupView>();
         }
 
         private static void SetText(TextMeshProUGUI target, string value)

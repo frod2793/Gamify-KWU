@@ -110,7 +110,6 @@ public class TimingCatchGameLifetimeScope : LifetimeScope
             .AsSelf()
             .AsImplementedInterfaces();
 
-        builder.Register<CommonSettingsViewModel>(Lifetime.Scoped);
     }
 
     /// <summary>
@@ -124,7 +123,6 @@ public class TimingCatchGameLifetimeScope : LifetimeScope
     {
         builder.RegisterComponentInHierarchy<TimingCatchGameView>();
         builder.RegisterComponentInHierarchy<CommonResultPopupView>();
-        builder.RegisterComponentInHierarchy<CommonSettingsPopupView>();
         builder.RegisterComponentInHierarchy<TimingCatchCharacterView>()
             .AsImplementedInterfaces();
     }

@@ -40,7 +40,7 @@ namespace GameArifiction.Tests.Editor
                 Assert.IsNotNull(view, "TimingCatchGameView가 필요합니다.");
 
                 SerializedObject serializedView = new SerializedObject(view);
-                string[] textFields = { "m_roundText", "m_turnText", "m_difficultyText", "m_scoreText", "m_judgeText", "m_dialogueText", "m_bonusText", "m_stateText" };
+                string[] textFields = { "m_turnText", "m_scoreText", "m_judgeText", "m_dialogueText", "m_bonusText" };
                 var references = new Object[textFields.Length];
                 for (int i = 0; i < textFields.Length; i++)
                 {
@@ -48,7 +48,13 @@ namespace GameArifiction.Tests.Editor
                     Assert.IsNotNull(references[i], $"{textFields[i]} 참조가 필요합니다.");
                 }
                 Assert.AreEqual(references.Length, new System.Collections.Generic.HashSet<Object>(references).Count, "HUD 텍스트는 별도 TMP 오브젝트여야 합니다.");
-                Assert.IsFalse(((Component)serializedView.FindProperty("m_stateText").objectReferenceValue).gameObject.activeSelf, "중복 StateText는 숨겨야 합니다.");
+                Assert.IsNull(view.transform.Find("RoundText"));
+                Assert.IsNull(view.transform.Find("DifficultyText"));
+                Assert.IsNull(view.transform.Find("StateText"));
+                Assert.IsNull(view.transform.Find("SlideText"));
+                Assert.IsNull(view.transform.Find("StarText"));
+                Assert.IsNull(view.transform.Find("SettingsButton"));
+                Assert.IsNull(FindRoot(scene, "CommonSettingsPopup"));
 
                 Assert.IsNotNull(serializedView.FindProperty("m_slideImage").objectReferenceValue, "슬라이드 Image 참조가 필요합니다.");
                 Assert.AreEqual(6, serializedView.FindProperty("m_slideSprites").arraySize, "슬라이드 Sprite 6장이 필요합니다.");
