@@ -7,14 +7,11 @@ namespace GameArifiction.TimingCatch
 {
     public sealed class TimingCatchGameView : MonoBehaviour
     {
-        [Header("PDF HUD")]
+        [Header("Timing Catch UI")]
         [SerializeField] private Slider m_gaugeSlider;
         [SerializeField] private RectTransform m_greatZone;
         [SerializeField] private RectTransform m_gaugePointer;
-        [SerializeField] private Image m_gaugeBarImage;
-        [SerializeField] private Image m_greatZoneImage;
         [SerializeField] private Image m_cursorImage;
-        [SerializeField] private Image m_timingButtonImage;
         [SerializeField] private Image m_backgroundImage;
         [SerializeField] private Image m_starImage;
         [SerializeField] private Sprite[] m_slideSprites;
@@ -77,7 +74,6 @@ namespace GameArifiction.TimingCatch
 
         private void func_OnStateChanged(TimingCatchGameState state)
         {
-            if (m_gaugeSlider != null) m_gaugeSlider.value = state.Gauge;
             RectTransform zone = m_greatZone;
             UpdateJudgeZone(zone, state.GreatZoneWidth * .5f);
             UpdateGaugePointer(state.Gauge);
@@ -106,19 +102,22 @@ namespace GameArifiction.TimingCatch
         {
             if (zone == null) return;
             float half = Mathf.Clamp(halfWidth, 0f, .5f);
-            zone.anchorMin = new Vector2(.5f - half, 0f);
-            zone.anchorMax = new Vector2(.5f + half, 1f);
-            zone.offsetMin = Vector2.zero;
-            zone.offsetMax = Vector2.zero;
+            Vector2 min = zone.anchorMin;
+            Vector2 max = zone.anchorMax;
+            min.x = .5f - half;
+            max.x = .5f + half;
+            zone.anchorMin = min;
+            zone.anchorMax = max;
         }
 
         private void UpdateGaugePointer(float gauge)
         {
-            if (m_gaugePointer == null) return;
+            RectTransform pointer = m_cursorImage != null ? m_cursorImage.rectTransform : m_gaugePointer;
+            if (pointer == null) return;
             Vector2 anchor = new Vector2(Mathf.Clamp01(gauge), .5f);
-            m_gaugePointer.anchorMin = anchor;
-            m_gaugePointer.anchorMax = anchor;
-            m_gaugePointer.anchoredPosition = Vector2.zero;
+            pointer.anchorMin = anchor;
+            pointer.anchorMax = anchor;
+            pointer.anchoredPosition = Vector2.zero;
         }
 
         private void TryResolveSerializedReferences()
@@ -129,12 +128,9 @@ namespace GameArifiction.TimingCatch
                 if (m_greatZone == null) m_greatZone = m_gaugeSlider.transform.Find("GreatZone") as RectTransform;
                 if (m_gaugePointer == null) m_gaugePointer = m_gaugeSlider.transform.Find("Cursor") as RectTransform;
                 if (m_gaugePointer == null) m_gaugePointer = m_gaugeSlider.transform.Find("GaugePointer") as RectTransform;
-                if (m_gaugeBarImage == null) m_gaugeBarImage = m_gaugeSlider.targetGraphic as Image;
             }
-            if (m_greatZoneImage == null && m_greatZone != null) m_greatZoneImage = m_greatZone.GetComponent<Image>();
             if (m_cursorImage == null && m_gaugePointer != null) m_cursorImage = m_gaugePointer.GetComponent<Image>();
             if (m_timingButton == null) m_timingButton = GetComponentInChildren<Button>(true);
-            if (m_timingButtonImage == null && m_timingButton != null) m_timingButtonImage = m_timingButton.targetGraphic as Image;
         }
 
         private static void SetText(TextMeshProUGUI target, string value)
