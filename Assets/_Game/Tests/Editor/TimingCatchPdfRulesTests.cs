@@ -45,13 +45,30 @@ namespace GameArifiction.Tests.Editor
             var model = new TimingCatchGameModel(m_config);
             var viewModel = new TimingCatchGameViewModel(model, new TimingCatchJudgeCalculator(), m_config);
             viewModel.StartGame();
+            AdvanceToPlaying(viewModel);
             viewModel.UpdateTick(6.01f);
 
             Assert.AreEqual(1, viewModel.MissCount);
-            Assert.IsTrue(viewModel.IsIntermission);
+            Assert.AreEqual(TimingCatchPhase.JudgeResult, viewModel.Phase);
             int score = viewModel.Score;
             viewModel.EvaluateInput();
             Assert.AreEqual(score, viewModel.Score);
+        }
+
+        [Test]
+        public void ViewModel_UsesIntroBeforePlayingAndRejectsInputDuringIntro()
+        {
+            var model = new TimingCatchGameModel(m_config);
+            var viewModel = new TimingCatchGameViewModel(model, new TimingCatchJudgeCalculator(), m_config);
+            viewModel.StartGame();
+
+            Assert.AreEqual(TimingCatchPhase.Intro, viewModel.Phase);
+            Assert.IsFalse(viewModel.InputEnabled);
+            viewModel.EvaluateInput();
+            Assert.AreEqual(0, viewModel.Score);
+
+            AdvanceToPlaying(viewModel);
+            Assert.IsTrue(viewModel.InputEnabled);
         }
 
         [Test]
@@ -60,11 +77,12 @@ namespace GameArifiction.Tests.Editor
             var model = new TimingCatchGameModel(m_config);
             var viewModel = new TimingCatchGameViewModel(model, new TimingCatchJudgeCalculator(), m_config);
             viewModel.StartGame();
+            AdvanceToPlaying(viewModel);
             for (int turn = 0; turn < 12; turn++)
             {
                 viewModel.UpdateTick(.5f / model.CurrentSpeed);
                 viewModel.EvaluateInput();
-                viewModel.UpdateTick(turn % 3 == 2 ? 2.01f : 1.01f);
+                AdvanceToPlayingOrCompleted(viewModel);
             }
 
             Assert.AreEqual(2000, viewModel.Score);
@@ -80,27 +98,13 @@ namespace GameArifiction.Tests.Editor
             TimingCatchGameState latest = default;
             viewModel.OnStateChanged += state => latest = state;
             viewModel.StartGame();
+            AdvanceToPlaying(viewModel);
 
             for (int turn = 0; turn < 3; turn++)
             {
                 viewModel.UpdateTick(.5f / model.CurrentSpeed);
                 viewModel.EvaluateInput();
-                if (turn == 0)
-                {
-                    Assert.AreEqual(1f, viewModel.IntermissionRemaining, .0001f);
-                    viewModel.UpdateTick(.999f);
-                    Assert.IsTrue(viewModel.IsIntermission);
-                    viewModel.UpdateTick(.0011f);
-                }
-                else if (turn == 1)
-                {
-                    viewModel.UpdateTick(1.001f);
-                }
-                else
-                {
-                    Assert.AreEqual(2f, viewModel.IntermissionRemaining, .0001f);
-                    viewModel.UpdateTick(2.001f);
-                }
+                AdvanceToPlayingOrCompleted(viewModel);
             }
 
             Assert.AreEqual(2, latest.CurrentRound);
@@ -120,15 +124,16 @@ namespace GameArifiction.Tests.Editor
             TimingCatchGameState latest = default;
             viewModel.OnStateChanged += state => latest = state;
             viewModel.StartGame();
+            AdvanceToPlaying(viewModel);
 
             for (int turn = 0; turn < 12; turn++)
             {
                 viewModel.UpdateTick(.5f / model.CurrentSpeed);
                 viewModel.EvaluateInput();
-                if (turn < 11) viewModel.UpdateTick(turn % 3 == 2 ? 2.001f : 1.001f);
+                if (turn < 11) AdvanceToPlayingOrCompleted(viewModel);
             }
 
-            Assert.IsTrue(latest.IsIntermission);
+            Assert.AreEqual(TimingCatchPhase.JudgeResult, latest.Phase);
             Assert.AreEqual(4, latest.CurrentRound);
             Assert.AreEqual(3, latest.CurrentTurn);
             Assert.AreEqual(12, latest.CurrentTurnTotal);
@@ -142,12 +147,53 @@ namespace GameArifiction.Tests.Editor
             MethodInfo getSlideIndex = typeof(TimingCatchGameView).GetMethod("GetSlideIndex", BindingFlags.NonPublic | BindingFlags.Static);
             Assert.IsNotNull(getSlideIndex);
 
-            var start = new TimingCatchGameState { CurrentRound = 1, CurrentTurnTotal = 1 };
+            var start = new TimingCatchGameState { Phase = TimingCatchPhase.Intro };
             var roundTwo = new TimingCatchGameState { CurrentRound = 2, CurrentTurnTotal = 4 };
-            var finish = new TimingCatchGameState { CurrentRound = 4, CurrentTurnTotal = 12, IsIntermission = true };
+            var finish = new TimingCatchGameState { Phase = TimingCatchPhase.Outro };
             Assert.AreEqual(0, getSlideIndex.Invoke(null, new object[] { start }));
             Assert.AreEqual(2, getSlideIndex.Invoke(null, new object[] { roundTwo }));
             Assert.AreEqual(5, getSlideIndex.Invoke(null, new object[] { finish }));
+        }
+
+        [Test]
+        public void View_UpdateJudgeZone_ClearsHorizontalOffsetAndSizeWhilePreservingVerticalValues()
+        {
+            GameObject viewObject = new GameObject("TimingCatchGameView");
+            GameObject parentObject = new GameObject("Gauge", typeof(RectTransform));
+            GameObject zoneObject = new GameObject("GreatZone", typeof(RectTransform));
+            zoneObject.transform.SetParent(parentObject.transform, false);
+            try
+            {
+                RectTransform zone = zoneObject.GetComponent<RectTransform>();
+                zone.anchorMin = new Vector2(.1f, .23f);
+                zone.anchorMax = new Vector2(.9f, .77f);
+                zone.anchoredPosition = new Vector2(170.22f, 21f);
+                zone.sizeDelta = new Vector2(700f, 33f);
+
+                MethodInfo updateJudgeZone = typeof(TimingCatchGameView).GetMethod(
+                    "UpdateJudgeZone",
+                    BindingFlags.Instance | BindingFlags.NonPublic
+                );
+                Assert.IsNotNull(updateJudgeZone);
+                updateJudgeZone.Invoke(
+                    viewObject.AddComponent<TimingCatchGameView>(),
+                    new object[] { zone, .1f }
+                );
+
+                Assert.AreEqual(.4f, zone.anchorMin.x, .0001f);
+                Assert.AreEqual(.6f, zone.anchorMax.x, .0001f);
+                Assert.AreEqual(.23f, zone.anchorMin.y, .0001f);
+                Assert.AreEqual(.77f, zone.anchorMax.y, .0001f);
+                Assert.AreEqual(0f, zone.anchoredPosition.x, .0001f);
+                Assert.AreEqual(21f, zone.anchoredPosition.y, .0001f);
+                Assert.AreEqual(0f, zone.sizeDelta.x, .0001f);
+                Assert.AreEqual(33f, zone.sizeDelta.y, .0001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(viewObject);
+                Object.DestroyImmediate(parentObject);
+            }
         }
 
         [Test]
@@ -157,6 +203,20 @@ namespace GameArifiction.Tests.Editor
 
             Assert.AreEqual(TimingCatchJudgeType.Great, calculator.Evaluate(.59f, .1f, 0f));
             Assert.AreEqual(TimingCatchJudgeType.Miss, calculator.Evaluate(.61f, .1f, 0f));
+        }
+
+        private static void AdvanceToPlaying(TimingCatchGameViewModel viewModel)
+        {
+            AdvanceToPlayingOrCompleted(viewModel);
+            Assert.AreEqual(TimingCatchPhase.Playing, viewModel.Phase);
+        }
+
+        private static void AdvanceToPlayingOrCompleted(TimingCatchGameViewModel viewModel)
+        {
+            for (int i = 0; i < 10 && viewModel.Phase != TimingCatchPhase.Playing && viewModel.Phase != TimingCatchPhase.Completed; i++)
+            {
+                viewModel.UpdateTick(10f);
+            }
         }
     }
 }

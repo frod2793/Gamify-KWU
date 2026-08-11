@@ -7,6 +7,7 @@ namespace GameArifiction.TimingCatch
         public int CurrentRound;
         public int CurrentTurn; // 1-based turn within the current round.
         public int CurrentTurnTotal; // 1-based turn across the complete 12-turn game.
+        public int TotalTurnCount;
         public int Round;
         public int Turn;
         public int TurnInRound;
@@ -17,6 +18,11 @@ namespace GameArifiction.TimingCatch
         public int MissCount;
         public int ConsecutiveGreat;
         public int GreatBonusCount;
+        public TimingCatchPhase Phase;
+        public TimingCatchJudgeType JudgeType;
+        public string Dialogue;
+        public int BonusScore;
+        public float StarScale;
         public bool IsRunning;
         public bool IsIntermission;
         public bool IsFinished;

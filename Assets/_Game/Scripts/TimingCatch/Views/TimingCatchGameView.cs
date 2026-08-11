@@ -1,3 +1,5 @@
+using Cysharp.Threading.Tasks;
+using GamifyKWU.UI.Utils;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -24,11 +26,16 @@ namespace GameArifiction.TimingCatch
         [SerializeField] private TextMeshProUGUI m_dialogueText;
         [SerializeField] private TextMeshProUGUI m_bonusText;
 
+        [Header("Dialogue")]
+        [SerializeField] private Image m_dialogueBubble;
+
         [Header("Buttons")]
         [SerializeField] private Button m_timingButton;
 
 
         private TimingCatchGameViewModel m_viewModel;
+        private TypewriterComponent m_typewriter;
+        private string m_lastDialogue;
 
         private void Awake()
         {
@@ -36,6 +43,12 @@ namespace GameArifiction.TimingCatch
             if (m_backgroundImage != null) m_backgroundImage.preserveAspect = false;
             if (m_starImage != null) m_starImage.preserveAspect = true;
             if (m_timingButton != null) m_timingButton.onClick.AddListener(func_OnTimingButtonPressed);
+            if (m_dialogueText != null)
+            {
+                m_typewriter = m_dialogueText.GetComponent<TypewriterComponent>();
+                if (m_typewriter == null) m_typewriter = m_dialogueText.gameObject.AddComponent<TypewriterComponent>();
+            }
+            SetDialogue(string.Empty);
         }
 
         private void Update()
@@ -46,9 +59,9 @@ namespace GameArifiction.TimingCatch
         private void OnDestroy()
         {
             if (m_timingButton != null) m_timingButton.onClick.RemoveListener(func_OnTimingButtonPressed);
+            if (m_typewriter != null) m_typewriter.StopTyping();
             if (m_viewModel == null) return;
             m_viewModel.OnStateChanged -= func_OnStateChanged;
-            m_viewModel.OnJudgeEvaluated -= func_OnJudgeEvaluated;
         }
 
         public void Initialize(TimingCatchGameViewModel viewModel)
@@ -56,13 +69,11 @@ namespace GameArifiction.TimingCatch
             if (m_viewModel != null)
             {
                 m_viewModel.OnStateChanged -= func_OnStateChanged;
-                m_viewModel.OnJudgeEvaluated -= func_OnJudgeEvaluated;
             }
             m_viewModel = viewModel;
             if (m_viewModel != null)
             {
                 m_viewModel.OnStateChanged += func_OnStateChanged;
-                m_viewModel.OnJudgeEvaluated += func_OnJudgeEvaluated;
                 m_viewModel.NotifyState();
             }
         }
@@ -78,10 +89,12 @@ namespace GameArifiction.TimingCatch
             UpdateJudgeZone(zone, state.GreatZoneWidth * .5f);
             UpdateGaugePointer(state.Gauge);
             if (m_timingButton != null) m_timingButton.interactable = state.InputEnabled;
-            SetText(m_turnText, $"TURN {state.CurrentTurnTotal}/12");
-            SetText(m_scoreText, $"SCORE {state.Score}");
-            SetText(m_bonusText, state.GreatBonusCount > 0 ? $"BONUS +{state.GreatBonusCount * 150}" : string.Empty);
-            SetText(m_dialogueText, state.IsIntermission ? "준비!" : string.Empty);
+            SetText(m_turnText, $"TURN {state.CurrentTurnTotal}/{state.TotalTurnCount}");
+            SetScore(state.Score);
+            SetText(m_judgeText, state.JudgeType == TimingCatchJudgeType.None ? string.Empty : state.JudgeType.ToString().ToUpperInvariant());
+            SetText(m_bonusText, state.BonusScore > 0 ? $"BONUS +{state.BonusScore}" : string.Empty);
+            SetDialogue(state.Dialogue);
+            SetStarScale(state.StarScale);
             if (m_slideSprites != null && m_slideSprites.Length > 0)
             {
                 int slideIndex = GetSlideIndex(state);
@@ -89,12 +102,10 @@ namespace GameArifiction.TimingCatch
             }
         }
 
-        private void func_OnJudgeEvaluated(TimingCatchJudgeType judgeType) => SetText(m_judgeText, judgeType == TimingCatchJudgeType.Great ? "Great" : "Miss");
-
         private static int GetSlideIndex(TimingCatchGameState state)
         {
-            if ((state.IsFinished || state.IsIntermission) && state.CurrentTurnTotal >= 12) return 5;
-            if (state.CurrentRound <= 1 && state.CurrentTurnTotal <= 1) return 0;
+            if (state.Phase == TimingCatchPhase.Intro) return 0;
+            if (state.Phase == TimingCatchPhase.Outro || state.Phase == TimingCatchPhase.Completed) return 5;
             return Mathf.Clamp(state.CurrentRound, 1, 4);
         }
 
@@ -104,10 +115,14 @@ namespace GameArifiction.TimingCatch
             float half = Mathf.Clamp(halfWidth, 0f, .5f);
             Vector2 min = zone.anchorMin;
             Vector2 max = zone.anchorMax;
+            Vector2 anchoredPosition = zone.anchoredPosition;
+            Vector2 sizeDelta = zone.sizeDelta;
             min.x = .5f - half;
             max.x = .5f + half;
             zone.anchorMin = min;
             zone.anchorMax = max;
+            zone.anchoredPosition = new Vector2(0f, anchoredPosition.y);
+            zone.sizeDelta = new Vector2(0f, sizeDelta.y);
         }
 
         private void UpdateGaugePointer(float gauge)
@@ -136,6 +151,44 @@ namespace GameArifiction.TimingCatch
         private static void SetText(TextMeshProUGUI target, string value)
         {
             if (target != null) target.text = value;
+        }
+
+        private void SetScore(int score)
+        {
+            if (m_scoreText != null) m_scoreText.SetText("Score {0:0000}", score);
+        }
+
+        private void SetStarScale(float scale)
+        {
+            if (m_starImage == null) return;
+            bool isVisible = scale > 0f;
+            if (m_starImage.gameObject.activeSelf != isVisible) m_starImage.gameObject.SetActive(isVisible);
+            if (isVisible) m_starImage.rectTransform.localScale = Vector3.one * scale;
+        }
+
+        private void SetDialogue(string dialogue)
+        {
+            string targetDialogue = dialogue ?? string.Empty;
+            if (m_lastDialogue == targetDialogue) return;
+            m_lastDialogue = targetDialogue;
+
+            bool isVisible = !string.IsNullOrEmpty(targetDialogue);
+            if (m_dialogueBubble != null) m_dialogueBubble.gameObject.SetActive(isVisible);
+            if (m_dialogueText != null) m_dialogueText.gameObject.SetActive(isVisible);
+            if (!isVisible)
+            {
+                if (m_typewriter != null) m_typewriter.StopTyping();
+                return;
+            }
+
+            if (m_typewriter != null)
+            {
+                m_typewriter.StopTyping();
+                m_typewriter.PlayTypingEffectAsync(targetDialogue).Forget();
+                return;
+            }
+
+            SetText(m_dialogueText, targetDialogue);
         }
     }
 }

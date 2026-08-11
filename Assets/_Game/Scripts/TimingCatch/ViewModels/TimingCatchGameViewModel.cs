@@ -1,4 +1,5 @@
 using System;
+using GameArifiction.Core.Audio;
 using GameArifiction.Player;
 using VContainer;
 
@@ -9,14 +10,23 @@ namespace GameArifiction.TimingCatch
         private readonly TimingCatchGameModel m_model;
         private readonly ITimingJudgeCalculator m_judgeCalculator;
         private readonly TimingCatchGameConfigSO m_config;
+        private readonly ISoundService m_soundService;
         private float m_playTime;
-        private float m_intermissionRemaining;
+        private float m_phaseRemaining;
         private int m_totalScore;
         private int m_greatCount;
         private int m_missCount;
         private int m_consecutiveGreat;
         private int m_greatBonusCount;
-        private bool m_pendingResult;
+        private int m_dialogueIndex;
+        private int m_displayRound;
+        private int m_displayTurn;
+        private int m_displayTurnTotal;
+        private TimingCatchDifficulty m_displayDifficulty;
+        private TimingCatchPhase m_phase;
+        private TimingCatchJudgeType m_judgeType;
+        private string m_dialogue = string.Empty;
+        private int m_bonusScore;
         private bool m_resultPublished;
 
         public event Action<TimingCatchGameState> OnStateChanged;
@@ -28,50 +38,63 @@ namespace GameArifiction.TimingCatch
         public int MissCount => m_missCount;
         public int ConsecutiveGreat => m_consecutiveGreat;
         public int GreatBonusCount => m_greatBonusCount;
-        public bool IsIntermission => m_intermissionRemaining > 0f;
-        public float IntermissionRemaining => m_intermissionRemaining;
-        public bool InputEnabled => m_model != null && m_model.IsRunning && !IsIntermission;
+        public TimingCatchPhase Phase => m_phase;
+        public bool IsIntermission => m_phase == TimingCatchPhase.TurnInterval || m_phase == TimingCatchPhase.RoundInterval;
+        public float IntermissionRemaining => IsIntermission ? m_phaseRemaining : 0f;
+        public bool InputEnabled => m_model != null && m_model.IsRunning && m_phase == TimingCatchPhase.Playing;
 
         [Inject]
-        public TimingCatchGameViewModel(TimingCatchGameModel model, ITimingJudgeCalculator judgeCalculator, TimingCatchGameConfigSO config)
+        public TimingCatchGameViewModel(
+            TimingCatchGameModel model,
+            ITimingJudgeCalculator judgeCalculator,
+            TimingCatchGameConfigSO config,
+            ISoundService soundService = null)
         {
             m_model = model;
             m_judgeCalculator = judgeCalculator;
             m_config = config;
+            m_soundService = soundService;
         }
 
         public void StartGame()
         {
             if (m_model == null || m_config == null) return;
+
             m_model.ResetState();
             m_playTime = 0f;
-            m_intermissionRemaining = 0f;
+            m_phaseRemaining = m_config.IntroLineDuration;
             m_totalScore = 0;
             m_greatCount = 0;
             m_missCount = 0;
             m_consecutiveGreat = 0;
             m_greatBonusCount = 0;
-            m_pendingResult = false;
+            m_dialogueIndex = 0;
+            m_judgeType = TimingCatchJudgeType.None;
+            m_bonusScore = 0;
             m_resultPublished = false;
+            SetDisplayFromCurrentTurn();
+            m_phase = TimingCatchPhase.Intro;
+            m_dialogue = m_config.GetIntroDialogue(m_dialogueIndex);
             PushState();
         }
 
         public void UpdateTick(float deltaTime)
         {
-            if (deltaTime <= 0f) return;
-            if (m_intermissionRemaining > 0f)
+            if (deltaTime <= 0f || m_model == null || m_config == null) return;
+
+            if (m_phase == TimingCatchPhase.Playing)
             {
-                m_intermissionRemaining = Math.Max(0f, m_intermissionRemaining - deltaTime);
-                if (m_intermissionRemaining <= 0f && m_pendingResult) PublishResult();
+                m_model.UpdateGauge(deltaTime);
+                m_playTime += deltaTime;
                 PushState();
+                if (m_model.IsTurnTimeout) ApplyJudge(TimingCatchJudgeType.Miss);
                 return;
             }
-            if (m_model == null || !m_model.IsRunning || m_model.IsFinished) return;
 
-            m_model.UpdateGauge(deltaTime);
-            m_playTime += deltaTime;
+            if (m_phase == TimingCatchPhase.Completed || m_phase == TimingCatchPhase.None) return;
+            m_phaseRemaining = Math.Max(0f, m_phaseRemaining - deltaTime);
+            if (m_phaseRemaining <= 0f) AdvancePhase();
             PushState();
-            if (m_model.IsTurnTimeout) ApplyJudge(TimingCatchJudgeType.Miss);
         }
 
         public void EvaluateInput()
@@ -81,57 +104,164 @@ namespace GameArifiction.TimingCatch
                 m_model.GaugeNormalized,
                 m_model.CurrentGreatZoneHalfWidth,
                 0f);
-            ApplyJudge(judge == TimingCatchJudgeType.Great ? TimingCatchJudgeType.Great : TimingCatchJudgeType.Miss);
+            ApplyJudge(judge);
         }
 
-        public void NotifyState() => PushState();
+        public void NotifyState()
+        {
+            PushState();
+        }
 
         private void ApplyJudge(TimingCatchJudgeType judge)
         {
-            if (!InputEnabled || m_config == null) return;
+            if (!InputEnabled) return;
+
+            SetDisplayFromCurrentTurn();
             bool isGreat = judge == TimingCatchJudgeType.Great;
+            m_judgeType = isGreat ? TimingCatchJudgeType.Great : TimingCatchJudgeType.Miss;
+            m_bonusScore = 0;
             if (isGreat)
             {
                 m_greatCount++;
                 m_consecutiveGreat++;
-                m_totalScore += m_config.GetDifficultyGreatScore(m_model.CurrentDifficulty);
-                if (m_consecutiveGreat >= m_config.TurnsPerRound)
+                m_totalScore += m_config.GetDifficultyGreatScore(m_displayDifficulty);
+                m_dialogue = m_config.GetGreatDialogue(m_displayRound - 1, m_displayTurn - 1);
+                if (m_consecutiveGreat == m_config.TurnsPerRound)
                 {
-                    m_totalScore += m_config.ThreeGreatBonus;
+                    m_bonusScore = m_config.ThreeGreatBonus;
+                    m_totalScore += m_bonusScore;
                     m_greatBonusCount++;
+                }
+
+                if (!string.IsNullOrWhiteSpace(m_config.GreatSfxPath) && m_soundService != null)
+                {
+                    m_soundService.PlaySFX(m_config.GreatSfxPath);
                 }
             }
             else
             {
                 m_missCount++;
                 m_consecutiveGreat = 0;
+                m_dialogue = m_config.MissDialogue;
             }
 
-            OnJudgeEvaluated?.Invoke(isGreat ? TimingCatchJudgeType.Great : TimingCatchJudgeType.Miss);
-            TimingCatchDifficulty completedDifficulty = m_model.CurrentDifficulty;
+            OnJudgeEvaluated?.Invoke(m_judgeType);
             m_model.AdvanceToNextTurn();
-            bool roundEnded = completedDifficulty == TimingCatchDifficulty.Hard;
+            m_phase = TimingCatchPhase.JudgeResult;
+            m_phaseRemaining = m_config.JudgeResultDuration;
+            PushState();
+        }
+
+        private void AdvancePhase()
+        {
+            switch (m_phase)
+            {
+                case TimingCatchPhase.Intro:
+                    AdvanceIntro();
+                    break;
+                case TimingCatchPhase.RoundStart:
+                    BeginPlaying();
+                    break;
+                case TimingCatchPhase.JudgeResult:
+                    AdvanceJudgeResult();
+                    break;
+                case TimingCatchPhase.TurnInterval:
+                    BeginPlaying();
+                    break;
+                case TimingCatchPhase.RoundInterval:
+                    m_consecutiveGreat = 0;
+                    m_phase = TimingCatchPhase.RoundStart;
+                    m_phaseRemaining = m_config.RoundStartDuration;
+                    m_dialogue = string.Empty;
+                    m_judgeType = TimingCatchJudgeType.None;
+                    m_bonusScore = 0;
+                    SetDisplayFromCurrentTurn();
+                    break;
+                case TimingCatchPhase.Outro:
+                    AdvanceOutro();
+                    break;
+            }
+        }
+
+        private void AdvanceIntro()
+        {
+            m_dialogueIndex++;
+            string nextDialogue = m_config.GetIntroDialogue(m_dialogueIndex);
+            if (!string.IsNullOrEmpty(nextDialogue))
+            {
+                m_dialogue = nextDialogue;
+                m_phaseRemaining = m_config.IntroLineDuration;
+                return;
+            }
+
+            m_phase = TimingCatchPhase.RoundStart;
+            m_phaseRemaining = m_config.RoundStartDuration;
+            m_dialogue = string.Empty;
+        }
+
+        private void AdvanceJudgeResult()
+        {
             if (m_model.IsFinished)
             {
-                m_pendingResult = true;
-                m_intermissionRemaining = m_config.HardIntermissionSeconds;
+                BeginOutro();
+                return;
             }
-            else
+
+            bool roundEnded = m_displayDifficulty == TimingCatchDifficulty.Hard;
+            m_phase = roundEnded ? TimingCatchPhase.RoundInterval : TimingCatchPhase.TurnInterval;
+            m_phaseRemaining = roundEnded ? m_config.HardIntermissionSeconds : m_config.EasyNormalIntermissionSeconds;
+        }
+
+        private void BeginPlaying()
+        {
+            m_phase = TimingCatchPhase.Playing;
+            m_phaseRemaining = 0f;
+            m_dialogue = string.Empty;
+            m_judgeType = TimingCatchJudgeType.None;
+            m_bonusScore = 0;
+            SetDisplayFromCurrentTurn();
+        }
+
+        private void BeginOutro()
+        {
+            m_phase = TimingCatchPhase.Outro;
+            m_phaseRemaining = m_config.OutroLineDuration;
+            m_dialogueIndex = 0;
+            m_dialogue = m_config.GetOutroDialogue(m_dialogueIndex);
+            m_judgeType = TimingCatchJudgeType.None;
+            m_bonusScore = 0;
+        }
+
+        private void AdvanceOutro()
+        {
+            m_dialogueIndex++;
+            string nextDialogue = m_config.GetOutroDialogue(m_dialogueIndex);
+            if (!string.IsNullOrEmpty(nextDialogue))
             {
-                if (roundEnded) m_consecutiveGreat = 0;
-                m_intermissionRemaining = roundEnded
-                    ? m_config.HardIntermissionSeconds
-                    : m_config.EasyNormalIntermissionSeconds;
+                m_dialogue = nextDialogue;
+                m_phaseRemaining = m_config.OutroLineDuration;
+                return;
             }
-            PushState();
-            if (m_intermissionRemaining <= 0f && m_pendingResult) PublishResult();
+
+            m_phase = TimingCatchPhase.Completed;
+            m_phaseRemaining = 0f;
+            m_dialogue = string.Empty;
+            PublishResult();
+        }
+
+        private void SetDisplayFromCurrentTurn()
+        {
+            if (m_model == null || m_config == null) return;
+            m_displayRound = Math.Min(m_model.CurrentRoundNumber, m_config.RoundCount);
+            m_displayTurn = Math.Min(m_model.CurrentTurnNumber, m_config.TurnsPerRound);
+            m_displayTurnTotal = Math.Min(m_model.CurrentTurn + 1, m_config.TotalTurnCount);
+            m_displayDifficulty = m_model.CurrentDifficulty;
         }
 
         private void PublishResult()
         {
-            if (m_resultPublished || m_config == null) return;
+            if (m_resultPublished) return;
             m_resultPublished = true;
-            m_pendingResult = false;
             OnGameResult?.Invoke(new TimingCatchGameResultDTO
             {
                 TotalScore = m_totalScore,
@@ -159,37 +289,37 @@ namespace GameArifiction.TimingCatch
         private void PushState()
         {
             if (m_model == null || m_config == null) return;
-            bool isFinished = m_model.IsFinished;
-            int displayRound = isFinished ? m_config.RoundCount : m_model.CurrentRoundNumber;
-            int displayTurnInRound = isFinished ? m_config.TurnsPerRound : m_model.CurrentTurnNumber;
-            int displayTurnTotal = isFinished ? m_config.TotalTurnCount : Math.Min(m_model.CurrentTurn + 1, m_config.TotalTurnCount);
-            TimingCatchDifficulty displayDifficulty = isFinished ? TimingCatchDifficulty.Hard : m_model.CurrentDifficulty;
-            float displayGreatWidth = isFinished ? m_config.CreateDifficultyGreatZoneWidthsSnapshot()[(int)TimingCatchDifficulty.Hard] : m_model.CurrentGreatZoneWidth;
             var state = new TimingCatchGameState
             {
                 Gauge = m_model.GaugeNormalized,
-                GreatZoneWidth = displayGreatWidth,
-                CurrentRound = displayRound,
-                CurrentTurn = displayTurnInRound,
-                CurrentTurnTotal = displayTurnTotal,
-                Round = displayRound,
-                Turn = displayTurnInRound,
-                TurnInRound = displayTurnInRound,
-                TotalTurn = displayTurnTotal,
-                Difficulty = displayDifficulty,
+                GreatZoneWidth = m_config.GetGreatZoneWidth(m_displayDifficulty),
+                CurrentRound = m_displayRound,
+                CurrentTurn = m_displayTurn,
+                CurrentTurnTotal = m_displayTurnTotal,
+                TotalTurnCount = m_config.TotalTurnCount,
+                Round = m_displayRound,
+                Turn = m_displayTurn,
+                TurnInRound = m_displayTurn,
+                TotalTurn = m_displayTurnTotal,
+                Difficulty = m_displayDifficulty,
                 Score = m_totalScore,
                 GreatCount = m_greatCount,
                 MissCount = m_missCount,
                 ConsecutiveGreat = m_consecutiveGreat,
                 GreatBonusCount = m_greatBonusCount,
-                IsRunning = m_model.IsRunning,
+                Phase = m_phase,
+                JudgeType = m_judgeType,
+                Dialogue = m_dialogue,
+                BonusScore = m_bonusScore,
+                StarScale = m_config.GetStarScale(m_consecutiveGreat),
+                IsRunning = m_phase == TimingCatchPhase.Playing,
                 IsIntermission = IsIntermission,
-                IsFinished = m_model.IsFinished && !m_pendingResult,
+                IsFinished = m_phase == TimingCatchPhase.Completed,
                 InputEnabled = InputEnabled,
-                IntermissionRemaining = m_intermissionRemaining,
+                IntermissionRemaining = IntermissionRemaining,
                 TurnElapsed = m_model.TurnElapsed,
                 TurnTimeout = m_model.TurnTimeoutSeconds,
-                GreatScore = m_config.GetDifficultyGreatScore(displayDifficulty),
+                GreatScore = m_config.GetDifficultyGreatScore(m_displayDifficulty),
             };
             OnStateChanged?.Invoke(state);
         }

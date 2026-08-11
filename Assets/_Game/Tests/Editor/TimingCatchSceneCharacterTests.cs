@@ -92,7 +92,7 @@ namespace GameArifiction.Tests.Editor
                 RectTransform dialogue = ((Component)serializedView.FindProperty("m_dialogueText").objectReferenceValue).GetComponent<RectTransform>();
                 RectTransform star = ((Image)serializedView.FindProperty("m_starImage").objectReferenceValue).rectTransform;
                 Assert.Greater(dialogue.anchorMin.x, .25f);
-                Assert.Greater(star.anchorMin.y, .3f);
+                Assert.AreEqual(.207f, star.anchorMin.y, .001f);
                 RectTransform bonus = ((Component)serializedView.FindProperty("m_bonusText").objectReferenceValue).GetComponent<RectTransform>();
                 Assert.Less(bonus.anchorMin.x, .5f);
                 Assert.Greater(bonus.anchorMin.y, .35f);
@@ -149,6 +149,7 @@ namespace GameArifiction.Tests.Editor
                 EditorSceneManager.CloseScene(scene, true);
             }
         }
+
         #endregion
 
         #region 테스트 보조 메서드 (Test Helpers)
