@@ -39,7 +39,6 @@ namespace GameArifiction.TimingCatch
         [Header("Presentation")]
         [SerializeField] private float m_introLineDuration = 2f;
         [SerializeField] private float m_roundStartDuration = 1f;
-        [SerializeField] private float m_judgeResultDuration = 1f;
         [SerializeField] private float m_outroLineDuration = 2f;
         [SerializeField] private float[] m_starScales = { .2f, .5f, 1f };
         [SerializeField] private string m_greatSfxPath = string.Empty;
@@ -73,7 +72,6 @@ namespace GameArifiction.TimingCatch
         public float GradeDThresholdRatio => m_gradeDThresholdRatio;
         public float IntroLineDuration => Mathf.Max(0f, m_introLineDuration);
         public float RoundStartDuration => Mathf.Max(0f, m_roundStartDuration);
-        public float JudgeResultDuration => Mathf.Max(0f, m_judgeResultDuration);
         public float OutroLineDuration => Mathf.Max(0f, m_outroLineDuration);
         public string GreatSfxPath => m_greatSfxPath ?? string.Empty;
         public string MissDialogue => m_missDialogue ?? string.Empty;

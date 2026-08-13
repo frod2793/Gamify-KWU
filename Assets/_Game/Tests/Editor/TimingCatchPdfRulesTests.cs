@@ -142,6 +142,71 @@ namespace GameArifiction.Tests.Editor
         }
 
         [Test]
+        public void ViewModel_TurnGapIsExactlyOneSecondWithJudgeVisible()
+        {
+            var model = new TimingCatchGameModel(m_config);
+            var viewModel = new TimingCatchGameViewModel(model, new TimingCatchJudgeCalculator(), m_config);
+            TimingCatchGameState latest = default;
+            viewModel.OnStateChanged += state => latest = state;
+            viewModel.StartGame();
+            AdvanceToPlaying(viewModel);
+
+            viewModel.UpdateTick(6.01f);
+
+            viewModel.UpdateTick(.99f);
+            Assert.AreNotEqual(TimingCatchPhase.Playing, viewModel.Phase);
+            Assert.AreEqual(TimingCatchJudgeType.Miss, latest.JudgeType);
+            viewModel.UpdateTick(.02f);
+            Assert.AreEqual(TimingCatchPhase.Playing, viewModel.Phase);
+        }
+
+        [Test]
+        public void ViewModel_RoundGapIsExactlyTwoSeconds()
+        {
+            var model = new TimingCatchGameModel(m_config);
+            var viewModel = new TimingCatchGameViewModel(model, new TimingCatchJudgeCalculator(), m_config);
+            viewModel.StartGame();
+            AdvanceToPlaying(viewModel);
+            for (int turn = 0; turn < 2; turn++)
+            {
+                viewModel.UpdateTick(.5f / model.CurrentSpeed);
+                viewModel.EvaluateInput();
+                AdvanceToPlayingOrCompleted(viewModel);
+            }
+
+            viewModel.UpdateTick(.5f / model.CurrentSpeed);
+            viewModel.EvaluateInput();
+
+            viewModel.UpdateTick(1.99f);
+            Assert.AreNotEqual(TimingCatchPhase.Playing, viewModel.Phase);
+            viewModel.UpdateTick(.02f);
+            Assert.AreEqual(TimingCatchPhase.Playing, viewModel.Phase);
+        }
+
+        [Test]
+        public void ViewModel_FinalTurnKeepsTwoSecondGapBeforeOutro()
+        {
+            var model = new TimingCatchGameModel(m_config);
+            var viewModel = new TimingCatchGameViewModel(model, new TimingCatchJudgeCalculator(), m_config);
+            viewModel.StartGame();
+            AdvanceToPlaying(viewModel);
+            for (int turn = 0; turn < 11; turn++)
+            {
+                viewModel.UpdateTick(.5f / model.CurrentSpeed);
+                viewModel.EvaluateInput();
+                AdvanceToPlayingOrCompleted(viewModel);
+            }
+
+            viewModel.UpdateTick(.5f / model.CurrentSpeed);
+            viewModel.EvaluateInput();
+
+            viewModel.UpdateTick(1.99f);
+            Assert.AreEqual(TimingCatchPhase.JudgeResult, viewModel.Phase);
+            viewModel.UpdateTick(.02f);
+            Assert.AreEqual(TimingCatchPhase.Outro, viewModel.Phase);
+        }
+
+        [Test]
         public void View_MapsStartRoundsAndFinalIntermissionToSlideSprites()
         {
             MethodInfo getSlideIndex = typeof(TimingCatchGameView).GetMethod("GetSlideIndex", BindingFlags.NonPublic | BindingFlags.Static);

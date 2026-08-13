@@ -148,7 +148,8 @@ namespace GameArifiction.TimingCatch
             OnJudgeEvaluated?.Invoke(m_judgeType);
             m_model.AdvanceToNextTurn();
             m_phase = TimingCatchPhase.JudgeResult;
-            m_phaseRemaining = m_config.JudgeResultDuration;
+            bool roundEnded = m_displayDifficulty == TimingCatchDifficulty.Hard;
+            m_phaseRemaining = roundEnded ? m_config.HardIntermissionSeconds : m_config.EasyNormalIntermissionSeconds;
             PushState();
         }
 
@@ -164,18 +165,6 @@ namespace GameArifiction.TimingCatch
                     break;
                 case TimingCatchPhase.JudgeResult:
                     AdvanceJudgeResult();
-                    break;
-                case TimingCatchPhase.TurnInterval:
-                    BeginPlaying();
-                    break;
-                case TimingCatchPhase.RoundInterval:
-                    m_consecutiveGreat = 0;
-                    m_phase = TimingCatchPhase.RoundStart;
-                    m_phaseRemaining = m_config.RoundStartDuration;
-                    m_dialogue = string.Empty;
-                    m_judgeType = TimingCatchJudgeType.None;
-                    m_bonusScore = 0;
-                    SetDisplayFromCurrentTurn();
                     break;
                 case TimingCatchPhase.Outro:
                     AdvanceOutro();
@@ -207,9 +196,12 @@ namespace GameArifiction.TimingCatch
                 return;
             }
 
-            bool roundEnded = m_displayDifficulty == TimingCatchDifficulty.Hard;
-            m_phase = roundEnded ? TimingCatchPhase.RoundInterval : TimingCatchPhase.TurnInterval;
-            m_phaseRemaining = roundEnded ? m_config.HardIntermissionSeconds : m_config.EasyNormalIntermissionSeconds;
+            if (m_displayDifficulty == TimingCatchDifficulty.Hard)
+            {
+                m_consecutiveGreat = 0;
+            }
+
+            BeginPlaying();
         }
 
         private void BeginPlaying()
