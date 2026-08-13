@@ -61,6 +61,12 @@ namespace GamifyKWU.UI.Utils
 
         public bool IsTyping => m_isTyping;
 
+        public RectTransform LayoutToRebuild
+        {
+            get => m_layoutToRebuild;
+            set => m_layoutToRebuild = value;
+        }
+
         public Transform TargetTransform
         {
             get => m_targetTransform;

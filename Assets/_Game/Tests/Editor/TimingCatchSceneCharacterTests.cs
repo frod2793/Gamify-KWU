@@ -1,6 +1,7 @@
 using GameArifiction.Player;
 using GameArifiction.TimingCatch;
 using NUnit.Framework;
+using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -101,6 +102,53 @@ namespace GameArifiction.Tests.Editor
             {
                 EditorSceneManager.CloseScene(scene, true);
             }
+        }
+
+        [Test]
+        public void TimingCatchScene_DialogueBubble_UsesFixedWidthAndDynamicHeightLayout()
+        {
+            string sceneYaml = File.ReadAllText(ScenePath);
+            string typewriterSource = File.ReadAllText("Assets/_Game/Scripts/UI/Utils/TypewriterComponent.cs");
+            string viewSource = File.ReadAllText("Assets/_Game/Scripts/TimingCatch/Views/TimingCatchGameView.cs");
+
+            StringAssert.Contains("m_SizeDelta: {x: 380, y: 104}", sceneYaml);
+            StringAssert.Contains("m_Pivot: {x: 0.5, y: 0}", sceneYaml);
+            StringAssert.Contains("m_AnchoredPosition: {x: -279, y: 222}", sceneYaml);
+            StringAssert.Contains("UnityEngine.UI::UnityEngine.UI.VerticalLayoutGroup", sceneYaml);
+            StringAssert.Contains("m_Left: 24", sceneYaml);
+            StringAssert.Contains("m_Right: 24", sceneYaml);
+            StringAssert.Contains("m_Top: 16", sceneYaml);
+            StringAssert.Contains("m_Bottom: 26", sceneYaml);
+            StringAssert.Contains("m_ChildAlignment: 4", sceneYaml);
+            StringAssert.Contains("m_ChildForceExpandWidth: 1", sceneYaml);
+            StringAssert.Contains("m_ChildForceExpandHeight: 0", sceneYaml);
+            StringAssert.Contains("m_ChildControlWidth: 1", sceneYaml);
+            StringAssert.Contains("m_ChildControlHeight: 1", sceneYaml);
+            StringAssert.Contains("UnityEngine.UI::UnityEngine.UI.ContentSizeFitter", sceneYaml);
+            StringAssert.Contains("m_HorizontalFit: 0", sceneYaml);
+            StringAssert.Contains("m_VerticalFit: 2", sceneYaml);
+            StringAssert.Contains("public RectTransform LayoutToRebuild", typewriterSource);
+            StringAssert.Contains("m_typewriter.LayoutToRebuild = m_dialogueBubble.rectTransform;", viewSource);
+        }
+
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        [TestCase(4)]
+        [TestCase(5)]
+        [TestCase(6)]
+        public void TimingSlides_UseDownscaleFriendlyWebGlImportSettings(int slideNumber)
+        {
+            string assetPath = $"Assets/_Game/Art/TimingCatch/Timing_Slides{slideNumber}.png";
+            TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+
+            Assert.IsNotNull(importer);
+            Assert.IsTrue(importer.mipmapEnabled);
+            Assert.AreEqual(FilterMode.Bilinear, importer.filterMode);
+
+            TextureImporterPlatformSettings webGl = importer.GetPlatformTextureSettings("WebGL");
+            Assert.IsTrue(webGl.overridden);
+            Assert.AreEqual(TextureImporterCompression.Uncompressed, webGl.textureCompression);
         }
 
         [Test]

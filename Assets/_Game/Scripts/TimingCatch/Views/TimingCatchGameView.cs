@@ -36,6 +36,13 @@ namespace GameArifiction.TimingCatch
         private TimingCatchGameViewModel m_viewModel;
         private TypewriterComponent m_typewriter;
         private string m_lastDialogue;
+        private int m_lastTurnTotal = -1;
+        private int m_lastScore = -1;
+        private int m_lastBonusScore = -1;
+        private int m_lastSlideIndex = -1;
+        private float m_lastZoneHalfWidth = -1f;
+        private float m_lastStarScale = -1f;
+        private TimingCatchJudgeType m_lastJudgeType = (TimingCatchJudgeType)(-1);
 
         private void Awake()
         {
@@ -47,6 +54,7 @@ namespace GameArifiction.TimingCatch
             {
                 m_typewriter = m_dialogueText.GetComponent<TypewriterComponent>();
                 if (m_typewriter == null) m_typewriter = m_dialogueText.gameObject.AddComponent<TypewriterComponent>();
+                if (m_dialogueBubble != null) m_typewriter.LayoutToRebuild = m_dialogueBubble.rectTransform;
             }
             SetDialogue(string.Empty);
         }
@@ -83,22 +91,58 @@ namespace GameArifiction.TimingCatch
             if (m_viewModel != null) m_viewModel.EvaluateInput();
         }
 
+        // 게이지 포인터를 제외한 나머지 UI는 값이 바뀔 때만 갱신한다.
+        // (매 프레임 문자열 할당·TMP 메시 재생성·레이아웃 dirty 방지 — 모바일 GC/배터리 대응)
         private void func_OnStateChanged(TimingCatchGameState state)
         {
-            RectTransform zone = m_greatZone;
-            UpdateJudgeZone(zone, state.GreatZoneWidth * .5f);
+            float zoneHalfWidth = state.GreatZoneWidth * .5f;
+            if (zoneHalfWidth != m_lastZoneHalfWidth)
+            {
+                m_lastZoneHalfWidth = zoneHalfWidth;
+                UpdateJudgeZone(m_greatZone, zoneHalfWidth);
+            }
             UpdateGaugePointer(state.Gauge);
             if (m_timingButton != null) m_timingButton.interactable = state.InputEnabled;
-            SetText(m_turnText, $"TURN {state.CurrentTurnTotal}/{state.TotalTurnCount}");
-            SetScore(state.Score);
-            SetText(m_judgeText, state.JudgeType == TimingCatchJudgeType.None ? string.Empty : state.JudgeType.ToString().ToUpperInvariant());
-            SetText(m_bonusText, state.BonusScore > 0 ? $"BONUS +{state.BonusScore}" : string.Empty);
+            if (state.CurrentTurnTotal != m_lastTurnTotal)
+            {
+                m_lastTurnTotal = state.CurrentTurnTotal;
+                SetText(m_turnText, $"TURN {state.CurrentTurnTotal}/{state.TotalTurnCount}");
+            }
+            if (state.Score != m_lastScore)
+            {
+                m_lastScore = state.Score;
+                SetScore(state.Score);
+            }
+            if (state.JudgeType != m_lastJudgeType)
+            {
+                m_lastJudgeType = state.JudgeType;
+                SetText(m_judgeText, GetJudgeText(state.JudgeType));
+            }
+            if (state.BonusScore != m_lastBonusScore)
+            {
+                m_lastBonusScore = state.BonusScore;
+                SetText(m_bonusText, state.BonusScore > 0 ? $"BONUS +{state.BonusScore}" : string.Empty);
+            }
             SetDialogue(state.Dialogue);
             SetStarScale(state.StarScale);
             if (m_slideSprites != null && m_slideSprites.Length > 0)
             {
                 int slideIndex = GetSlideIndex(state);
-                if (m_slideImage != null) m_slideImage.sprite = m_slideSprites[slideIndex];
+                if (slideIndex != m_lastSlideIndex)
+                {
+                    m_lastSlideIndex = slideIndex;
+                    if (m_slideImage != null) m_slideImage.sprite = m_slideSprites[slideIndex];
+                }
+            }
+        }
+
+        private static string GetJudgeText(TimingCatchJudgeType judgeType)
+        {
+            switch (judgeType)
+            {
+                case TimingCatchJudgeType.Great: return "GREAT";
+                case TimingCatchJudgeType.Miss: return "MISS";
+                default: return string.Empty;
             }
         }
 
@@ -125,8 +169,12 @@ namespace GameArifiction.TimingCatch
             zone.sizeDelta = new Vector2(0f, sizeDelta.y);
         }
 
+        private float m_lastGauge = -1f;
+
         private void UpdateGaugePointer(float gauge)
         {
+            if (gauge == m_lastGauge) return;
+            m_lastGauge = gauge;
             RectTransform pointer = m_cursorImage != null ? m_cursorImage.rectTransform : m_gaugePointer;
             if (pointer == null) return;
             Vector2 anchor = new Vector2(Mathf.Clamp01(gauge), .5f);
@@ -160,7 +208,8 @@ namespace GameArifiction.TimingCatch
 
         private void SetStarScale(float scale)
         {
-            if (m_starImage == null) return;
+            if (m_starImage == null || scale == m_lastStarScale) return;
+            m_lastStarScale = scale;
             bool isVisible = scale > 0f;
             if (m_starImage.gameObject.activeSelf != isVisible) m_starImage.gameObject.SetActive(isVisible);
             if (isVisible) m_starImage.rectTransform.localScale = Vector3.one * scale;
