@@ -96,7 +96,19 @@ public class TimingCatchGameLifetimeScope : LifetimeScope
     /// </summary>
     private void ConfigureCore(IContainerBuilder builder)
     {
-        builder.Register<SoundService>(Lifetime.Scoped).AsImplementedInterfaces().AsSelf();
+        // 공통 사운드 시스템 등록 (단독 실행 환경 지원)
+        if (Parent == null)
+        {
+            var soundView = FindFirstObjectByType<SoundPlayerView>();
+            if (soundView == null)
+            {
+                var soundObject = new GameObject("SoundPlayerView");
+                soundView = soundObject.AddComponent<SoundPlayerView>();
+            }
+            builder.RegisterComponent(soundView);
+            builder.Register<SoundService>(Lifetime.Scoped).AsImplementedInterfaces().AsSelf();
+            builder.RegisterBuildCallback(container => container.Inject(soundView));
+        }
 
         builder.Register<ITimingJudgeCalculator, TimingCatchJudgeCalculator>(Lifetime.Scoped);
 

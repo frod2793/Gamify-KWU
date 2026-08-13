@@ -42,7 +42,7 @@ MonoBehaviour:
   - 0.2
   - 0.5
   - 1
-  m_greatSfxPath: ""
+  m_greatSfxPath: Sounds/SFX/CardMatch/sfx_cardmatch_correct
   m_introDialogue:
   - "안녕하세요 발표자 우니입니다."
   - "발표 시작하겠습니다."
