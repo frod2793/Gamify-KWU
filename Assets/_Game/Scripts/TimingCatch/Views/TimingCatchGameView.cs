@@ -43,6 +43,8 @@ namespace GameArifiction.TimingCatch
         private float m_lastZoneHalfWidth = -1f;
         private float m_lastStarScale = -1f;
         private TimingCatchJudgeType m_lastJudgeType = (TimingCatchJudgeType)(-1);
+        private Outline m_gaugePointerOutline;
+        private bool m_hasCachedGaugePointerOutline;
 
         private void Awake()
         {
@@ -169,15 +171,29 @@ namespace GameArifiction.TimingCatch
             zone.sizeDelta = new Vector2(0f, sizeDelta.y);
         }
 
-        private float m_lastGauge = -1f;
+        private float m_lastPointerAnchorX = -1f;
 
         private void UpdateGaugePointer(float gauge)
         {
-            if (gauge == m_lastGauge) return;
-            m_lastGauge = gauge;
             RectTransform pointer = m_cursorImage != null ? m_cursorImage.rectTransform : m_gaugePointer;
             if (pointer == null) return;
-            Vector2 anchor = new Vector2(Mathf.Clamp01(gauge), .5f);
+            if (!m_hasCachedGaugePointerOutline)
+            {
+                m_gaugePointerOutline = pointer.GetComponent<Outline>();
+                m_hasCachedGaugePointerOutline = true;
+            }
+            float pointerGauge = Mathf.Clamp01(gauge);
+            RectTransform parentGauge = pointer.parent as RectTransform;
+            if (parentGauge != null && parentGauge.rect.width > 0f)
+            {
+                float pointerScaleX = Mathf.Abs(pointer.localScale.x);
+                float outlineHalfWidth = m_gaugePointerOutline != null ? Mathf.Abs(m_gaugePointerOutline.effectDistance.x) * pointerScaleX : 0f;
+                float inset = Mathf.Clamp((pointer.rect.width * pointerScaleX * .5f + outlineHalfWidth) / parentGauge.rect.width, 0f, .5f);
+                pointerGauge = Mathf.Clamp(pointerGauge, inset, 1f - inset);
+            }
+            if (pointerGauge == m_lastPointerAnchorX) return;
+            m_lastPointerAnchorX = pointerGauge;
+            Vector2 anchor = new Vector2(pointerGauge, .5f);
             pointer.anchorMin = anchor;
             pointer.anchorMax = anchor;
             pointer.anchoredPosition = Vector2.zero;

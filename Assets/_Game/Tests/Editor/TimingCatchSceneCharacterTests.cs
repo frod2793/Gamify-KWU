@@ -2,6 +2,7 @@ using GameArifiction.Player;
 using GameArifiction.TimingCatch;
 using NUnit.Framework;
 using System.IO;
+using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -97,6 +98,66 @@ namespace GameArifiction.Tests.Editor
                 RectTransform bonus = ((Component)serializedView.FindProperty("m_bonusText").objectReferenceValue).GetComponent<RectTransform>();
                 Assert.Less(bonus.anchorMin.x, .5f);
                 Assert.Greater(bonus.anchorMin.y, .35f);
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 게이지 양 끝에서도 별 포인터의 좌우 끝이 게이지 안에 남는지 검증합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        [Test]
+        public void TimingCatchGaugePointer_KeepsBothEdgesInsideGaugeAtEndpoints()
+        {
+            Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            try
+            {
+                TimingCatchGameView view = FindRoot(scene, "Canvas").GetComponentInChildren<TimingCatchGameView>(true);
+                SerializedObject serializedView = new SerializedObject(view);
+                RectTransform gauge = ((Slider)serializedView.FindProperty("m_gaugeSlider").objectReferenceValue).GetComponent<RectTransform>();
+                RectTransform pointer = serializedView.FindProperty("m_gaugePointer").objectReferenceValue as RectTransform;
+                MethodInfo updateGaugePointer = typeof(TimingCatchGameView).GetMethod("UpdateGaugePointer", BindingFlags.Instance | BindingFlags.NonPublic);
+
+                Assert.IsNotNull(updateGaugePointer);
+                Assert.AreSame(gauge, pointer.parent);
+
+                updateGaugePointer.Invoke(view, new object[] { 0f });
+                AssertPointerInsideGauge(gauge, pointer);
+
+                updateGaugePointer.Invoke(view, new object[] { 1f });
+                AssertPointerInsideGauge(gauge, pointer);
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        /// <summary>
+        /// [기능]: 같은 게이지 값에서도 부모 폭 변경 뒤 포인터 경계가 다시 계산되는지 검증합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        [Test]
+        public void TimingCatchGaugePointer_RepositionsAtSameGaugeAfterParentWidthChanges()
+        {
+            Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            try
+            {
+                TimingCatchGameView view = FindRoot(scene, "Canvas").GetComponentInChildren<TimingCatchGameView>(true);
+                SerializedObject serializedView = new SerializedObject(view);
+                RectTransform gauge = ((Slider)serializedView.FindProperty("m_gaugeSlider").objectReferenceValue).GetComponent<RectTransform>();
+                RectTransform pointer = serializedView.FindProperty("m_gaugePointer").objectReferenceValue as RectTransform;
+                MethodInfo updateGaugePointer = typeof(TimingCatchGameView).GetMethod("UpdateGaugePointer", BindingFlags.Instance | BindingFlags.NonPublic);
+
+                updateGaugePointer.Invoke(view, new object[] { 0f });
+                gauge.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, gauge.rect.width * .5f);
+                Canvas.ForceUpdateCanvases();
+                updateGaugePointer.Invoke(view, new object[] { 0f });
+
+                AssertPointerInsideGauge(gauge, pointer);
             }
             finally
             {
@@ -220,6 +281,23 @@ namespace GameArifiction.Tests.Editor
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// [기능]: 포인터의 월드 코너가 부모 게이지의 좌우 경계 안에 있는지 검증합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private static void AssertPointerInsideGauge(RectTransform gauge, RectTransform pointer)
+        {
+            Vector3[] corners = new Vector3[4];
+            pointer.GetWorldCorners(corners);
+            float left = gauge.InverseTransformPoint(corners[0]).x;
+            float right = gauge.InverseTransformPoint(corners[2]).x;
+            Outline outline = pointer.GetComponent<Outline>();
+            float outlineOffset = outline != null ? Mathf.Abs(outline.effectDistance.x * pointer.localScale.x) : 0f;
+
+            Assert.GreaterOrEqual(left - outlineOffset, gauge.rect.xMin, "포인터 시각 왼쪽 끝이 게이지 밖으로 나갔습니다.");
+            Assert.LessOrEqual(right + outlineOffset, gauge.rect.xMax, "포인터 시각 오른쪽 끝이 게이지 밖으로 나갔습니다.");
         }
         #endregion
     }
