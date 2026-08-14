@@ -14,6 +14,8 @@ namespace GameArifiction.TimingCatch
         [SerializeField] private RectTransform m_greatZone;
         [SerializeField] private RectTransform m_gaugePointer;
         [SerializeField] private Image m_cursorImage;
+        [Tooltip("게이지 양 끝에서 포인터를 추가로 안쪽으로 이동할 픽셀")]
+        [SerializeField, Range(0f, 300f)] private float m_gaugePointerHorizontalPadding;
         [SerializeField] private Image m_backgroundImage;
         [SerializeField] private Image m_starImage;
         [SerializeField] private Sprite[] m_slideSprites;
@@ -184,19 +186,52 @@ namespace GameArifiction.TimingCatch
             }
             float pointerGauge = Mathf.Clamp01(gauge);
             RectTransform parentGauge = pointer.parent as RectTransform;
-            if (parentGauge != null && parentGauge.rect.width > 0f)
-            {
-                float pointerScaleX = Mathf.Abs(pointer.localScale.x);
-                float outlineHalfWidth = m_gaugePointerOutline != null ? Mathf.Abs(m_gaugePointerOutline.effectDistance.x) * pointerScaleX : 0f;
-                float inset = Mathf.Clamp((pointer.rect.width * pointerScaleX * .5f + outlineHalfWidth) / parentGauge.rect.width, 0f, .5f);
-                pointerGauge = Mathf.Clamp(pointerGauge, inset, 1f - inset);
-            }
+            float inset = CalculateGaugePointerInset(pointer, parentGauge, m_gaugePointerOutline);
+            pointerGauge = Mathf.Clamp(pointerGauge, inset, 1f - inset);
             if (pointerGauge == m_lastPointerAnchorX) return;
             m_lastPointerAnchorX = pointerGauge;
             Vector2 anchor = new Vector2(pointerGauge, .5f);
             pointer.anchorMin = anchor;
             pointer.anchorMax = anchor;
             pointer.anchoredPosition = Vector2.zero;
+        }
+
+        /// <summary>
+        /// [기능]: 포인터의 시각 폭과 Inspector 여백을 게이지 정규화 inset으로 변환합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private float CalculateGaugePointerInset(RectTransform pointer, RectTransform parentGauge, Outline outline)
+        {
+            if (pointer == null || parentGauge == null || parentGauge.rect.width <= 0f) return 0f;
+            float pointerScaleX = Mathf.Abs(pointer.localScale.x);
+            float outlineHalfWidth = outline != null ? Mathf.Abs(outline.effectDistance.x) * pointerScaleX : 0f;
+            return Mathf.Clamp((pointer.rect.width * pointerScaleX * .5f + outlineHalfWidth + Mathf.Max(0f, m_gaugePointerHorizontalPadding) * pointerScaleX) / parentGauge.rect.width, 0f, .5f);
+        }
+
+        /// <summary>
+        /// [기능]: 선택한 View의 포인터 중심 이동 가능 구간을 Scene View에 표시합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        private void OnDrawGizmosSelected()
+        {
+            RectTransform pointer = m_cursorImage != null ? m_cursorImage.rectTransform : m_gaugePointer;
+            RectTransform parentGauge = pointer != null ? pointer.parent as RectTransform : null;
+            if (pointer == null || parentGauge == null || parentGauge.rect.width <= 0f) return;
+
+            Outline outline = m_hasCachedGaugePointerOutline ? m_gaugePointerOutline : pointer.GetComponent<Outline>();
+            float inset = CalculateGaugePointerInset(pointer, parentGauge, outline);
+            float y = parentGauge.rect.center.y;
+            Vector3 left = new Vector3(Mathf.Lerp(parentGauge.rect.xMin, parentGauge.rect.xMax, inset), y);
+            Vector3 right = new Vector3(Mathf.Lerp(parentGauge.rect.xMin, parentGauge.rect.xMax, 1f - inset), y);
+            Color previousColor = Gizmos.color;
+            Matrix4x4 previousMatrix = Gizmos.matrix;
+            Gizmos.color = Color.cyan;
+            Gizmos.matrix = parentGauge.localToWorldMatrix;
+            Gizmos.DrawLine(left, right);
+            Gizmos.DrawSphere(left, 8f);
+            Gizmos.DrawSphere(right, 8f);
+            Gizmos.color = previousColor;
+            Gizmos.matrix = previousMatrix;
         }
 
         private void TryResolveSerializedReferences()

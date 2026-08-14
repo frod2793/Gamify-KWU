@@ -165,6 +165,49 @@ namespace GameArifiction.Tests.Editor
             }
         }
 
+        /// <summary>
+        /// [기능]: Inspector 추가 여백이 게이지 끝에서 포인터를 같은 픽셀만큼 안쪽으로 이동하는지 검증합니다.
+        /// [작성자]: 윤승종
+        /// </summary>
+        [Test]
+        public void TimingCatchGaugePointer_AppliesConfigured20PixelPaddingAtEndpoint()
+        {
+            Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            try
+            {
+                TimingCatchGameView view = FindRoot(scene, "Canvas").GetComponentInChildren<TimingCatchGameView>(true);
+                SerializedObject serializedView = new SerializedObject(view);
+                SerializedProperty padding = serializedView.FindProperty("m_gaugePointerHorizontalPadding");
+                FieldInfo paddingField = typeof(TimingCatchGameView).GetField("m_gaugePointerHorizontalPadding", BindingFlags.Instance | BindingFlags.NonPublic);
+                RectTransform gauge = ((Slider)serializedView.FindProperty("m_gaugeSlider").objectReferenceValue).GetComponent<RectTransform>();
+                RectTransform pointer = serializedView.FindProperty("m_gaugePointer").objectReferenceValue as RectTransform;
+                MethodInfo updateGaugePointer = typeof(TimingCatchGameView).GetMethod("UpdateGaugePointer", BindingFlags.Instance | BindingFlags.NonPublic);
+
+                Assert.IsNotNull(padding, "직렬화된 padding 필드가 필요합니다.");
+                Assert.IsNotNull(paddingField, "padding 필드가 필요합니다.");
+                UnityEngine.RangeAttribute range = paddingField.GetCustomAttribute<UnityEngine.RangeAttribute>();
+                Assert.IsNotNull(range, "padding RangeAttribute가 필요합니다.");
+                Assert.AreEqual(0f, range.min);
+                Assert.AreEqual(300f, range.max);
+                Assert.GreaterOrEqual(padding.floatValue, 0f);
+                Assert.AreEqual(0f, padding.floatValue);
+                padding.floatValue = 20f;
+                serializedView.ApplyModifiedPropertiesWithoutUndo();
+
+                updateGaugePointer.Invoke(view, new object[] { 0f });
+                Vector3[] corners = new Vector3[4];
+                pointer.GetWorldCorners(corners);
+                Outline outline = pointer.GetComponent<Outline>();
+                float visualLeft = gauge.InverseTransformPoint(corners[0]).x - Mathf.Abs(outline.effectDistance.x * pointer.localScale.x);
+
+                Assert.AreEqual(gauge.rect.xMin + 20f * Mathf.Abs(pointer.localScale.x), visualLeft, .001f);
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
         [Test]
         public void TimingCatchScene_DialogueBubble_UsesFixedWidthAndDynamicHeightLayout()
         {
