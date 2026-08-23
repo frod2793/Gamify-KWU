@@ -20,6 +20,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Game/Scenes/TimingCatch.unity
     guid: 7f44803ce291e4fb4b575fa26c10a25d
+  - enabled: 1
+    path: Assets/_Game/Scenes/TaskRush.unity
+    guid: 1a43b4e896e2b4e12aad462f42a0387e
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
